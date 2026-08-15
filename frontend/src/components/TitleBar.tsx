@@ -2,21 +2,24 @@ import { useState, useEffect } from 'react'
 import { Minus, Maximize2, X } from 'lucide-react'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 
-const appWindow = getCurrentWindow()
-
 function TitleBar() {
-  const [isMaximized, setIsMaximized] = useState(false)
   const [isTauri, setIsTauri] = useState(false)
+  const [appWindow, setAppWindow] = useState<any>(null)
+  const [isMaximized, setIsMaximized] = useState(false)
 
   useEffect(() => {
-    setIsTauri(!!(window as any).__TAURI__)
+    const tauriEnv = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__
+    setIsTauri(tauriEnv)
+    if (tauriEnv) {
+      try {
+        setAppWindow(getCurrentWindow())
+      } catch {
+        // ignore initialization errors
+      }
+    }
   }, [])
 
-  useEffect(() => {
-    if (!isTauri) return
-  }, [isTauri])
-
-  if (!isTauri) return null
+  if (!isTauri || !appWindow) return null
 
   const handleMinimize = async () => {
     try { await appWindow.minimize() } catch { /* ignore */ }
