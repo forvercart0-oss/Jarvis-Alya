@@ -48,7 +48,7 @@ Choose your OS and copy-paste the commands.
 ### Arch Linux
 
 ```bash
-sudo pacman -S --needed python3 python-pip python-virtualenv nodejs npm webkit2gtk-4.1 libappindicator-gtk3 librsvg xdotool openssl base-devel cmake patchelf pkg-config
+sudo pacman -S --needed python3 python-pip python-virtualenv nodejs npm webkit2gtk-4.1 libappindicator-gtk3 librsvg xdotool openssl base-devel cmake patchelf pkg-config appmenu-gtk-module
 git clone https://github.com/forvercart0-oss/Jarvis-Alya.git
 cd Jarvis-Alya
 ./install.sh

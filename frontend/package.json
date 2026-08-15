@@ -13,6 +13,7 @@
     "tauri:build": "tauri build"
   },
   "dependencies": {
+    "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/cli": "^2.11.4",
     "framer-motion": "^11.18.2",
     "lucide-react": "^0.454.0",

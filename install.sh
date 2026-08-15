@@ -69,6 +69,7 @@ if command -v pacman &>/dev/null; then
     cmake
     patchelf
     pkg-config
+    appmenu-gtk-module
   )
   missing_tauri=()
   for pkg in "${TAURI_PKGS[@]}"; do

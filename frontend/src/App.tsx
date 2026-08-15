@@ -21,6 +21,7 @@ import { StartupSequence } from './components/Startup/StartupSequence'
 import { OfflineScreen } from './components/Common/OfflineScreen'
 import { MediaGenerationPanel } from './components/Media/MediaGenerationPanel'
 import { FirstRunSetup } from './components/Common/FirstRunSetup'
+import TitleBar from './components/TitleBar'
 import { useJarvis } from './hooks/useJarvis'
 import { api } from './services/api'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
@@ -384,6 +385,7 @@ export default function App() {
 
   return (
     <div className="h-screen w-screen flex flex-col bg-jarvis-dark relative overflow-hidden">
+      <TitleBar />
       {/* HUD overlay effects */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,240,255,0.03)_0%,transparent_70%)]" />
