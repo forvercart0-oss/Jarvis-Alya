@@ -42,8 +42,18 @@ done
 
 if [[ ${#missing[@]} -gt 0 ]]; then
   warn "Missing system packages: ${missing[*]}"
-  warn "Install them first, then re-run ./install.sh"
-  exit 1
+  read -p "Install missing packages now? (y/N) " -n 1 -r
+  echo
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    fail "Cannot continue without required packages."
+    exit 1
+  fi
+  if command -v pacman &>/dev/null; then
+    sudo pacman -S --needed python3 python-pip python-virtualenv nodejs npm
+  else
+    fail "Automatic install not supported on this distro. Please install: ${missing[*]}"
+    exit 1
+  fi
 fi
 
 # ---------------------------------------------------------------- Tauri deps
@@ -60,18 +70,25 @@ if command -v pacman &>/dev/null; then
     patchelf
     pkg-config
   )
+  missing_tauri=()
   for pkg in "${TAURI_PKGS[@]}"; do
     if ! pacman -Q "$pkg" &>/dev/null; then
-      warn "Missing Tauri dependency: $pkg"
-      warn "Install with: sudo pacman -S --needed ${TAURI_PKGS[*]}"
-      read -p "Continue anyway? (y/N) " -n 1 -r
-      echo
-      if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        exit 1
-      fi
-      break
+      missing_tauri+=("$pkg")
     fi
   done
+  if [[ ${#missing_tauri[@]} -gt 0 ]]; then
+    warn "Missing Tauri dependencies: ${missing_tauri[*]}"
+    read -p "Install missing Tauri packages now? (y/N) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+      warn "Skipping Tauri dependencies. Desktop app may not build."
+    else
+      sudo pacman -S --needed "${missing_tauri[@]}"
+      ok "Tauri dependencies installed"
+    fi
+  else
+    ok "Tauri dependencies: OK"
+  fi
 else
   warn "Not on Arch Linux. Ensure Tauri build dependencies are installed."
 fi
