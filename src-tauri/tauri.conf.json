@@ -4,10 +4,8 @@
   "version": "2.0.0",
   "identifier": "com.jarvis.desktop",
   "build": {
-    "devUrl": "http://localhost:5174",
     "frontendDist": "../frontend/dist",
-    "beforeBuildCommand": "npm run build",
-    "beforeDevCommand": "npm run dev"
+    "beforeBuildCommand": "npm run build"
   },
   "app": {
     "windows": [

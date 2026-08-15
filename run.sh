@@ -58,13 +58,11 @@ if [[ ! -d "frontend/node_modules" ]]; then
   fail "Node modules not found. Run ./install.sh first."
   exit 1
 fi
-if [[ ! -d "frontend/dist" ]]; then
-  warn "Frontend build not found. Building now..."
-  cd frontend
-  npm run build
-  cd ..
-  ok "Frontend built"
-fi
+warn "Building frontend..."
+cd frontend
+npm run build
+cd ..
+ok "Frontend built"
 if [[ ! -f ".env" ]]; then
   warn ".env not found. Copying from .env.example..."
   cp .env.example .env
