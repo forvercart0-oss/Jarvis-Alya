@@ -1,4 +1,4 @@
-import { MessageSquare, Cpu, Wrench, Zap, Settings, AudioLines, FileCode2, Activity, Home, BookOpen, ImageIcon } from 'lucide-react'
+import { MessageSquare, Cpu, Wrench, Zap, Settings, AudioLines, FileCode2, Activity, Home, BookOpen, ImageIcon, HeartPulse } from 'lucide-react'
 import type { TabId, PersonaInfo } from '../../types'
 
 interface SidebarItemProps {
@@ -88,6 +88,7 @@ export function Sidebar({ activeTab, onTabChange, connection, persona, onSwitchP
       <SidebarItem id="memory" label="Memory" icon={<Zap className="w-5 h-5" />} active={activeTab === 'memory'} accent={accentColor} onClick={() => onTabChange('memory')} />
       <SidebarItem id="automations" label="Tasks" icon={<Settings className="w-5 h-5" />} active={activeTab === 'automations'} accent={accentColor} onClick={() => onTabChange('automations')} />
       <SidebarItem id="media" label="Media" icon={<ImageIcon className="w-5 h-5" />} active={activeTab === 'media'} accent={accentColor} onClick={() => onTabChange('media')} />
+      <SidebarItem id="health" label="Health" icon={<HeartPulse className="w-5 h-5" />} active={activeTab === 'health'} accent={accentColor} onClick={() => onTabChange('health')} />
       <SidebarItem id="diagnostics" label="Diag" icon={<Activity className="w-5 h-5" />} active={activeTab === 'diagnostics'} accent={accentColor} onClick={() => onTabChange('diagnostics')} />
       <SidebarItem id="about" label="About" icon={<BookOpen className="w-5 h-5" />} active={activeTab === 'about'} accent={accentColor} onClick={() => onTabChange('about')} />
       <SidebarItem id="settings" label="Settings" icon={<Settings className="w-5 h-5" />} active={activeTab === 'settings'} accent={accentColor} onClick={() => onTabChange('settings')} />

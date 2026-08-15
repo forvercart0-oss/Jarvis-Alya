@@ -12,6 +12,7 @@ import { SettingsPanel } from './components/Settings/SettingsPanel'
 import { VoicePanel } from './components/Voice/VoicePanel'
 import { CodingPanel } from './components/Coding/CodingPanel'
 import { DiagnosticsPanel } from './components/Diagnostics/DiagnosticsPanel'
+import { HealthDashboard } from './components/System/HealthDashboard'
 import { AboutPanel } from './components/About/AboutPanel'
 import { Sidebar } from './components/Sidebar/Sidebar'
 import { ActivityFeed } from './components/Activity/ActivityFeed'
@@ -19,6 +20,7 @@ import { HomePanel } from './components/Home/HomePanel'
 import { StartupSequence } from './components/Startup/StartupSequence'
 import { OfflineScreen } from './components/Common/OfflineScreen'
 import { MediaGenerationPanel } from './components/Media/MediaGenerationPanel'
+import { MediaLibrary } from './components/Media/MediaLibrary'
 import { FirstRunSetup } from './components/Common/FirstRunSetup'
 import { useJarvis } from './hooks/useJarvis'
 import { api } from './services/api'
@@ -524,6 +526,12 @@ export default function App() {
                   )}
                   {activeTab === 'coding' && <CodingPanel projects={projects} onRefresh={fetchData} />}
                   {activeTab === 'diagnostics' && <DiagnosticsPanel />}
+                  {activeTab === 'health' && (
+                    <HealthDashboard
+                      health={health}
+                      diagnostics={diagnostics}
+                    />
+                  )}
                   {activeTab === 'about' && <AboutPanel />}
                 </div>
                 {activeTab !== 'chat' && (

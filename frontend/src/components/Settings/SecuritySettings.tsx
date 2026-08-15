@@ -1,35 +1,129 @@
 import type { JarvisSettings } from '../../types'
-import { Button } from '../Common'
 
 interface SecuritySettingsProps {
   settings: JarvisSettings
   onUpdate: (patch: Partial<JarvisSettings>) => void
 }
 
+interface PermissionItem {
+  id: string
+  label: string
+  description: string
+  enabled: boolean
+  level: 'allowed' | 'confirmation' | 'disabled'
+}
+
 export function SecuritySettings({ settings, onUpdate }: SecuritySettingsProps) {
+  const permissions: PermissionItem[] = [
+    {
+      id: 'microphone',
+      label: 'Microphone',
+      description: 'Allow JARVIS to access your microphone for voice input.',
+      enabled: settings.voice_enabled,
+      level: settings.voice_enabled ? 'allowed' : 'disabled',
+    },
+    {
+      id: 'camera',
+      label: 'Camera',
+      description: 'Allow JARVIS to access your camera for gesture control.',
+      enabled: settings.gesture_control_enabled ?? false,
+      level: (settings.gesture_control_enabled ?? false) ? 'allowed' : 'disabled',
+    },
+    {
+      id: 'notifications',
+      label: 'Notifications',
+      description: 'Show desktop notifications for messages and system events.',
+      enabled: true,
+      level: 'allowed',
+    },
+    {
+      id: 'computer_control',
+      label: 'Computer Control',
+      description: 'Allow JARVIS to control keyboard, mouse, and applications.',
+      enabled: true,
+      level: 'allowed',
+    },
+    {
+      id: 'browser_control',
+      label: 'Browser Control',
+      description: 'Allow JARVIS to interact with web browsers.',
+      enabled: true,
+      level: 'allowed',
+    },
+    {
+      id: 'messages',
+      label: 'Messages',
+      description: 'Allow JARVIS to read and draft messages. Requires confirmation for sending.',
+      enabled: false,
+      level: 'confirmation',
+    },
+    {
+      id: 'calls',
+      label: 'Calls',
+      description: 'Allow JARVIS to manage calls. Requires confirmation for outgoing calls.',
+      enabled: settings.call_control_enabled ?? false,
+      level: (settings.call_control_enabled ?? false) ? 'confirmation' : 'disabled',
+    },
+  ]
+
+  const togglePermission = (id: string) => {
+    if (id === 'microphone') {
+      onUpdate({ voice_enabled: !settings.voice_enabled })
+    } else if (id === 'camera') {
+      onUpdate({ gesture_control_enabled: !(settings.gesture_control_enabled ?? false) })
+    } else if (id === 'calls') {
+      onUpdate({ call_control_enabled: !(settings.call_control_enabled ?? false) })
+    }
+  }
+
+  const getLevelColor = (level: string) => {
+    switch (level) {
+      case 'allowed': return 'text-green-400'
+      case 'confirmation': return 'text-yellow-400'
+      case 'disabled': return 'text-slate-600'
+      default: return 'text-slate-500'
+    }
+  }
+
+  const getLevelLabel = (level: string) => {
+    switch (level) {
+      case 'allowed': return 'Allowed'
+      case 'confirmation': return 'Confirmation Required'
+      case 'disabled': return 'Disabled'
+      default: return level
+    }
+  }
+
   return (
     <div className="space-y-4 max-w-md">
-      <h3 className="text-xs tracking-[0.3em] text-slate-400 uppercase mb-4">Security</h3>
-      <div>
-        <label className="block text-xs text-slate-400 mb-1">GROQ API Key</label>
-        <input
-          type="password"
-          value={settings.groq_api_key || ''}
-          onChange={(e) => onUpdate({ groq_api_key: e.target.value })}
-          placeholder="gsk_..."
-          className="w-full bg-slate-900/80 border border-cyan-500/20 rounded px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-400/60 font-mono"
-        />
-        <p className="text-[10px] text-slate-500 mt-1">Stored securely on the backend. Never exposed to the browser.</p>
+      <h3 className="text-xs tracking-[0.3em] text-slate-400 uppercase mb-4">Permissions</h3>
+      <div className="space-y-3">
+        {permissions.map((perm) => (
+          <div key={perm.id} className="glass-panel p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm text-slate-200">{perm.label}</div>
+                <div className="text-[10px] text-slate-500">{perm.description}</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`text-[10px] tracking-wider uppercase ${getLevelColor(perm.level)}`}>
+                  {getLevelLabel(perm.level)}
+                </span>
+                <button
+                  onClick={() => togglePermission(perm.id)}
+                  className={`w-10 h-5 rounded-full transition-all relative ${
+                    perm.enabled ? 'bg-cyan-500/40' : 'bg-slate-700'
+                  }`}
+                >
+                  <div className={`absolute top-1 w-3 h-3 rounded-full bg-cyan-400 transition-all ${
+                    perm.enabled ? 'left-6' : 'left-1'
+                  }`} />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
-      <Button variant="secondary" onClick={async () => {
-        try {
-          const res = await fetch('/api/health')
-          const data = await res.json()
-          alert(`Groq: ${data.groq.status}\n${data.groq.error || 'Connected'}`)
-        } catch {
-          alert('Failed to test connection')
-        }
-      }}>Test Groq Connection</Button>
     </div>
   )
 }
