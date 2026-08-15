@@ -1,0 +1,21 @@
+{
+  "name": "JARVIS 2.0",
+  "short_name": "JARVIS",
+  "description": "Advanced Personal AI Assistant",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050a14",
+  "theme_color": "#00f0ff",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "64x64",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

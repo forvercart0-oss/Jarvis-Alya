@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="coreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f0ff" />
+      <stop offset="100%" stop-color="#0077ff" />
+    </linearGradient>
+  </defs>
+  <g transform="translate(16,16)">
+    <polygon points="0,-12 10,-6 10,6 0,12 -10,6 -10,-6" fill="none" stroke="url(#coreGrad)" stroke-width="2.5" stroke-linejoin="round"/>
+    <circle cx="0" cy="0" r="3" fill="url(#coreGrad)"/>
+  </g>
+</svg>

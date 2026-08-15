@@ -1,0 +1,8 @@
+/home/hell/Jarvis2.0/src-tauri/target/release/deps/synstructure-7be628d80ed9a624.d: /home/hell/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/synstructure-0.13.2/src/lib.rs /home/hell/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/synstructure-0.13.2/src/macros.rs
+
+/home/hell/Jarvis2.0/src-tauri/target/release/deps/libsynstructure-7be628d80ed9a624.rlib: /home/hell/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/synstructure-0.13.2/src/lib.rs /home/hell/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/synstructure-0.13.2/src/macros.rs
+
+/home/hell/Jarvis2.0/src-tauri/target/release/deps/libsynstructure-7be628d80ed9a624.rmeta: /home/hell/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/synstructure-0.13.2/src/lib.rs /home/hell/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/synstructure-0.13.2/src/macros.rs
+
+/home/hell/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/synstructure-0.13.2/src/lib.rs:
+/home/hell/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/synstructure-0.13.2/src/macros.rs:

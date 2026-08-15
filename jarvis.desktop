@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=JARVIS 2.0
+Comment=Advanced Personal AI Assistant
+Exec=/home/hell/Jarvis2.0/run.sh
+Icon=jarvis
+Terminal=false
+Type=Application
+Categories=Utility;AI;Development;
+StartupWMClass=jarvis

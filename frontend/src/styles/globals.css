@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-jarvis-dark text-gray-200 font-mono antialiased;
+    margin: 0;
+    overflow: hidden;
+  }
+  #root {
+    height: 100vh;
+    width: 100vw;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-jarvis-panel backdrop-blur-md border border-jarvis-cyan/20 rounded-lg;
+  }
+  .glass-panel-strong {
+    @apply bg-jarvis-panel backdrop-blur-xl border border-jarvis-cyan/30 rounded-lg shadow-[0_0_20px_rgba(0,240,255,0.05)];
+  }
+  .glow-text {
+    text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+  }
+  .chat-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 240, 255, 0.2) transparent;
+  }
+  .chat-scroll::-webkit-scrollbar {
+    width: 4px;
+  }
+  .chat-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .chat-scroll::-webkit-scrollbar-thumb {
+    background: rgba(0, 240, 255, 0.2);
+    border-radius: 2px;
+  }
+  .cursor-blink {
+    animation: blink 1s step-end infinite;
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+  .hud-border {
+    position: relative;
+  }
+  .hud-border::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(0,240,255,0.3), transparent);
+  }
+  .scanline {
+    background: linear-gradient(
+      to bottom,
+      rgba(0, 240, 255, 0.03) 50%,
+      rgba(0, 240, 255, 0.01) 50%
+    );
+    background-size: 100% 4px;
+    pointer-events: none;
+  }
+}

@@ -1,0 +1,23 @@
+# ============================================================
+# JARVIS 2.0 - Optional dependencies
+# These are NOT required for the core assistant.
+# Install with:  pip install -r requirements-optional.txt
+# ============================================================
+
+# Kokoro neural TTS (preferred over espeak-ng).
+kokoro>=0.3
+
+# Local/offline speech-to-text (set STT_ENGINE=vosk).
+# Requires a model download, see README.
+vosk>=0.3.45
+
+# Alternative microphone capture backend.
+pyaudio>=0.2.14
+
+# Optional vector memory (set VECTOR_MEMORY_ENABLED=true).
+chromadb>=0.5
+# Local embeddings for vector memory.
+sentence-transformers>=3.3
+
+# Alternative web search backend (uses a nicer API when installed).
+duckduckgo-search>=7

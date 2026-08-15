@@ -1,0 +1,156 @@
+from fastapi import APIRouter
+from pydantic import BaseModel
+from typing import Optional
+
+from config.settings import get_settings
+
+router = APIRouter()
+
+
+class SettingsUpdate(BaseModel):
+    assistant_name: Optional[str] = None
+    user_name: Optional[str] = None
+    voice_enabled: Optional[bool] = None
+    voice_language: Optional[str] = None
+    tts_enabled: Optional[bool] = None
+    tts_voice: Optional[str] = None
+    tts_speed: Optional[int] = None
+    tts_volume: Optional[int] = None
+    wake_word_enabled: Optional[bool] = None
+    wake_word: Optional[str] = None
+    memory_enabled: Optional[bool] = None
+    vector_memory_enabled: Optional[bool] = None
+    debug: Optional[bool] = None
+    groq_model: Optional[str] = None
+    groq_api_key: Optional[str] = None
+    gemini_api_key: Optional[str] = None
+    gemini_model: Optional[str] = None
+    openrouter_api_key: Optional[str] = None
+    openrouter_model: Optional[str] = None
+    local_llm_url: Optional[str] = None
+    local_llm_model: Optional[str] = None
+    local_llm_enabled: Optional[bool] = None
+    local_llm_api_key: Optional[str] = None
+    local_llm_api_type: Optional[str] = None
+    local_llm_timeout: Optional[int] = None
+    tts_engine: Optional[str] = None
+    tts_venv_dir: Optional[str] = None
+    kokoro_model_path: Optional[str] = None
+    response_style: Optional[str] = None
+    language: Optional[str] = None
+    auto_failover: Optional[bool] = None
+    provider_priority: Optional[str] = None
+    theme: Optional[str] = None
+    accent_color: Optional[str] = None
+    glow_intensity: Optional[int] = None
+    animation_level: Optional[str] = None
+    orb_size: Optional[int] = None
+    persona: Optional[str] = None
+    compact_ui: Optional[bool] = None
+    panel_transparency: Optional[int] = None
+    background_particles: Optional[bool] = None
+    reduced_motion: Optional[bool] = None
+    font_size: Optional[str] = None
+
+
+def _mask_api_key(key: str) -> str:
+    if not key:
+        return ""
+    if len(key) <= 8:
+        return key[:2] + "****"
+    return key[:4] + "****" + key[-4:]
+
+
+@router.get("/settings")
+async def get_settings_api():
+    s = get_settings()
+    from backend.main import memory_manager
+    db_settings = memory_manager.store.get_all_settings()
+    return {
+        "assistant_name": s.assistant_name,
+        "user_name": s.user_name,
+        "voice_enabled": s.voice_enabled,
+        "voice_language": s.voice_language,
+        "tts_enabled": s.tts_enabled,
+        "tts_voice": s.tts_voice,
+        "tts_speed": s.tts_speed,
+        "tts_volume": s.tts_volume,
+        "wake_word_enabled": s.wake_word_enabled,
+        "wake_word": s.wake_word,
+        "memory_enabled": s.memory_enabled,
+        "vector_memory_enabled": s.vector_memory_enabled,
+        "debug": s.debug,
+        "groq_model": s.groq_model,
+        "groq_api_key": _mask_api_key(s.groq_api_key),
+        "gemini_api_key": _mask_api_key(s.gemini_api_key),
+        "gemini_model": s.gemini_model,
+        "openrouter_api_key": _mask_api_key(s.openrouter_api_key),
+        "openrouter_model": s.openrouter_model,
+        "local_llm_url": s.local_llm_url,
+        "local_llm_model": s.local_llm_model,
+        "local_llm_enabled": s.local_llm_enabled,
+        "local_llm_api_key": _mask_api_key(s.local_llm_api_key),
+        "local_llm_api_type": s.local_llm_api_type,
+        "local_llm_timeout": s.local_llm_timeout,
+        "tts_engine": s.tts_engine,
+        "tts_venv_dir": getattr(s, "tts_venv_dir", ""),
+        "kokoro_model_path": getattr(s, "kokoro_model_path", ""),
+        "response_style": s.response_style,
+        "language": s.language,
+        "auto_failover": s.auto_failover,
+        "provider_priority": s.provider_priority,
+        "theme": s.theme,
+        "accent_color": s.accent_color,
+        "glow_intensity": s.glow_intensity,
+        "animation_level": s.animation_level,
+        "orb_size": s.orb_size,
+        "persona": s.persona,
+        "compact_ui": getattr(s, "compact_ui", False),
+        "panel_transparency": getattr(s, "panel_transparency", 85),
+        "background_particles": getattr(s, "background_particles", True),
+        "reduced_motion": getattr(s, "reduced_motion", False),
+        "font_size": getattr(s, "font_size", "normal"),
+        "db_settings": db_settings,
+    }
+
+
+_TTS_FIELDS = {"tts_engine", "tts_voice", "tts_speed", "tts_volume", "tts_enabled", "tts_venv_dir", "kokoro_model_path"}
+_PROVIDER_FIELDS = {"groq_api_key", "groq_model", "gemini_api_key", "gemini_model",
+                    "openrouter_api_key", "openrouter_model", "local_llm_url", "local_llm_model",
+                    "local_llm_enabled", "local_llm_api_key", "local_llm_api_type",
+                    "local_llm_timeout", "provider_priority", "auto_failover"}
+
+
+@router.put("/settings")
+async def update_settings(update: SettingsUpdate):
+    from backend.main import memory_manager, ai_service, tts_manager
+    from backend.services.persona_service import persona_service
+    s = get_settings()
+    updates = update.model_dump(exclude_none=True)
+
+    if "persona" in updates and str(updates["persona"]).lower() != s.persona:
+        payload = await persona_service.switch(updates["persona"])
+        updates.pop("persona")
+        if payload.get("accent_color"):
+            s.accent_color = payload["accent_color"]
+        updates.pop("accent_color", None)
+
+    for key, value in updates.items():
+        if hasattr(s, key):
+            setattr(s, key, value)
+            if "api_key" in key and value:
+                memory_manager.store.set_setting(key, value)
+            else:
+                memory_manager.store.set_setting(key, str(value))
+    s.persist()
+    if updates.keys() & _PROVIDER_FIELDS:
+        ai_service.reconfigure_providers()
+    if updates.keys() & _TTS_FIELDS:
+        tts_manager.reconfigure()
+        if "tts_voice" in updates:
+            tts_manager.set_voice(updates["tts_voice"])
+        if "tts_speed" in updates:
+            tts_manager.set_speed(updates["tts_speed"])
+        if "tts_volume" in updates:
+            tts_manager.set_volume(updates["tts_volume"])
+    return {"status": "updated"}

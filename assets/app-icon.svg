@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="appIconGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f0ff" />
+      <stop offset="50%" stop-color="#0088ff" />
+      <stop offset="100%" stop-color="#5500ff" />
+    </linearGradient>
+    <filter id="appGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="64" height="64" rx="14" fill="#050a14" />
+
+  <!-- Outer ring -->
+  <polygon points="32,6 56,20 56,44 32,58 8,44 8,20" fill="none" stroke="url(#appIconGrad)" stroke-width="2" stroke-linejoin="round" opacity="0.8" />
+
+  <!-- Inner structure -->
+  <polygon points="32,16 46,26 46,38 32,48 18,38 18,26" fill="none" stroke="url(#appIconGrad)" stroke-width="1.2" stroke-linejoin="round" opacity="0.5" />
+
+  <!-- Core -->
+  <circle cx="32" cy="32" r="7" fill="url(#appIconGrad)" filter="url(#appGlow)" opacity="0.85" />
+  <circle cx="32" cy="32" r="3.5" fill="#ffffff" opacity="0.95" />
+
+  <!-- Accent lines -->
+  <path d="M32,6 L32,16 M56,20 L46,26 M56,44 L46,38 M32,58 L32,48 M8,44 L18,38 M8,20 L18,26" stroke="url(#appIconGrad)" stroke-width="1" opacity="0.6" />
+</svg>

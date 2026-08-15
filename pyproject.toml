@@ -1,0 +1,34 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+asyncio_mode = "auto"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+src = ["."]
+exclude = [".venv", "frontend", "data", "logs", "dist"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "C4", "DTZ", "S", "PLW", "RUF", "TRY", "ASYNC", "PIE"]
+# Intentional patterns in this codebase:
+#   BLE001   tool/service boundaries catch `Exception` and turn failures into
+#            friendly user-presentable results (see registry.py).
+#   RUF012   tool `parameters` class attributes are immutable-by-convention
+#            shared spec dicts; subclasses override them wholesale.
+#   TRY003/300/400  raise/except style is kept simple and readable.
+#   ASYNC109/240/250  small bounded subprocess/path/input calls are intentional
+#            in tools and the CLI REPL; heavy work uses asyncio where it matters.
+#   PLW0603  singleton reset helpers intentionally use `global`.
+#   S603/607 subprocess without shell=True is deliberate (PATH lookup only);
+#            bandit's partial-path rule does not apply to vetted commands.
+ignore = ["BLE001", "RUF012", "TRY003", "TRY300", "TRY400", "ASYNC109", "ASYNC240", "ASYNC250", "PLW0603", "S603", "S607"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S", "E402", "PLW0108"]
+# System prompt / offline reply strings are intentionally long single lines.
+"brain/prompts.py" = ["E501"]
+"brain/offline.py" = ["E501"]
