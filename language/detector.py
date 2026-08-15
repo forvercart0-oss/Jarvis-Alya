@@ -17,18 +17,13 @@ _URDU_RE = re.compile(r'[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uF
 # Roman Urdu / Hinglish keywords
 _ROMAN_URDU_KEYWORDS = {
     'kya', 'kaise', 'kahan', 'kab', 'kyun', 'karna', 'karo', 'kholo', 'khol',
-    'chahiye', 'hai', 'nahi', 'nahin', 'please', 'thoda', 'bahut', 'zyada',
+    'chahiye', 'hai', 'nahi', 'nahin', 'thoda', 'bahut', 'zyada',
     'kam', 'bhai', 'bhaiya', 'aap', 'tum', 'main', 'mera', 'tumhara',
     'batao', 'bata', 'suno', 'sun', 'dekh', 'dekho', 'chal', 'chalo',
     'ruk', 'ruko', 'aao', 'aaja', 'jao', 'ja', 'le', 'lo', 'do', 'de',
     'kar', 'karte', 'karta', 'karti', 'kar raha', 'kar rahi', 'karunga',
     'karungi', 'kardunga', 'kardungi', 'theek', 'thik', 'accha', 'achha',
     'bura', 'ganda', 'sahi', 'galat', 'jaldi', 'dhyaan', 'dhyan',
-    'system', 'status', 'battery', 'cpu', 'ram', 'disk', 'file', 'folder',
-    'browser', 'firefox', 'chrome', 'terminal', 'command', 'run', 'execute',
-    'open', 'close', 'launch', 'search', 'find', 'create', 'make', 'delete',
-    'read', 'write', 'install', 'update', 'download', 'upload', 'send',
-    'receive', 'call', 'message', 'email', 'notification', 'reminder',
 }
 _ENGLISH_KEYWORDS = {
     'the', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
@@ -68,16 +63,16 @@ def detect_language(text: str) -> str:
     urdu_chars = _URDU_RE.findall(text)
 
     has_urdu_script = len(urdu_chars) > 0
-    has_roman_urdu = any(w in _ROMAN_URDU_KEYWORDS for w in words)
-    has_english = any(w in _ENGLISH_KEYWORDS for w in words)
+    roman_urdu_count = sum(1 for w in words if w in _ROMAN_URDU_KEYWORDS)
+    english_count = sum(1 for w in words if w in _ENGLISH_KEYWORDS)
 
-    if has_urdu_script and has_english:
+    if has_urdu_script and english_count > 0:
         return 'mixed'
     if has_urdu_script:
         return 'ur'
-    if has_roman_urdu and not has_english:
+    if roman_urdu_count > english_count:
         return 'roman_urdu'
-    if has_roman_urdu and has_english:
+    if roman_urdu_count > 0 and english_count > 0:
         return 'mixed'
     return 'en'
 
