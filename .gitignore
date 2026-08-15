@@ -8,6 +8,7 @@ logs/
 *.log
 frontend/node_modules/
 frontend/dist/
+node_modules/
 *.pyo
 .pytest_cache/
 .coverage
