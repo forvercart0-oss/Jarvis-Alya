@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ImageIcon, VideoIcon, Trash2, FolderOpen, RefreshCw } from 'lucide-react'
+import { ImageIcon, VideoIcon, Trash2, RefreshCw } from 'lucide-react'
 import { api } from '../../services/api'
 
 interface MediaHistoryItem {
@@ -12,11 +12,7 @@ interface MediaHistoryItem {
   url?: string
 }
 
-interface MediaLibraryProps {
-  settings: any
-}
-
-export function MediaLibrary({ settings }: MediaLibraryProps) {
+export function MediaLibrary() {
   const [items, setItems] = useState<MediaHistoryItem[]>([])
   const [loading, setLoading] = useState(false)
   const [filter, setFilter] = useState<'all' | 'images' | 'videos'>('all')

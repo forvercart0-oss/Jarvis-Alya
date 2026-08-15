@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Activity, Cpu, Mic, Camera, MessageSquare, Phone, ImageIcon, VideoIcon } from 'lucide-react'
 import { api } from '../../services/api'
 
@@ -12,10 +12,9 @@ interface ProviderCardProps {
   icon: React.ReactNode
   status: string
   detail?: string
-  color: string
 }
 
-function ProviderCard({ title, icon, status, detail, color }: ProviderCardProps) {
+function ProviderCard({ title, icon, status, detail }: ProviderCardProps) {
   const isOnline = status === 'online' || status === 'available' || status === 'ready'
   const isConfigured = status !== 'not_configured' && status !== 'unavailable'
 
@@ -86,28 +85,24 @@ export function HealthDashboard({ health, diagnostics }: HealthDashboardProps) {
               icon={<Cpu className="w-4 h-4 text-cyan-400" />}
               status={providers?.groq?.status || 'unknown'}
               detail={providers?.groq?.model || ''}
-              color="#00f0ff"
             />
             <ProviderCard
               title="Local AI"
               icon={<Cpu className="w-4 h-4 text-violet-400" />}
               status={providers?.local_llm?.status || 'unknown'}
               detail={providers?.local_llm?.url || ''}
-              color="#a855f7"
             />
             <ProviderCard
               title="Gemini"
               icon={<Cpu className="w-4 h-4 text-blue-400" />}
               status={providers?.gemini?.status || 'unknown'}
               detail={providers?.gemini?.model || ''}
-              color="#3b82f6"
             />
             <ProviderCard
               title="OpenRouter"
               icon={<Cpu className="w-4 h-4 text-green-400" />}
               status={providers?.openrouter?.status || 'unknown'}
               detail={providers?.openrouter?.model || ''}
-              color="#22c55e"
             />
           </div>
         </div>
@@ -120,14 +115,12 @@ export function HealthDashboard({ health, diagnostics }: HealthDashboardProps) {
               icon={<MessageSquare className="w-4 h-4 text-pink-400" />}
               status={health?.tts?.status || 'unknown'}
               detail={health?.tts?.engine || ''}
-              color="#ec4899"
             />
             <ProviderCard
               title="STT"
               icon={<Mic className="w-4 h-4 text-orange-400" />}
               status={health?.voice?.status || 'unknown'}
               detail={health?.voice?.mic ? 'Microphone ready' : 'No microphone'}
-              color="#f97316"
             />
           </div>
         </div>
@@ -140,14 +133,12 @@ export function HealthDashboard({ health, diagnostics }: HealthDashboardProps) {
               icon={<ImageIcon className="w-4 h-4 text-purple-400" />}
               status={Object.keys(imageProviders).length > 0 ? 'online' : 'not_configured'}
               detail={Object.keys(imageProviders).join(', ') || 'No providers'}
-              color="#a855f7"
             />
             <ProviderCard
               title="Video"
               icon={<VideoIcon className="w-4 h-4 text-red-400" />}
               status={Object.keys(videoProviders).length > 0 ? 'online' : 'not_configured'}
               detail={Object.keys(videoProviders).join(', ') || 'No providers'}
-              color="#ef4444"
             />
           </div>
         </div>
@@ -160,14 +151,12 @@ export function HealthDashboard({ health, diagnostics }: HealthDashboardProps) {
               icon={<Camera className="w-4 h-4 text-teal-400" />}
               status={diagnostics?.gestures?.active ? 'active' : 'inactive'}
               detail={diagnostics?.gestures?.available ? 'Camera ready' : 'Not configured'}
-              color="#14b8a6"
             />
             <ProviderCard
               title="Calls"
               icon={<Phone className="w-4 h-4 text-indigo-400" />}
               status={diagnostics?.calls?.available ? 'available' : 'not_configured'}
               detail={diagnostics?.calls?.provider || 'No provider'}
-              color="#6366f1"
             />
           </div>
         </div>

@@ -182,6 +182,8 @@ export interface DiagnosticInfo {
   pipewire: { status: string; error?: string }
   voice: { initialized: boolean; mic_available: boolean; tts_available: boolean }
   memory: { conversations: number }
+  image?: Array<{ id?: string; prompt?: string; provider?: string; date?: string; url?: string }>
+  video?: Array<{ id?: string; prompt?: string; provider?: string; date?: string; url?: string }>
   python: string
 }
 
