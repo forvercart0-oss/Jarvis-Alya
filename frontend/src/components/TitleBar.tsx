@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { Minus, Maximize2, X } from 'lucide-react'
-import { getCurrentWindow } from '@tauri-apps/api/window'
 
 function TitleBar() {
   const [isTauri, setIsTauri] = useState(false)
@@ -10,12 +9,22 @@ function TitleBar() {
   useEffect(() => {
     const tauriEnv = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__
     setIsTauri(tauriEnv)
-    if (tauriEnv) {
+    if (!tauriEnv) return
+
+    let cancelled = false
+    async function initWindow() {
       try {
-        setAppWindow(getCurrentWindow())
+        const { getCurrentWindow } = await import('@tauri-apps/api/window')
+        if (!cancelled) {
+          setAppWindow(getCurrentWindow())
+        }
       } catch {
         // ignore initialization errors
       }
+    }
+    initWindow()
+    return () => {
+      cancelled = true
     }
   }, [])
 
