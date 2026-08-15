@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { motion } from 'framer-motion'
 import { ImageIcon, VideoIcon, Sparkles } from 'lucide-react'
 import { api } from '../../services/api'
 
@@ -8,7 +7,7 @@ interface MediaGenerationPanelProps {
   onUpdate: (patch: any) => void
 }
 
-export function MediaGenerationPanel({ settings, onUpdate }: MediaGenerationPanelProps) {
+export function MediaGenerationPanel({ settings }: MediaGenerationPanelProps) {
   const [tab, setTab] = useState<'images' | 'videos'>('images')
   const [imagePrompt, setImagePrompt] = useState('')
   const [videoPrompt, setVideoPrompt] = useState('')
