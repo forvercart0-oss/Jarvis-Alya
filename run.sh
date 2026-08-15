@@ -73,6 +73,7 @@ fi
 
 # ---------------------------------------------------------------- backend
 info "Starting backend..."
+source .venv/bin/activate
 BACKEND_PID=$(lsof -ti tcp:8000 2>/dev/null || true)
 if [[ -n "$BACKEND_PID" ]]; then
   ok "Backend already running (PID $BACKEND_PID)"
