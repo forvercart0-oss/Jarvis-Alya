@@ -237,4 +237,18 @@ export const api = {
     })
     return res?.result ?? res
   },
+
+  async generateImage(prompt: string, provider?: string, width = 1024, height = 1024, negativePrompt = ''): Promise<any> {
+    return request('/generate/image', {
+      method: 'POST',
+      body: JSON.stringify({ prompt, provider, width, height, negative_prompt: negativePrompt }),
+    })
+  },
+
+  async generateVideo(prompt: string, provider?: string, duration = 5, resolution = '720p', aspectRatio = '16:9'): Promise<any> {
+    return request('/generate/video', {
+      method: 'POST',
+      body: JSON.stringify({ prompt, provider, duration, resolution, aspect_ratio: aspectRatio }),
+    })
+  },
 }

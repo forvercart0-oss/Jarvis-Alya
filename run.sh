@@ -16,12 +16,12 @@ ok()    { echo -e "${GREEN}[JARVIS]${NC} $*"; }
 warn()  { echo -e "${YELLOW}[JARVIS]${NC} $*"; }
 fail()  { echo -e "${RED}[JARVIS]${NC} $*"; }
 
-# ---------------------------------------------------------------- checks
 info "Starting JARVIS 2.0..."
 
+# ---------------------------------------------------------------- checks
 check_cmd() {
   if command -v "$1" &>/dev/null; then
-    ok "$2: OK ($(command -v "$1"))"
+    ok "$2: OK"
     return 0
   else
     fail "$2: MISSING"
@@ -48,65 +48,30 @@ if [[ $PYTHON_OK -ne 0 || $NODE_OK -ne 0 || $NPM_OK -ne 0 ]]; then
   exit 1
 fi
 
-# ---------------------------------------------------------------- Python venv
-info "Checking Python environment..."
+# ---------------------------------------------------------------- verify installation
+info "Verifying installation..."
 if [[ ! -d ".venv" ]]; then
-  warn "Virtual environment not found. Creating..."
-  python3 -m venv .venv
-  ok "Virtual environment created"
+  fail "Python virtual environment not found. Run ./install.sh first."
+  exit 1
 fi
-
-source .venv/bin/activate
-
-if [[ ! -f ".venv/.installed" ]] || [[ "requirements.txt" -nt ".venv/.installed" ]]; then
-  warn "Installing Python dependencies..."
-  PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 pip install --timeout 120 --retries 10 --no-cache-dir -r requirements.txt
-  touch .venv/.installed
-  ok "Python dependencies installed"
-else
-  ok "Python dependencies: OK"
-fi
-
-# ---------------------------------------------------------------- Node dependencies
-info "Checking Node dependencies..."
 if [[ ! -d "frontend/node_modules" ]]; then
-  warn "Node modules not found. Installing..."
-  cd frontend
-  npm install
-  cd ..
-  ok "Node dependencies installed"
-else
-  ok "Node dependencies: OK"
+  fail "Node modules not found. Run ./install.sh first."
+  exit 1
 fi
-
-# ---------------------------------------------------------------- Frontend build
-info "Checking frontend build..."
-if [[ ! -d "frontend/dist" ]] || [[ "frontend/src" -nt "frontend/dist" ]]; then
-  warn "Building frontend..."
+if [[ ! -d "frontend/dist" ]]; then
+  warn "Frontend build not found. Building now..."
   cd frontend
   npm run build
   cd ..
   ok "Frontend built"
-else
-  ok "Frontend build: OK"
 fi
-
-# ---------------------------------------------------------------- Environment
-info "Checking environment..."
 if [[ ! -f ".env" ]]; then
-  if [[ -f ".env.example" ]]; then
-    warn ".env not found. Copying from .env.example..."
-    cp .env.example .env
-    ok ".env created from .env.example"
-  else
-    fail ".env and .env.example not found!"
-    exit 1
-  fi
-else
-  ok "Environment: OK"
+  warn ".env not found. Copying from .env.example..."
+  cp .env.example .env
+  ok ".env created"
 fi
 
-# ---------------------------------------------------------------- Backend
+# ---------------------------------------------------------------- backend
 info "Starting backend..."
 BACKEND_PID=$(lsof -ti tcp:8000 2>/dev/null || true)
 if [[ -n "$BACKEND_PID" ]]; then
@@ -117,7 +82,6 @@ else
   ok "Backend started (PID $BACKEND_PID)"
 fi
 
-# Wait for backend
 for i in {1..30}; do
   if curl -s http://127.0.0.1:8000/api/health >/dev/null 2>&1; then
     ok "Backend: ONLINE"
@@ -130,33 +94,19 @@ for i in {1..30}; do
   sleep 1
 done
 
-# ---------------------------------------------------------------- Desktop
-info "Checking desktop environment..."
+# ---------------------------------------------------------------- desktop
+info "Launching JARVIS desktop application..."
+echo ""
+echo -e "${GREEN}╔══════════════════════════════════════╗${NC}"
+echo -e "${GREEN}║   JARVIS 2.0  —  Desktop Mode       ║${NC}"
+echo -e "${GREEN}╚══════════════════════════════════════╝${NC}"
+echo ""
 
-# Check if Tauri is available
-TAURI_AVAILABLE=0
 if [[ -f "frontend/node_modules/.bin/tauri" ]] || command -v tauri &>/dev/null; then
-  TAURI_AVAILABLE=1
-  ok "Tauri: AVAILABLE"
-else
-  warn "Tauri: NOT AVAILABLE (install Rust: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh)"
-  warn "Then run: cd frontend && npm install && cd .. && ./run.sh"
-fi
-
-if [[ $TAURI_AVAILABLE -eq 1 ]]; then
-  info "Launching JARVIS desktop application..."
-  echo ""
-  echo -e "${GREEN}╔══════════════════════════════════════╗${NC}"
-  echo -e "${GREEN}║   JARVIS 2.0  —  Desktop Mode       ║${NC}"
-  echo -e "${GREEN}╚══════════════════════════════════════╝${NC}"
-  echo ""
-
-  # Launch Tauri from frontend directory where scripts are defined
   cd frontend
   npm run tauri:dev
   cd ..
 else
-  fail "Cannot launch desktop mode without Tauri."
-  fail "Install Rust and run: cd frontend && npm install"
+  fail "Tauri not available. Run ./install.sh to set up Rust."
   exit 1
 fi

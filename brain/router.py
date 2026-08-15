@@ -81,6 +81,14 @@ class Router:
         if "hello" in lower or "hi" in lower:
             return Route("respond", "", {})
 
+        if any(k in lower for k in ["generate an image", "create an image", "make an image", "image generate", "image banao", "image create karo", "photo generate", "wallpaper generate"]):
+            prompt = re.sub(r"^(generate|create|make)\s+(an?\s+)?image\s*(of\s+)?", "", text, flags=re.IGNORECASE).strip()
+            return Route("tool", "generate_image", {"prompt": prompt or text})
+
+        if any(k in lower for k in ["generate a video", "create a video", "make a video", "video generate", "video banao", "cinematic video"]):
+            prompt = re.sub(r"^(generate|create|make)\s+(a\s+)?video\s*(of\s+)?", "", text, flags=re.IGNORECASE).strip()
+            return Route("tool", "generate_video", {"prompt": prompt or text})
+
         return Route("respond", "", {})
 
     async def decide(self, messages: list[dict]) -> Route:

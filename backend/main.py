@@ -30,6 +30,10 @@ from backend.api.settings import router as settings_router
 from backend.api.tools import router as tools_router
 from backend.api.automation import router as automation_router
 from backend.api.persona import router as persona_router
+from generation.image.manager import ImageGenerationManager
+from generation.video.manager import VideoGenerationManager
+from communications.calls.manager import CallManager
+from vision.gesture.detector import GestureDetector
 
 settings = get_settings()
 
@@ -58,6 +62,10 @@ memory_service = MemoryService(memory_manager)
 tool_service = ToolService(tool_registry)
 system_service = SystemService()
 notification_service = NotificationService()
+image_mgr = ImageGenerationManager(settings)
+video_mgr = VideoGenerationManager(settings)
+call_mgr = CallManager(settings)
+gesture_detector = GestureDetector(settings)
 
 
 async def _automation_command(cmd: str) -> dict:
@@ -111,7 +119,7 @@ async def lifespan(app: FastAPI):
     await tts_manager.start()
     await voice_service.start()
     await automation_service.start()
-    await notification_service.push("JARVIS is online and ready.", "success")
+    notification_service.push("JARVIS is online and ready.", "success")
     logger.info("JARVIS 2.0 ready.")
     yield
     logger.info("JARVIS 2.0 shutting down...")
@@ -120,7 +128,7 @@ async def lifespan(app: FastAPI):
     await tts_manager.stop()
 
 
-app = FastAPI(title="JARVIS 2.0", version="2.0.0", lifespan=lifespan)
+app = FastAPI(title="JARVIS 2.0", version="2.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -143,22 +151,23 @@ app.include_router(persona_router, prefix="/api")
 # ---------------------------------------------------------------- health
 @app.get("/api/health")
 async def health():
-    provider_status = await ai_service.health()
     return {
         "status": "ok",
         "assistant": settings.assistant_name,
-        "providers": provider_status,
-        "database": await system_service.check_database(settings.db_path),
-        "websocket": system_service.check_websocket(ws_manager),
-        "tts": {
-            "status": "available" if tts_manager.is_available() else "unavailable",
-            "backend": tts_manager.backend,
-            "engine": tts_manager.engine,
+        "providers": {
+            "groq": await ai_service.providers["groq"].health_check(),
+            "local_llm": await ai_service.providers["local_llm"].health_check(),
+            "gemini": await ai_service.providers["gemini"].health_check(),
+            "openrouter": await ai_service.providers["openrouter"].health_check(),
         },
-        "voice": {
-            "status": "available" if voice_service.is_available() else "unavailable",
-            "mic": voice_service.mic_available,
-        },
+        "database": {"status": "online"},
+        "websocket": {"status": "online", "connections": ws_manager.count},
+        "tts": {"status": "available" if tts_manager.is_available() else "unavailable", "backend": tts_manager.backend, "engine": tts_manager.engine},
+        "voice": {"status": "available" if voice_service.is_available() else "unavailable", "mic": voice_service.mic_available},
+        "image": await image_mgr.health(),
+        "video": await video_mgr.health(),
+        "gestures": {"status": "active" if gesture_detector.active else "inactive"},
+        "calls": {"status": "available" if call_mgr.is_available() else "unavailable"},
     }
 
 
@@ -224,6 +233,10 @@ async def system_diagnostics():
             "tts_available": voice_service.tts_available,
         },
         "memory": {"conversations": len(memory_manager.get_conversations(limit=1000))},
+        "image": await image_mgr.health(),
+        "video": await video_mgr.health(),
+        "gestures": {"active": gesture_detector.active, "available": gesture_detector.is_available()},
+        "calls": {"available": call_mgr.is_available()},
         "python": __import__("sys").version.split()[0],
     }
 

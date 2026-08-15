@@ -148,6 +148,7 @@ def build_registry(db_path=None) -> ToolRegistry:
         ScreenshotTool, BrightnessControlTool, DoNotDisturbTool,
         TypeTextTool, ClickTool,
     )
+    from tools.media import GenerateImageTool, GenerateVideoTool
     from memory.manager import MemoryManager
 
     if hasattr(db_path, "store"):
@@ -194,4 +195,6 @@ def build_registry(db_path=None) -> ToolRegistry:
     registry.register(DoNotDisturbTool())
     registry.register(TypeTextTool())
     registry.register(ClickTool())
+    registry.register(GenerateImageTool())
+    registry.register(GenerateVideoTool())
     return registry

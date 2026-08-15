@@ -8,6 +8,11 @@ A production-quality, cross-platform desktop AI assistant built with Tauri, Reac
 - **AI Providers** — Groq (default), Gemini, OpenRouter, Local LLM (Ollama/OpenAI-compatible).
 - **Voice Pipeline** — Kokoro TTS with low-latency streaming, Google STT, wake word support.
 - **Personas** — Switch between JARVIS (male/cyan) and ALYA (female/pink) at runtime.
+- **Language** — Auto-detect English, Urdu, Roman Urdu, Hinglish. Responds in the user's language style.
+- **Image Generation** — Puter (free), Pixazo (free tier), Gemini.
+- **Video Generation** — fal.ai, Magic Hour.
+- **Gesture Control** — Hand gesture recognition via local computer vision (configurable).
+- **Call Control** — Legitimate call provider integration with permission controls.
 - **System Control** — Real CPU/RAM/disk/battery/network monitoring, app launching, terminal execution.
 - **Computer Use** — Screenshots, keyboard/mouse input, browser automation, accessibility-aware interaction.
 - **Coding Agent** — Project inspection, file creation/editing, full-stack scaffolding.

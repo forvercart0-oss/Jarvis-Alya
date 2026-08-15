@@ -504,6 +504,9 @@ export default function App() {
                       onExecute={handleAutomationExecute}
                     />
                   )}
+                  {activeTab === 'media' && (
+                    <MediaGenerationPanel settings={settings} onUpdate={handleSettingsUpdate} />
+                  )}
                   {activeTab === 'settings' && (
                     <SettingsPanel settings={settings} persona={persona} onSwitchPersona={(id) => switchPersona(id)} onUpdate={handleSettingsUpdate} onClose={() => setActiveTab('chat')} />
                   )}

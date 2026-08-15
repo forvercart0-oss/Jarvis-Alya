@@ -1,6 +1,6 @@
 export type OrbState = 'idle' | 'listening' | 'thinking' | 'processing' | 'speaking' | 'error'
 
-export type TabId = 'home' | 'chat' | 'voice' | 'system' | 'tools' | 'coding' | 'memory' | 'automations' | 'settings' | 'diagnostics' | 'about'
+export type TabId = 'home' | 'chat' | 'voice' | 'system' | 'tools' | 'coding' | 'memory' | 'automations' | 'media' | 'settings' | 'diagnostics' | 'about'
 
 export type ConnectionState = 'connecting' | 'online' | 'offline'
 
@@ -72,6 +72,22 @@ export interface JarvisSettings {
   reduced_motion?: boolean
   font_size?: string
   ui_preset?: string
+  language_mode?: string
+  image_generation_enabled?: boolean
+  image_provider?: string
+  pixazo_api_key?: string
+  puter_api_key?: string
+  video_generation_enabled?: boolean
+  video_provider?: string
+  fal_api_key?: string
+  magic_hour_api_key?: string
+  gesture_control_enabled?: boolean
+  gesture_camera_device?: string
+  gesture_sensitivity?: number
+  call_control_enabled?: boolean
+  call_provider?: string
+  call_api_key?: string
+  call_assist_mode?: string
 }
 
 export interface PersonaInfo {

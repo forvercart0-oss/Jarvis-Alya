@@ -158,6 +158,10 @@ class Settings(BaseSettings):
     # Web search
     web_search_api_key: str = ""
 
+    # Language
+    language_mode: str = "auto"
+    response_style: str = "balanced"
+
     # ---- persistence -------------------------------------------------
     def apply_db_overrides(self, overrides: dict[str, str]) -> None:
         """Apply string values (from the settings DB table) on top of env."""

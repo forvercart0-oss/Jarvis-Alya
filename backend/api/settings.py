@@ -51,6 +51,22 @@ class SettingsUpdate(BaseModel):
     background_particles: Optional[bool] = None
     reduced_motion: Optional[bool] = None
     font_size: Optional[str] = None
+    language_mode: Optional[str] = None
+    image_generation_enabled: Optional[bool] = None
+    image_provider: Optional[str] = None
+    pixazo_api_key: Optional[str] = None
+    puter_api_key: Optional[str] = None
+    video_generation_enabled: Optional[bool] = None
+    video_provider: Optional[str] = None
+    fal_api_key: Optional[str] = None
+    magic_hour_api_key: Optional[str] = None
+    gesture_control_enabled: Optional[bool] = None
+    gesture_camera_device: Optional[str] = None
+    gesture_sensitivity: Optional[int] = None
+    call_control_enabled: Optional[bool] = None
+    call_provider: Optional[str] = None
+    call_api_key: Optional[str] = None
+    call_assist_mode: Optional[str] = None
 
 
 def _mask_api_key(key: str) -> str:
@@ -110,6 +126,21 @@ async def get_settings_api():
         "background_particles": getattr(s, "background_particles", True),
         "reduced_motion": getattr(s, "reduced_motion", False),
         "font_size": getattr(s, "font_size", "normal"),
+        "language_mode": getattr(s, "language_mode", "auto"),
+        "image_generation_enabled": getattr(s, "image_generation_enabled", True),
+        "image_provider": getattr(s, "image_provider", "auto"),
+        "pixazo_api_key": _mask_api_key(getattr(s, "pixazo_api_key", "")),
+        "puter_api_key": _mask_api_key(getattr(s, "puter_api_key", "")),
+        "video_generation_enabled": getattr(s, "video_generation_enabled", True),
+        "video_provider": getattr(s, "video_provider", "auto"),
+        "fal_api_key": _mask_api_key(getattr(s, "fal_api_key", "")),
+        "magic_hour_api_key": _mask_api_key(getattr(s, "magic_hour_api_key", "")),
+        "gesture_control_enabled": getattr(s, "gesture_control_enabled", False),
+        "gesture_camera_device": getattr(s, "gesture_camera_device", ""),
+        "gesture_sensitivity": getattr(s, "gesture_sensitivity", 50),
+        "call_control_enabled": getattr(s, "call_control_enabled", False),
+        "call_provider": getattr(s, "call_provider", ""),
+        "call_assist_mode": getattr(s, "call_assist_mode", "notify_only"),
         "db_settings": db_settings,
     }
 
