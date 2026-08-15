@@ -104,9 +104,11 @@ echo -e "${GREEN}╚════════════════════
 echo ""
 
 if [[ -f "frontend/node_modules/.bin/tauri" ]] || command -v tauri &>/dev/null; then
-  cd frontend
-  npm run tauri:dev
-  cd ..
+  if [[ -f "frontend/node_modules/.bin/tauri" ]]; then
+    "$SCRIPT_DIR/frontend/node_modules/.bin/tauri" dev
+  else
+    tauri dev
+  fi
 else
   fail "Tauri not available. Run ./install.sh to set up Rust."
   exit 1
