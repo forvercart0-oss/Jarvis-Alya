@@ -56,6 +56,8 @@ export function useJarvis() {
       setConnection('offline')
     })
 
+    ws.connect()
+
     ws.on('thinking', () => setOrbState('thinking'))
     ws.on('listening', () => setOrbState('listening'))
     ws.on('processing', () => setOrbState('processing'))
