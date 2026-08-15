@@ -63,7 +63,7 @@ if command -v pacman &>/dev/null; then
     webkit2gtk-4.1
     libappindicator-gtk3
     librsvg
-    libxdo
+    xdotool
     openssl
     base-devel
     cmake

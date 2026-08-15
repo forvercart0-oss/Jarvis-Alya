@@ -40,27 +40,66 @@ Tauri (Rust)
 - Node.js 18+
 - npm 9+
 - Rust 1.70+ (for Tauri desktop build)
-- Arch Linux recommended (Linux-first design)
 
-## Quick Start
+## Installation
+
+Choose your OS and copy-paste the commands.
+
+### Arch Linux
 
 ```bash
-# 1. Clone
+sudo pacman -S --needed python3 python-pip python-virtualenv nodejs npm webkit2gtk-4.1 libappindicator-gtk3 librsvg xdotool openssl base-devel cmake patchelf pkg-config
 git clone https://github.com/forvercart0-oss/Jarvis-Alya.git
 cd Jarvis-Alya
-
-# 2. Install dependencies
 ./install.sh
-
-# 3. Configure
-cp .env.example .env
-# Edit .env and add your GROQ_API_KEY
-
-# 4. Run
-./run.sh
 ```
 
-Or launch from your application menu after installation: **JARVIS 2.0**
+### Debian / Ubuntu
+
+```bash
+sudo apt install python3 python3-pip python3-venv nodejs npm libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev libxdo-dev libssl-dev libayatana-appindicator3-dev pkg-config build-essential
+git clone https://github.com/forvercart0-oss/Jarvis-Alya.git
+cd Jarvis-Alya
+./install.sh
+```
+
+### Fedora
+
+```bash
+sudo dnf install python3 python3-pip nodejs npm webkit2gtk4-devel libappindicator-gtk3-devel librsvg2-devel xdotool openssl-devel cmake pkg-config
+git clone https://github.com/forvercart0-oss/Jarvis-Alya.git
+cd Jarvis-Alya
+./install.sh
+```
+
+### macOS
+
+```bash
+brew install python node webkit2gtk-4.1 libappindicator-gtk3 librsvg xdotool openssl cmake pkg-config
+git clone https://github.com/forvercart0-oss/Jarvis-Alya.git
+cd Jarvis-Alya
+./install-macos.sh
+```
+
+### Windows (PowerShell as Administrator)
+
+```powershell
+winget install Python.Python.3.12 OpenJS.NodeJS.LTS Git.Git
+git clone https://github.com/forvercart0-oss/Jarvis-Alya.git
+cd Jarvis-Alya
+.\install-windows.ps1
+```
+
+## Post-Install Configuration
+
+After installation:
+
+```bash
+cp .env.example .env
+# Edit .env and add your GROQ_API_KEY
+```
+
+Run with `./run.sh` (Linux/macOS) or `.\run.bat` (Windows), or launch **JARVIS 2.0** from your application menu.
 
 ## Configuration
 
@@ -115,13 +154,9 @@ npm run build
 npm run tauri:build
 ```
 
-## Production Build (Linux)
+## Building Desktop App
 
 ```bash
-# Install system dependencies for Tauri
-sudo pacman -S --needed webkit2gtk-4.1 libappindicator-gtk3 librsvg libxdo openssl base-devel cmake patchelf pkg-config
-
-# Build desktop application
 npm run tauri:build
 
 # Binary will be in:
@@ -148,7 +183,7 @@ python main.py
 ```
 
 ### Tauri build fails
-Ensure `webkit2gtk-4.1` and related system packages are installed (see Production Build above).
+Ensure `webkit2gtk-4.1` and related system packages are installed (see Installation above).
 
 ### Kokoro TTS not working
 Kokoro requires a dedicated virtualenv on Python 3.11/3.12. Set `TTS_VENV_DIR` to the path of a venv with `kokoro` installed, or use `espeak-ng` fallback (`TTS_ENGINE=espeak-ng`).
