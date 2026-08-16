@@ -1,4 +1,5 @@
 import asyncio
+from types import SimpleNamespace
 from typing import AsyncGenerator, Optional
 from groq import Groq, APITimeoutError, AuthenticationError, RateLimitError, InternalServerError
 from config.settings import Settings
@@ -22,7 +23,6 @@ class GroqClient:
     @staticmethod
     def _normalize_error(exc: Exception) -> GroqClientError:
         status_code = getattr(exc, "status_code", None)
-        message = getattr(exc, "message", str(exc))
         if status_code == 401 or isinstance(exc, AuthenticationError):
             return GroqClientError("GROQ_API_KEY is invalid or expired. Please check your configuration.")
         if status_code == 429 or isinstance(exc, RateLimitError):
@@ -33,7 +33,7 @@ class GroqClient:
             return GroqClientError("Groq request timed out. The service may be overloaded.")
         return GroqClientError(f"Unexpected Groq error: {exc}")
 
-    async def chat(self, messages: list[dict]) -> "SimpleNamespace":
+    async def chat(self, messages: list[dict]) -> SimpleNamespace:
         if not self._client:
             raise GroqClientError("Groq client is not configured.")
         try:
@@ -43,7 +43,6 @@ class GroqClient:
             )
             if asyncio.iscoroutine(response):
                 response = await response
-            from types import SimpleNamespace
             return SimpleNamespace(content=response.choices[0].message.content)
         except Exception as exc:
             raise self._normalize_error(exc) from exc

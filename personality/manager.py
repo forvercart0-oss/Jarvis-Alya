@@ -180,7 +180,6 @@ class PersonalityEngine:
 
     def get_persona_aware_opening(self, user_name: str = "Sir") -> str:
         """Get a persona-aware conversation opening."""
-        persona = self._current_persona
         level = self.get_personality_config()
 
         if self._persona_id == "jarvis":
@@ -211,7 +210,6 @@ class PersonalityEngine:
         but this can add persona-specific flair.
         """
         level = self.get_personality_config()
-        persona = self._current_persona
 
         # Add personality-appropriate prefix for certain responses
         if response.strip().startswith(("I cannot", "I can't", "I'm sorry")):

@@ -5,8 +5,15 @@
   "identifier": "com.jarvis.desktop",
   "build": {
     "frontendDist": "../frontend/dist",
-    "devPath": "http://localhost:5174",
-    "beforeBuildCommand": "npm run build"
+    "devUrl": "http://localhost:5174",
+    "beforeDevCommand": {
+      "script": "npm run dev",
+      "cwd": "../frontend"
+    },
+    "beforeBuildCommand": {
+      "script": "npm run build",
+      "cwd": "../frontend"
+    }
   },
   "app": {
     "windows": [

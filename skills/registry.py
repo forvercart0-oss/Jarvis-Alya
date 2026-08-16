@@ -19,6 +19,11 @@ class SkillRegistry:
         self._skills: dict[str, dict[str, Any]] = {}
         self._activity_log: list[dict[str, Any]] = []
 
+    @property
+    def base_dir(self) -> Path:
+        """Directory skills are loaded from and persisted to."""
+        return self._base_dir
+
     # ---------------------------------------------------------------- loading
     def load(self) -> dict[str, dict[str, Any]]:
         """Load all skills from disk, replacing current registry contents."""

@@ -38,7 +38,6 @@ class PersonaService:
 
         # Theme colors follow the persona but only overwrite when the user has
         # not customized them away from a persona default.
-        persona_payload_dict = persona_payload(persona.id)
         if settings.accent_color in ("#00f0ff", "#ff6ec7", "", "cyan", None):
             settings.accent_color = persona.accent_color
 

@@ -59,7 +59,7 @@ class WindowsPlatform(SystemPlatform):
         try:
             _pw(
                 "$n = New-Object -ComObject WScript.Shell",
-                f"$n.SendKeys([char]0)",  # noqa: B005 - volume via nircmd not guaranteed
+                "$n.SendKeys([char]0)",  # noqa: B005 - volume via nircmd not guaranteed
             )
             return {"ok": True, "level": level}
         except Exception as exc:

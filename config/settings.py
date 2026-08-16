@@ -160,7 +160,6 @@ class Settings(BaseSettings):
 
     # Language
     language_mode: str = "auto"
-    response_style: str = "balanced"
 
     # ---- persistence -------------------------------------------------
     def apply_db_overrides(self, overrides: dict[str, str]) -> None:

@@ -108,7 +108,7 @@ class GroqProvider(AIProvider):
         try:
             import time as _time
             start = _time.monotonic()
-            response = await asyncio.to_thread(
+            await asyncio.to_thread(
                 lambda: self._client.chat.completions.create(
                     model=self.settings.groq_model,
                     messages=[{"role": "user", "content": "Hi"}],

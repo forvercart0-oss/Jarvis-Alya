@@ -187,8 +187,6 @@ class SafetyResponseGenerator:
         language: str = "en",
     ) -> str:
         """Generate a confirmation request for dangerous operations."""
-        style = self._alya_style if persona.lower() == "alya" else self._jarvis_style
-
         if language in ("roman_urdu", "mixed", "ur"):
             return self._roman_urdu_confirmation(tool_name, persona)
 

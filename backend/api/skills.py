@@ -111,12 +111,11 @@ async def toggle_skill(skill_id: str, body: Optional[dict] = None):
 
 @router.post("/skills/{skill_id}/reload")
 async def reload_skill(skill_id: str):
-    from backend.main import skill_manager
+    from backend.main import skill_manager, skill_registry
     skill = skill_manager.get_skill(skill_id)
     if skill is None:
         raise HTTPException(status_code=404, detail="Skill not found")
-    skill_manager.save_skill_to_disk(skill_id, Path("/home/hell/Jarvis2.0/skills/custom"))
-    from backend.main import skill_registry
+    skill_manager.save_skill_to_disk(skill_id, skill_registry.base_dir)
     skill_registry.reload()
     return {"status": "reloaded", "id": skill_id}
 

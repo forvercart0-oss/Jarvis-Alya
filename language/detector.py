@@ -36,13 +36,11 @@ _ENGLISH_KEYWORDS = {
     'both', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'not',
     'only', 'own', 'same', 'than', 'too', 'very', 'just', 'because',
     'as', 'until', 'while', 'although', 'though', 'even', 'if', 'unless',
-    'whether', 'while', 'since', 'during', 'before', 'after', 'above',
-    'below', 'between', 'among', 'through', 'during', 'before', 'after',
-    'open', 'close', 'run', 'execute', 'search', 'find', 'create', 'make',
+    'whether', 'since', 'during', 'before', 'after', 'between', 'among', 'through', 'open', 'close', 'run', 'execute', 'search', 'find', 'create', 'make',
     'delete', 'read', 'write', 'install', 'update', 'download', 'send',
     'please', 'thank', 'thanks', 'sorry', 'hello', 'hi', 'hey', 'good',
-    'morning', 'evening', 'night', 'yes', 'no', 'ok', 'okay', 'sure',
-    'help', 'what', 'when', 'where', 'who', 'why', 'how', 'which',
+    'morning', 'evening', 'night', 'yes', 'ok', 'okay', 'sure',
+    'help', 'what', 'who', 'which',
 }
 
 
