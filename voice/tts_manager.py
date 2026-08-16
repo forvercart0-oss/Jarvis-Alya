@@ -3,6 +3,7 @@ import logging
 import re
 from typing import Awaitable, Callable, Optional
 
+from backend.services.ws_manager import ws_manager
 from voice.tts import TTS as EspeakTTS
 from voice.kokoro_tts import KokoroTTS
 from config.settings import get_settings
@@ -36,6 +37,17 @@ class TTSManager:
         self._worker: Optional[asyncio.Task] = None
         self._speaking = False
         self._callbacks: list[Callable[[str], Awaitable[None]]] = []
+        self._first_audio_callbacks: list[Callable[[], Awaitable[None]]] = []
+        if self._kokoro.is_available():
+            self._kokoro.on_first_audio(self._on_first_audio)
+
+    def _on_first_audio(self):
+        if self._first_audio_callbacks:
+            for cb in list(self._first_audio_callbacks):
+                try:
+                    asyncio.get_running_loop().create_task(cb())
+                except RuntimeError:
+                    pass
 
     def _resolve_engine(self):
         if self.engine == "kokoro" and self._kokoro.is_available():
@@ -82,6 +94,8 @@ class TTSManager:
         self._espeak = EspeakTTS(self.settings)
         self._kokoro = KokoroTTS(self.settings)
         self._active = self._resolve_engine()
+        if self._kokoro.is_available():
+            self._kokoro.on_first_audio(self._on_first_audio)
 
     async def start(self):
         if self._worker is None or self._worker.done():
@@ -124,6 +138,9 @@ class TTSManager:
 
     def on_event(self, callback: Callable[[str, str], Awaitable[None]]):
         self._callbacks.append(callback)
+
+    def on_first_audio(self, callback: Callable[[], Awaitable[None]]):
+        self._first_audio_callbacks.append(callback)
 
     def is_speaking(self) -> bool:
         return self._speaking

@@ -8,8 +8,11 @@ import sys
 import tempfile
 import threading
 from pathlib import Path
+from typing import Callable
 
 from config.settings import get_settings
+
+from tts.cache import TTSCache
 
 KOKORO_VOICES = [
     "af_heart", "af_bella", "af_nicole", "af_aoede", "af_kore", "af_sarah",
@@ -51,6 +54,19 @@ def _voice_gender(voice_id: str) -> str:
     if len(prefix) >= 2:
         return "female" if prefix[1] == "f" else "male"
     return "unknown"
+
+
+def detect_language(text: str) -> str:
+    """Detect if text is English, Urdu, or mixed."""
+    if not text:
+        return "en"
+    urdu_chars = sum(1 for c in text if "\u0600" <= c <= "\u06FF" or "\uFB50" <= c <= "\uFDFF" or "\uFE70" <= c <= "\uFEFF")
+    latin_chars = sum(1 for c in text if c.isascii() and c.isalpha())
+    if urdu_chars > 0 and latin_chars > 0:
+        return "mixed"
+    if urdu_chars > latin_chars:
+        return "ur"
+    return "en"
 
 
 def _lang_for_voice(voice_id: str) -> str:
@@ -202,7 +218,20 @@ class KokoroTTS:
         self._available = False
         self._backend: str | None = None
         self._worker: _KokoroWorker | None = None
+        self._first_audio_callbacks: list[Callable[[], None]] = []
+        cache_dir = getattr(self.settings, "tts_cache_dir", "") or os.path.join(tempfile.gettempdir(), "jarvis-tts-cache")
+        self._cache = TTSCache(cache_dir)
         self._check_availability()
+
+    def on_first_audio(self, callback: Callable[[], None]) -> None:
+        self._first_audio_callbacks.append(callback)
+
+    def _emit_first_audio(self) -> None:
+        for cb in list(self._first_audio_callbacks):
+            try:
+                cb()
+            except Exception:
+                pass
 
     def _check_availability(self):
         try:
@@ -350,21 +379,33 @@ class KokoroTTS:
         player = self._find_player()
         if not player:
             return False
+        speed_mult = max(0.5, min(2.5, self.speed / 150.0))
+        cached_path = self._cache.get(text, self.voice, speed_mult, "en")
         try:
-            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-                wav_path = tmp.name
-            if not self._render_to_wav(text, wav_path):
-                os.unlink(wav_path)
-                return False
+            if not cached_path:
+                with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+                    wav_path = tmp.name
+                if not self._render_to_wav(text, wav_path):
+                    with contextlib.suppress(OSError):
+                        os.unlink(wav_path)
+                    return False
+                with open(wav_path, "rb") as f:
+                    audio_data = f.read()
+                self._cache.put(text, self.voice, speed_mult, "en", audio_data)
+            else:
+                wav_path = cached_path
             vol = max(0.0, min(1.0, self.volume / 100.0))
             play_cmd = [player, "--volume", f"{vol:.2f}", wav_path] if player == "pw-play" else [player, wav_path]
+            self._emit_first_audio()
             subprocess.run(play_cmd, capture_output=True, check=True)
-            with contextlib.suppress(OSError):
-                os.unlink(wav_path)
+            if not cached_path:
+                with contextlib.suppress(OSError):
+                    os.unlink(wav_path)
             return True
         except Exception:
-            with contextlib.suppress(OSError, UnboundLocalError):
-                os.unlink(wav_path)
+            if not cached_path:
+                with contextlib.suppress(OSError, UnboundLocalError):
+                    os.unlink(wav_path)
             return False
 
     def _speak_espeak(self, text: str) -> bool:
@@ -381,11 +422,14 @@ class KokoroTTS:
             )
             vol = max(0.0, min(1.0, self.volume / 100.0))
             play_cmd = [player, "--volume", f"{vol:.2f}", wav_path] if player == "pw-play" else [player, wav_path]
+            self._emit_first_audio()
             subprocess.run(play_cmd, capture_output=True, check=True)
             with contextlib.suppress(OSError):
                 os.unlink(wav_path)
             return True
         except Exception:
+            with contextlib.suppress(OSError):
+                os.unlink(wav_path)
             return False
 
     async def speak(self, text: str) -> bool:

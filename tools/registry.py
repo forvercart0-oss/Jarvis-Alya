@@ -138,6 +138,11 @@ def build_registry(db_path=None) -> ToolRegistry:
     from tools.time import TimeTool, DateTool
     from tools.web import WebSearchTool
     from tools.browser import OpenBrowserTool
+    from tools.browser_control import (
+        BrowserNavigateTool, BrowserBackTool, BrowserForwardTool,
+        BrowserReloadTool, BrowserClickTool, BrowserTypeTool,
+        BrowserReadTool, BrowserScreenshotTool, BrowserStatusTool,
+    )
     from tools.memory_tools import RememberTool, ForgetTool, RecallMemoriesTool
     from tools.projects import (
         ListProjectsTool, CreateProjectTool, DeleteProjectTool,
@@ -149,6 +154,8 @@ def build_registry(db_path=None) -> ToolRegistry:
         TypeTextTool, ClickTool,
     )
     from tools.media import GenerateImageTool, GenerateVideoTool
+    from tools.computer_control import ComputerControlTool
+    from computer.controller import computer_controller
     from memory.manager import MemoryManager
 
     if hasattr(db_path, "store"):
@@ -180,6 +187,15 @@ def build_registry(db_path=None) -> ToolRegistry:
     registry.register(CloseApplicationTool())
     registry.register(WebSearchTool())
     registry.register(OpenBrowserTool())
+    registry.register(BrowserNavigateTool())
+    registry.register(BrowserBackTool())
+    registry.register(BrowserForwardTool())
+    registry.register(BrowserReloadTool())
+    registry.register(BrowserClickTool())
+    registry.register(BrowserTypeTool())
+    registry.register(BrowserReadTool())
+    registry.register(BrowserScreenshotTool())
+    registry.register(BrowserStatusTool())
     registry.register(RememberTool(memory))
     registry.register(ForgetTool(memory))
     registry.register(RecallMemoriesTool(memory))
@@ -197,4 +213,5 @@ def build_registry(db_path=None) -> ToolRegistry:
     registry.register(ClickTool())
     registry.register(GenerateImageTool())
     registry.register(GenerateVideoTool())
+    registry.register(ComputerControlTool())
     return registry

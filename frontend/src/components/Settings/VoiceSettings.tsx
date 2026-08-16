@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import type { JarvisSettings } from '../../types'
 import { Input, Toggle, Button, Slider } from '../Common'
 import { api } from '../../services/api'
@@ -26,6 +26,11 @@ export function VoiceSettings({ settings, onUpdate }: VoiceSettingsProps) {
   const [voices, setVoices] = useState<string[]>([])
   const [testText, setTestText] = useState('Hello! This is JARVIS speaking.')
   const [testing, setTesting] = useState(false)
+  const [voiceEngine, setVoiceEngine] = useState(settings.tts_engine)
+  const [voiceVoice, setVoiceVoice] = useState(settings.tts_voice)
+  const [voiceSpeed, setVoiceSpeed] = useState(settings.tts_speed)
+  const [voiceVolume, setVoiceVolume] = useState(settings.tts_volume)
+  const timersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
 
   const refreshStatus = async () => {
     try {
@@ -42,6 +47,16 @@ export function VoiceSettings({ settings, onUpdate }: VoiceSettingsProps) {
     const timer = setInterval(refreshStatus, 5000)
     return () => clearInterval(timer)
   }, [])
+
+  useEffect(() => { setVoiceEngine(settings.tts_engine) }, [settings.tts_engine])
+  useEffect(() => { setVoiceVoice(settings.tts_voice) }, [settings.tts_voice])
+  useEffect(() => { setVoiceSpeed(settings.tts_speed) }, [settings.tts_speed])
+  useEffect(() => { setVoiceVolume(settings.tts_volume) }, [settings.tts_volume])
+
+  const debouncedUpdate = useCallback((key: string, value: any) => {
+    if (timersRef.current[key]) clearTimeout(timersRef.current[key])
+    timersRef.current[key] = setTimeout(() => onUpdate({ [key]: value }), 300)
+  }, [onUpdate])
 
   const handleTest = async () => {
     setTesting(true)
@@ -86,7 +101,7 @@ export function VoiceSettings({ settings, onUpdate }: VoiceSettingsProps) {
 
       <div className="space-y-1">
         <label className="text-xs text-slate-400">TTS Engine</label>
-        <select value={settings.tts_engine} onChange={(e) => onUpdate({ tts_engine: e.target.value })} className={inputCls}>
+        <select value={voiceEngine} onChange={(e) => { setVoiceEngine(e.target.value); debouncedUpdate('tts_engine', e.target.value) }} className={inputCls}>
           <option value="espeak-ng">espeak-ng (fast, offline)</option>
           <option value="kokoro">kokoro (neural, if installed)</option>
         </select>
@@ -95,17 +110,17 @@ export function VoiceSettings({ settings, onUpdate }: VoiceSettingsProps) {
       <div className="space-y-1">
         <label className="text-xs text-slate-400">TTS Voice</label>
         <select
-          value={settings.tts_voice}
-          onChange={(e) => onUpdate({ tts_voice: e.target.value })}
+          value={voiceVoice}
+          onChange={(e) => { setVoiceVoice(e.target.value); debouncedUpdate('tts_voice', e.target.value) }}
           className={inputCls}
         >
-          {voices.includes(settings.tts_voice) ? (
-            <option value={settings.tts_voice}>{settings.tts_voice}</option>
+          {voices.includes(voiceVoice) ? (
+            <option value={voiceVoice}>{voiceVoice}</option>
           ) : (
-            <option value={settings.tts_voice}>Custom: {settings.tts_voice}</option>
+            <option value={voiceVoice}>Custom: {voiceVoice}</option>
           )}
           {voices
-            .filter((v) => v !== settings.tts_voice)
+            .filter((v) => v !== voiceVoice)
             .map((v) => (
               <option key={v} value={v}>{v}</option>
             ))}
@@ -117,16 +132,16 @@ export function VoiceSettings({ settings, onUpdate }: VoiceSettingsProps) {
         min={50}
         max={500}
         step={5}
-        value={settings.tts_speed}
-        onChange={(v: number) => onUpdate({ tts_speed: v })}
+        value={voiceSpeed}
+        onChange={(v: number) => { setVoiceSpeed(v); debouncedUpdate('tts_speed', v) }}
       />
       <Slider
         label="TTS Volume"
         min={0}
         max={100}
         step={5}
-        value={settings.tts_volume}
-        onChange={(v: number) => onUpdate({ tts_volume: v })}
+        value={voiceVolume}
+        onChange={(v: number) => { setVoiceVolume(v); debouncedUpdate('tts_volume', v) }}
       />
 
       <div className="space-y-1">

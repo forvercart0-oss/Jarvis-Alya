@@ -20,6 +20,10 @@ class SettingsUpdate(BaseModel):
     wake_word: Optional[str] = None
     memory_enabled: Optional[bool] = None
     vector_memory_enabled: Optional[bool] = None
+    message_notifications_enabled: Optional[bool] = None
+    browser_notifications_enabled: Optional[bool] = None
+    voice_notifications_enabled: Optional[bool] = None
+    desktop_notifications_enabled: Optional[bool] = None
     debug: Optional[bool] = None
     groq_model: Optional[str] = None
     groq_api_key: Optional[str] = None
@@ -35,6 +39,7 @@ class SettingsUpdate(BaseModel):
     local_llm_timeout: Optional[int] = None
     tts_engine: Optional[str] = None
     tts_venv_dir: Optional[str] = None
+    tts_cache_dir: Optional[str] = None
     kokoro_model_path: Optional[str] = None
     response_style: Optional[str] = None
     language: Optional[str] = None
@@ -95,6 +100,10 @@ async def get_settings_api():
         "wake_word": s.wake_word,
         "memory_enabled": s.memory_enabled,
         "vector_memory_enabled": s.vector_memory_enabled,
+        "message_notifications_enabled": s.message_notifications_enabled,
+        "browser_notifications_enabled": s.browser_notifications_enabled,
+        "voice_notifications_enabled": s.voice_notifications_enabled,
+        "desktop_notifications_enabled": s.desktop_notifications_enabled,
         "debug": s.debug,
         "groq_model": s.groq_model,
         "groq_api_key": _mask_api_key(s.groq_api_key),
@@ -110,6 +119,7 @@ async def get_settings_api():
         "local_llm_timeout": s.local_llm_timeout,
         "tts_engine": s.tts_engine,
         "tts_venv_dir": getattr(s, "tts_venv_dir", ""),
+        "tts_cache_dir": getattr(s, "tts_cache_dir", ""),
         "kokoro_model_path": getattr(s, "kokoro_model_path", ""),
         "response_style": s.response_style,
         "language": s.language,
@@ -145,7 +155,7 @@ async def get_settings_api():
     }
 
 
-_TTS_FIELDS = {"tts_engine", "tts_voice", "tts_speed", "tts_volume", "tts_enabled", "tts_venv_dir", "kokoro_model_path"}
+_TTS_FIELDS = {"tts_engine", "tts_voice", "tts_speed", "tts_volume", "tts_enabled", "tts_venv_dir", "tts_cache_dir", "kokoro_model_path"}
 _PROVIDER_FIELDS = {"groq_api_key", "groq_model", "gemini_api_key", "gemini_model",
                     "openrouter_api_key", "openrouter_model", "local_llm_url", "local_llm_model",
                     "local_llm_enabled", "local_llm_api_key", "local_llm_api_type",

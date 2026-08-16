@@ -146,7 +146,12 @@ async def _tts_broadcast(event: str, text: str):
     await ws_manager.broadcast(event, {"text": text})
 
 
+async def _tts_first_audio():
+    await ws_manager.broadcast("tts_first_audio", {})
+
+
 tts_manager.on_event(_tts_broadcast)
+tts_manager.on_first_audio(_tts_first_audio)
 
 
 @asynccontextmanager

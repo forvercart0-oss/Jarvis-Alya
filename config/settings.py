@@ -48,6 +48,10 @@ PUBLIC_SETTING_KEYS = {
     "wake_word",
     "memory_enabled",
     "vector_memory_enabled",
+    "message_notifications_enabled",
+    "browser_notifications_enabled",
+    "voice_notifications_enabled",
+    "desktop_notifications_enabled",
     "theme",
     "accent_color",
     "glow_intensity",
@@ -125,11 +129,18 @@ class Settings(BaseSettings):
     tts_volume: int = 80
     tts_enabled: bool = True
     tts_venv_dir: str = ""
+    tts_cache_dir: str = ""
     kokoro_model_path: str = ""
 
     # Memory
     memory_enabled: bool = True
     vector_memory_enabled: bool = False
+
+    # Notifications
+    message_notifications_enabled: bool = True
+    browser_notifications_enabled: bool = True
+    voice_notifications_enabled: bool = True
+    desktop_notifications_enabled: bool = True
 
     # Appearance
     theme: str = "dark"

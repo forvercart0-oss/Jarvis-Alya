@@ -162,6 +162,11 @@ class AIService:
             tool_args = tc.get("arguments", {}) or {}
             yield {"event": "tool_start", "data": {"tool": tool_name, "arguments": tool_args}}
 
+            if tool_name.startswith("browser_"):
+                yield {"event": "browser_action", "data": {"action": tool_name, "arguments": tool_args}}
+            if tool_name == "computer_control":
+                yield {"event": "computer_action", "data": {"action": tool_args.get("action", ""), "arguments": tool_args.get("arguments", {})}}
+
             # Permission enforcement: when a skill is active, the tool call must
             # stay within the user-granted permissions for that skill.
             if self._active_skill_id and self.permission_manager:
@@ -243,6 +248,11 @@ class AIService:
                 "result": data,
                 "success": data.get("success", False),
             }}
+
+            if tool_name.startswith("browser_"):
+                yield {"event": "browser_result", "data": {"action": tool_name, "result": data}}
+            if tool_name == "computer_control":
+                yield {"event": "computer_result", "data": {"action": tool_args.get("action", ""), "result": data}}
 
         self._last_tool_results = results
 

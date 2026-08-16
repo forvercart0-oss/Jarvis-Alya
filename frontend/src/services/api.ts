@@ -1,4 +1,4 @@
-import type { JarvisSettings, HealthStatus, MemoryItem, Automation, ToolInfo, Message, SystemStats, ConversationSummary, NotificationItem, DiagnosticInfo, VoiceInfo, CodingProject, ProjectFileEntry, PersonaInfo, Skill, SkillActivity } from '../types'
+import type { JarvisSettings, HealthStatus, MemoryItem, Automation, ToolInfo, Message, SystemStats, ConversationSummary, NotificationItem, DiagnosticInfo, VoiceInfo, CodingProject, ProjectFileEntry, PersonaInfo, Skill, SkillActivity, GitStatus } from '../types'
 
 const isTauri = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__
 const API_BASE = isTauri ? 'http://127.0.0.1:8000/api' : '/api'

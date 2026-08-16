@@ -24,6 +24,8 @@ import { MediaGenerationPanel } from './components/Media/MediaGenerationPanel'
 import { FirstRunSetup } from './components/Common/FirstRunSetup'
 import TitleBar from './components/TitleBar'
 import { AgentPanel } from './components/Agent/AgentPanel'
+import { BrowserPanel } from './components/Browser/BrowserPanel'
+import { ComputerPanel } from './components/Computer/ComputerPanel'
 import { useJarvis } from './hooks/useJarvis'
 import { api } from './services/api'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
@@ -539,6 +541,8 @@ export default function App() {
                   {activeTab === 'about' && <AboutPanel />}
                   {activeTab === 'skills' && <SkillsPanel />}
                   {activeTab === 'agent' && <AgentPanel />}
+                  {activeTab === 'browser' && <BrowserPanel onNavigate={setActiveTab} />}
+                  {activeTab === 'computer' && <ComputerPanel onNavigate={setActiveTab} />}
                 </div>
                 {activeTab !== 'chat' && (
                   <div className="w-72 border-l border-cyan-500/10 hidden lg:block overflow-hidden">

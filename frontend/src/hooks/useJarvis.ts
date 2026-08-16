@@ -162,6 +162,35 @@ export function useJarvis() {
     ws.on('history', (_event, data: Message[]) => {
       setMessages(data.map((m) => ({ ...m, id: m.id || nextId() })))
     })
+
+    ws.on('tts_first_audio', () => {
+      // First audio frame started - useful for UI timing metrics
+    })
+
+    ws.on('browser_action', (_event, data: any) => {
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: `Browser: ${data.action}`, type: 'info', data } }))
+    })
+
+    ws.on('browser_result', (_event, data: any) => {
+      const ok = data.result?.success !== false
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: `Browser ${data.action}: ${ok ? 'Done' : 'Failed'}`, type: ok ? 'info' : 'error', data } }))
+    })
+
+    ws.on('computer_action', (_event, data: any) => {
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: `Computer: ${data.action}`, type: 'info', data } }))
+    })
+
+    ws.on('computer_result', (_event, data: any) => {
+      const ok = data.result?.success !== false
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: `Computer ${data.action}: ${ok ? 'Done' : 'Failed'}`, type: ok ? 'info' : 'error', data } }))
+    })
+
+    ws.on('voice_state', (_event, data: any) => {
+      if (data?.state === 'speaking') setOrbState('speaking')
+      else if (data?.state === 'listening') setOrbState('listening')
+      else if (data?.state === 'processing') setOrbState('thinking')
+      else if (data?.state === 'idle') setOrbState('idle')
+    })
   }, [])
 
   const sendChat = useCallback(

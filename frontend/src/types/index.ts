@@ -1,6 +1,6 @@
 export type OrbState = 'idle' | 'listening' | 'thinking' | 'processing' | 'speaking' | 'error'
 
-export type TabId = 'home' | 'chat' | 'voice' | 'system' | 'tools' | 'coding' | 'memory' | 'automations' | 'media' | 'settings' | 'diagnostics' | 'health' | 'about' | 'skills' | 'agent'
+export type TabId = 'home' | 'chat' | 'voice' | 'system' | 'tools' | 'coding' | 'memory' | 'automations' | 'media' | 'settings' | 'diagnostics' | 'health' | 'about' | 'skills' | 'agent' | 'browser' | 'computer'
 
 export type ConnectionState = 'connecting' | 'online' | 'offline'
 
@@ -42,10 +42,15 @@ export interface JarvisSettings {
   tts_voice: string
   tts_speed: number
   tts_volume: number
+  tts_cache_dir?: string
   wake_word_enabled: boolean
   wake_word: string
   memory_enabled: boolean
   vector_memory_enabled?: boolean
+  message_notifications_enabled?: boolean
+  browser_notifications_enabled?: boolean
+  voice_notifications_enabled?: boolean
+  desktop_notifications_enabled?: boolean
   groq_model: string
   groq_api_key: string
   gemini_api_key: string
