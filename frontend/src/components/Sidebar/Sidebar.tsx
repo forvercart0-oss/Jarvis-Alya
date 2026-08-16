@@ -1,4 +1,4 @@
-import { MessageSquare, Cpu, Wrench, Zap, Settings, AudioLines, FileCode2, Activity, Home, BookOpen, ImageIcon, HeartPulse, Puzzle, Bot, Globe, Monitor } from 'lucide-react'
+import { MessageSquare, Cpu, Wrench, Zap, Settings, AudioLines, FileCode2, Activity, Home, BookOpen, ImageIcon, HeartPulse, Puzzle, Bot, Globe, Monitor, Eye } from 'lucide-react'
 import type { TabId, PersonaInfo } from '../../types'
 
 interface SidebarItemProps {
@@ -95,6 +95,7 @@ export function Sidebar({ activeTab, onTabChange, connection, persona, onSwitchP
       <SidebarItem id="agent" label="Agent" icon={<Bot className="w-5 h-5" />} active={activeTab === 'agent'} accent={accentColor} onClick={() => onTabChange('agent')} />
       <SidebarItem id="browser" label="Browser" icon={<Globe className="w-5 h-5" />} active={activeTab === 'browser'} accent={accentColor} onClick={() => onTabChange('browser')} />
       <SidebarItem id="computer" label="Computer" icon={<Monitor className="w-5 h-5" />} active={activeTab === 'computer'} accent={accentColor} onClick={() => onTabChange('computer')} />
+      <SidebarItem id="vision" label="Vision" icon={<Eye className="w-5 h-5" />} active={activeTab === 'vision'} accent={accentColor} onClick={() => onTabChange('vision')} />
       <SidebarItem id="settings" label="Settings" icon={<Settings className="w-5 h-5" />} active={activeTab === 'settings'} accent={accentColor} onClick={() => onTabChange('settings')} />
 
       <div className="mt-auto flex flex-col items-center gap-3">

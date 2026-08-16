@@ -15,8 +15,13 @@ Phase 1 supported permissions (canonical dotted ids):
     memory.read            read long-term memory
     memory.write           write to long-term memory
 
-Advanced permissions (browser control, calls, messages, payments, ...)
-belong to later phases and are intentionally absent.
+Phase 4 supported permissions (vision + computer control):
+
+    vision.read_screen     observe screen content
+    vision.capture         capture screenshots
+    vision.analyze         send screen content to vision models
+    computer.mouse         control mouse pointer
+    computer.keyboard      control keyboard input
 """
 
 from __future__ import annotations
@@ -75,6 +80,21 @@ PERMISSION_DESCRIPTIONS: dict[str, PermissionDefinition] = {
     "memory.write": PermissionDefinition(
         "memory.write", "Write memory", "Store information in long-term memory.", "medium"
     ),
+    "vision.read_screen": PermissionDefinition(
+        "vision.read_screen", "Read screen", "Observe your screen content for analysis.", "high"
+    ),
+    "vision.capture": PermissionDefinition(
+        "vision.capture", "Capture screen", "Capture screenshots of your screen.", "high"
+    ),
+    "vision.analyze": PermissionDefinition(
+        "vision.analyze", "Analyze screen", "Send screen content to AI vision models.", "high"
+    ),
+    "computer.mouse": PermissionDefinition(
+        "computer.mouse", "Mouse control", "Control the mouse pointer and clicks.", "high"
+    ),
+    "computer.keyboard": PermissionDefinition(
+        "computer.keyboard", "Keyboard control", "Control keyboard input and typing.", "high"
+    ),
 }
 
 ALL_PERMISSIONS: tuple[str, ...] = tuple(PERMISSION_DESCRIPTIONS)
@@ -95,4 +115,9 @@ LEGACY_PERMISSION_MAP: dict[str, tuple[str, ...]] = {
     "notifications": ("notifications",),
     "memory_read": ("memory.read",),
     "memory_write": ("memory.write",),
+    "vision_read_screen": ("vision.read_screen",),
+    "vision_capture": ("vision.capture",),
+    "vision_analyze": ("vision.analyze",),
+    "computer_mouse": ("computer.mouse",),
+    "computer_keyboard": ("computer.keyboard",),
 }

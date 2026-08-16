@@ -72,6 +72,14 @@ class SettingsUpdate(BaseModel):
     call_provider: Optional[str] = None
     call_api_key: Optional[str] = None
     call_assist_mode: Optional[str] = None
+    vision_enabled: Optional[bool] = None
+    vision_provider: Optional[str] = None
+    vision_confidence_threshold: Optional[float] = None
+    vision_local_model: Optional[str] = None
+    vision_cloud_model: Optional[str] = None
+    vision_max_retries: Optional[int] = None
+    vision_cache_ttl: Optional[float] = None
+    vision_capture_hotkey: Optional[str] = None
 
 
 def _mask_api_key(key: str) -> str:
@@ -151,6 +159,14 @@ async def get_settings_api():
         "call_control_enabled": getattr(s, "call_control_enabled", False),
         "call_provider": getattr(s, "call_provider", ""),
         "call_assist_mode": getattr(s, "call_assist_mode", "notify_only"),
+        "vision_enabled": getattr(s, "vision_enabled", False),
+        "vision_provider": getattr(s, "vision_provider", ""),
+        "vision_confidence_threshold": getattr(s, "vision_confidence_threshold", 0.70),
+        "vision_local_model": getattr(s, "vision_local_model", ""),
+        "vision_cloud_model": getattr(s, "vision_cloud_model", ""),
+        "vision_max_retries": getattr(s, "vision_max_retries", 3),
+        "vision_cache_ttl": getattr(s, "vision_cache_ttl", 30.0),
+        "vision_capture_hotkey": getattr(s, "vision_capture_hotkey", "ctrl+shift+j"),
         "db_settings": db_settings,
     }
 
@@ -164,7 +180,7 @@ _PROVIDER_FIELDS = {"groq_api_key", "groq_model", "gemini_api_key", "gemini_mode
 
 @router.put("/settings")
 async def update_settings(update: SettingsUpdate):
-    from backend.main import memory_manager, ai_service, tts_manager
+    from backend.main import memory_manager, ai_service, tts_manager, vision_manager, ws_manager
     from backend.services.persona_service import persona_service
     s = get_settings()
     updates = update.model_dump(exclude_none=True)
@@ -184,6 +200,12 @@ async def update_settings(update: SettingsUpdate):
             else:
                 memory_manager.store.set_setting(key, str(value))
     s.persist()
+    if "vision_enabled" in updates:
+        vision_manager.enabled = bool(updates["vision_enabled"])
+        if vision_manager.enabled:
+            await ws_manager.broadcast("vision_started", {"provider": vision_manager.status().get("provider")})
+        else:
+            await ws_manager.broadcast("vision_ready", {})
     if updates.keys() & _PROVIDER_FIELDS:
         ai_service.reconfigure_providers()
     if updates.keys() & _TTS_FIELDS:

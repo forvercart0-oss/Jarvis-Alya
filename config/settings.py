@@ -64,6 +64,14 @@ PUBLIC_SETTING_KEYS = {
     "font_size",
     "ui_preset",
     "log_level",
+    "vision_enabled",
+    "vision_provider",
+    "vision_confidence_threshold",
+    "vision_local_model",
+    "vision_cloud_model",
+    "vision_max_retries",
+    "vision_cache_ttl",
+    "vision_capture_hotkey",
 }
 
 # Secret keys stored in `.env` but never returned unmasked to the browser.
@@ -171,6 +179,16 @@ class Settings(BaseSettings):
 
     # Language
     language_mode: str = "auto"
+
+    # Vision
+    vision_enabled: bool = False
+    vision_provider: str = ""
+    vision_confidence_threshold: float = 0.70
+    vision_local_model: str = ""
+    vision_cloud_model: str = ""
+    vision_max_retries: int = 3
+    vision_cache_ttl: float = 30.0
+    vision_capture_hotkey: str = "ctrl+shift+j"
 
     # ---- persistence -------------------------------------------------
     def apply_db_overrides(self, overrides: dict[str, str]) -> None:

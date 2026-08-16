@@ -40,6 +40,12 @@ class TaskType(str, Enum):
     PLAN = "plan"
     OBSERVE = "observe"
     MEMORY = "memory"
+    VISION_CAPTURE = "vision_capture"
+    VISION_ANALYZE = "vision_analyze"
+    VISION_FIND = "vision_find"
+    VISION_OCR = "vision_ocr"
+    COMPUTER_MOUSE = "computer_mouse"
+    COMPUTER_KEYBOARD = "computer_keyboard"
 
 
 @dataclass

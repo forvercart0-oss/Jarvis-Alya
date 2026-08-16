@@ -1,6 +1,6 @@
 export type OrbState = 'idle' | 'listening' | 'thinking' | 'processing' | 'speaking' | 'error'
 
-export type TabId = 'home' | 'chat' | 'voice' | 'system' | 'tools' | 'coding' | 'memory' | 'automations' | 'media' | 'settings' | 'diagnostics' | 'health' | 'about' | 'skills' | 'agent' | 'browser' | 'computer'
+export type TabId = 'home' | 'chat' | 'voice' | 'system' | 'tools' | 'coding' | 'memory' | 'automations' | 'media' | 'settings' | 'diagnostics' | 'health' | 'about' | 'skills' | 'agent' | 'browser' | 'computer' | 'vision'
 
 export type ConnectionState = 'connecting' | 'online' | 'offline'
 
@@ -93,6 +93,14 @@ export interface JarvisSettings {
   call_provider?: string
   call_api_key?: string
   call_assist_mode?: string
+  vision_enabled?: boolean
+  vision_provider?: string
+  vision_confidence_threshold?: number
+  vision_local_model?: string
+  vision_cloud_model?: string
+  vision_max_retries?: number
+  vision_cache_ttl?: number
+  vision_capture_hotkey?: string
 }
 
 export interface PersonaInfo {
@@ -168,6 +176,7 @@ export interface HealthStatus {
   voice: { status: string; mic?: boolean }
   database: { status: string }
   websocket: { status: string; connections?: number }
+  vision?: { enabled: boolean; provider?: string | null; last_capture?: any }
 }
 
 export interface DiagnosticInfo {
@@ -190,6 +199,7 @@ export interface DiagnosticInfo {
   image?: Array<{ id?: string; prompt?: string; provider?: string; date?: string; url?: string }>
   video?: Array<{ id?: string; prompt?: string; provider?: string; date?: string; url?: string }>
   python: string
+  vision?: { enabled: boolean; provider?: string | null; last_capture?: any }
 }
 
 export interface VoiceCatalogEntry {

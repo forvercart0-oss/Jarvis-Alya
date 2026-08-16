@@ -155,6 +155,12 @@ def build_registry(db_path=None) -> ToolRegistry:
     )
     from tools.media import GenerateImageTool, GenerateVideoTool
     from tools.computer_control import ComputerControlTool
+    from tools.vision_tools import (
+        VisionCaptureScreenTool, VisionAnalyzeScreenTool, VisionFindTargetTool,
+        VisionOcrTool, ComputerMouseClickTool, ComputerMouseMoveTool,
+        ComputerMouseDragTool, ComputerMouseScrollTool, ComputerKeyboardTypeTool,
+        ComputerKeyboardHotkeyTool, ComputerKeyboardPressTool,
+    )
     from computer.controller import computer_controller
     from memory.manager import MemoryManager
 
@@ -214,4 +220,15 @@ def build_registry(db_path=None) -> ToolRegistry:
     registry.register(GenerateImageTool())
     registry.register(GenerateVideoTool())
     registry.register(ComputerControlTool())
+    registry.register(VisionCaptureScreenTool())
+    registry.register(VisionAnalyzeScreenTool())
+    registry.register(VisionFindTargetTool())
+    registry.register(VisionOcrTool())
+    registry.register(ComputerMouseClickTool())
+    registry.register(ComputerMouseMoveTool())
+    registry.register(ComputerMouseDragTool())
+    registry.register(ComputerMouseScrollTool())
+    registry.register(ComputerKeyboardTypeTool())
+    registry.register(ComputerKeyboardHotkeyTool())
+    registry.register(ComputerKeyboardPressTool())
     return registry

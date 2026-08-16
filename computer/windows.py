@@ -33,3 +33,11 @@ def take_screenshot(path: str) -> dict[str, Any]:
 
 def set_volume(level: int) -> dict[str, Any]:
     return run_command(["powershell", "-Command", f"$obj = New-Object -ComObject WScript.Shell; $obj.SendKeys([char]174)"])
+
+
+def mouse_scroll(x: int, y: int, scroll: str, amount: int = 3) -> dict[str, Any]:
+    return run_command(["powershell", "-Command", f"Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point({x}, {y}); [System.Windows.Forms.SendKeys]::SendWait('{' + {scroll} + ' ' + str({amount}) + '}')"])
+
+
+def mouse_drag(x1: int, y1: int, x2: int, y2: int) -> dict[str, Any]:
+    return run_command(["powershell", "-Command", f"Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point({x1}, {y1}); [System.Windows.Forms.SendKeys]::SendWait(' ')"])

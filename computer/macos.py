@@ -34,3 +34,18 @@ def take_screenshot(path: str) -> dict[str, Any]:
 
 def set_volume(level: int) -> dict[str, Any]:
     return run_command(["osascript", "-e", f"set volume output volume {level}"])
+
+
+def mouse_scroll(x: int, y: int, scroll: str, amount: int = 3) -> dict[str, Any]:
+    direction = "down" if scroll == "4" else "up"
+    return run_command(["osascript", "-e", f"tell application \"System Events\" to key code {126 if direction == 'up' else 125} using {{option down}}"])
+
+
+def mouse_drag(x1: int, y1: int, x2: int, y2: int) -> dict[str, Any]:
+    return run_command(["osascript", "-e", f"tell application \"System Events\" to drag from {{ {x1}, {y1} }} to {{ {x2}, {y2} }}"])
+
+
+def keyboard_hotkey(keys: str) -> dict[str, Any]:
+    key_map = {"ctrl": "control", "alt": "option", "shift": "shift", "cmd": "command", "win": "command"}
+    mapped = [key_map.get(k, k) for k in keys.split("+")]
+    return run_command(["osascript", "-e", f"tell application \"System Events\" to keystroke \"\" using {{{', '.join(mapped)}}}"])

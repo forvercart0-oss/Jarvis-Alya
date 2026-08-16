@@ -26,6 +26,7 @@ export function useJarvis() {
   const [streaming, setStreaming] = useState(false)
   const [pendingToolConfirmation, setPendingToolConfirmation] = useState<{ tool: string; arguments: Record<string, any>; message: string; tool_call_id: string } | null>(null)
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null)
+  const [visionStatus, setVisionStatus] = useState<{ enabled: boolean; provider?: string | null } | null>(null)
 
   const wsRef = useRef<WebSocketManager | null>(null)
   const abortRef = useRef(false)
@@ -185,11 +186,47 @@ export function useJarvis() {
       window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: `Computer ${data.action}: ${ok ? 'Done' : 'Failed'}`, type: ok ? 'info' : 'error', data } }))
     })
 
+    ws.on('vision_capture', (_event, data: any) => {
+      window.dispatchEvent(new CustomEvent('jarvis-vision-capture', { detail: data }))
+    })
+
+    ws.on('vision_analysis_started', () => {
+      window.dispatchEvent(new CustomEvent('jarvis-vision-analyzing', { detail: {} }))
+    })
+
+    ws.on('vision_analysis_completed', (_event, data: any) => {
+      window.dispatchEvent(new CustomEvent('jarvis-vision-done', { detail: data }))
+    })
+
+    ws.on('vision_target_found', (_event, data: any) => {
+      window.dispatchEvent(new CustomEvent('jarvis-vision-target', { detail: data }))
+    })
+
+    ws.on('vision_action_started', (_event, data: any) => {
+      window.dispatchEvent(new CustomEvent('jarvis-vision-action', { detail: data }))
+    })
+
+    ws.on('vision_action_completed', (_event, data: any) => {
+      window.dispatchEvent(new CustomEvent('jarvis-vision-action-done', { detail: data }))
+    })
+
+    ws.on('vision_failed', (_event, data: any) => {
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: `Vision: ${data.error || 'Failed'}`, type: 'error', data } }))
+    })
+
     ws.on('voice_state', (_event, data: any) => {
       if (data?.state === 'speaking') setOrbState('speaking')
       else if (data?.state === 'listening') setOrbState('listening')
       else if (data?.state === 'processing') setOrbState('thinking')
       else if (data?.state === 'idle') setOrbState('idle')
+    })
+
+    ws.on('vision_started', (_event, data: any) => {
+      setVisionStatus({ enabled: true, provider: data?.provider })
+    })
+
+    ws.on('vision_ready', () => {
+      setVisionStatus((prev) => ({ ...prev, enabled: true }))
     })
   }, [])
 
@@ -318,7 +355,7 @@ export function useJarvis() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [h, s, t, a, m, set, v, d, pr, per, sk] = await Promise.all([
+      const [h, s, t, a, m, set, v, d, pr, per, sk, vs] = await Promise.all([
         api.getHealth().catch(() => null),
         api.getSystemStats().catch(() => null),
         api.getTools().catch(() => []),
@@ -330,6 +367,7 @@ export function useJarvis() {
         api.listProjects().catch(() => null),
         api.getPersona().catch(() => null),
         api.listSkills().catch(() => []),
+        api.getVisionStatus().catch(() => null),
       ])
       if (h) setHealth(h)
       if (s) setStats(s)
@@ -342,6 +380,7 @@ export function useJarvis() {
       if (pr?.projects) setProjects(pr.projects)
       if (per) setPersona(per)
       if (sk) setSkills(sk)
+      if (vs) setVisionStatus(vs)
     } catch {
       // ignore
     }
@@ -416,5 +455,6 @@ export function useJarvis() {
     pendingToolConfirmation,
     confirmTool,
     reconnect,
+    visionStatus,
   }
 }

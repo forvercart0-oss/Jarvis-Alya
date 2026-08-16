@@ -19,6 +19,7 @@ from backend.api.settings import router as settings_router
 from backend.api.skills import router as skills_router
 from backend.api.system import router as system_router
 from backend.api.tools import router as tools_router
+from backend.api.vision import router as vision_router
 from backend.api.voice import router as voice_router
 from backend.api.agent import router as agent_router
 from backend.api.git import router as git_router
@@ -44,6 +45,7 @@ from skills.manager import SkillManager
 from skills.registry import SkillRegistry
 from tools.registry import build_registry
 from vision.gesture.detector import GestureDetector
+from vision.manager import vision_manager
 from voice.tts_manager import TTSManager
 
 settings = get_settings()
@@ -161,6 +163,17 @@ async def lifespan(app: FastAPI):
     await tts_manager.start()
     await voice_service.start()
     await automation_service.start()
+    vision_manager.enabled = settings.vision_enabled
+    vision_manager.set_broadcast(ws_manager.broadcast)
+    if settings.vision_provider:
+        try:
+            from vision.providers.base import VisionProvider
+            provider_mod = __import__(f"vision.providers.{settings.vision_provider}", fromlist=["VisionProvider"])
+            provider = getattr(provider_mod, "VisionProvider", None)
+            if provider:
+                vision_manager.register_provider(provider())
+        except Exception as exc:
+            logger.warning("Failed to load vision provider %s: %s", settings.vision_provider, exc)
     notification_service.push("JARVIS is online and ready.", "success")
     logger.info("JARVIS 2.0 ready.")
     yield
@@ -193,6 +206,7 @@ app.include_router(permissions_router, prefix="/api")
 app.include_router(activity_router, prefix="/api")
 app.include_router(agent_router, prefix="/api")
 app.include_router(git_router, prefix="/api")
+app.include_router(vision_router, prefix="/api")
 
 
 # ---------------------------------------------------------------- health
@@ -215,6 +229,7 @@ async def health():
         "video": await video_mgr.health(),
         "gestures": {"status": "active" if gesture_detector.active else "inactive"},
         "calls": {"status": "available" if call_mgr.is_available() else "unavailable"},
+        "vision": vision_manager.status(),
     }
 
 
@@ -347,6 +362,7 @@ async def system_diagnostics():
         "video": await video_mgr.health(),
         "gestures": {"active": gesture_detector.active, "available": gesture_detector.is_available()},
         "calls": {"available": call_mgr.is_available()},
+        "vision": vision_manager.status(),
         "python": __import__("sys").version.split()[0],
     }
 

@@ -53,6 +53,17 @@ TOOL_PERMISSION_REQUIREMENTS: dict[str, tuple[str, ...]] = {
     "recall_memories": ("memory.read",),
     "volume_control": ("terminal.execute",),
     "take_screenshot": ("camera",),
+    "vision_capture_screen": ("vision.capture",),
+    "vision_analyze_screen": ("vision.read_screen", "vision.analyze"),
+    "vision_find_target": ("vision.read_screen", "vision.analyze"),
+    "vision_ocr": ("vision.read_screen", "vision.analyze"),
+    "computer_mouse_click": ("computer.mouse",),
+    "computer_mouse_move": ("computer.mouse",),
+    "computer_mouse_drag": ("computer.mouse",),
+    "computer_mouse_scroll": ("computer.mouse",),
+    "computer_keyboard_type": ("computer.keyboard",),
+    "computer_keyboard_hotkey": ("computer.keyboard",),
+    "computer_keyboard_press": ("computer.keyboard",),
 }
 
 # Tools that only require read-ish system introspection and are safe by default.

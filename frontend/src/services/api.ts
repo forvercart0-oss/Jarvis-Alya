@@ -332,4 +332,97 @@ export const api = {
   async getGitStatus(path: string): Promise<GitStatus> {
     return request<GitStatus>(`/git/status?path=${encodeURIComponent(path)}`)
   },
+
+  async getVisionStatus(): Promise<{ enabled: boolean; provider?: string | null }> {
+    return request('/vision/status')
+  },
+
+  async visionScreenshot(mode: string = 'full', window?: string, region?: string, monitor?: number): Promise<any> {
+    return request('/vision/screenshot', {
+      method: 'POST',
+      body: JSON.stringify({ mode, window, region, monitor }),
+    })
+  },
+
+  async visionAnalyze(imagePath: string, mode: string = 'describe', prompt?: string): Promise<any> {
+    return request('/vision/analyze', {
+      method: 'POST',
+      body: JSON.stringify({ image_path: imagePath, mode, prompt }),
+    })
+  },
+
+  async visionFind(target: string, region?: string): Promise<any> {
+    return request('/vision/find', {
+      method: 'POST',
+      body: JSON.stringify({ target, region }),
+    })
+  },
+
+  async visionOcr(imagePath: string, region?: string): Promise<any> {
+    return request('/vision/ocr', {
+      method: 'POST',
+      body: JSON.stringify({ image_path: imagePath, region }),
+    })
+  },
+
+  async visionActiveWindow(): Promise<any> {
+    return request('/vision/active_window')
+  },
+
+  async visionScreenInfo(): Promise<{ width: number; height: number }> {
+    return request('/vision/screen_info')
+  },
+
+  async visionMonitors(): Promise<{ monitors: any[] }> {
+    return request('/vision/monitors')
+  },
+
+  async visionMouseClick(x: number, y: number, button?: number): Promise<any> {
+    return request('/vision/mouse/click', {
+      method: 'POST',
+      body: JSON.stringify({ x, y, button }),
+    })
+  },
+
+  async visionMouseDoubleClick(x: number, y: number): Promise<any> {
+    return request('/vision/mouse/double_click', {
+      method: 'POST',
+      body: JSON.stringify({ x, y }),
+    })
+  },
+
+  async visionMouseDrag(x1: number, y1: number, x2: number, y2: number): Promise<any> {
+    return request('/vision/mouse/drag', {
+      method: 'POST',
+      body: JSON.stringify({ x1, y1, x2, y2 }),
+    })
+  },
+
+  async visionMouseScroll(x: number, y: number, direction: string = 'down', amount?: number): Promise<any> {
+    return request('/vision/mouse/scroll', {
+      method: 'POST',
+      body: JSON.stringify({ x, y, direction, amount }),
+    })
+  },
+
+  async visionKeyboardType(text: string): Promise<any> {
+    return request('/vision/keyboard/type', {
+      method: 'POST',
+      body: JSON.stringify({ text }),
+    })
+  },
+
+  async visionKeyboardHotkey(keys: string[]): Promise<any> {
+    return request('/vision/keyboard/hotkey', {
+      method: 'POST',
+      body: JSON.stringify({ keys }),
+    })
+  },
+
+  async visionKeyboardPress(key: string): Promise<any> {
+    return request('/vision/keyboard/press', {
+      method: 'POST',
+      body: JSON.stringify({ key }),
+    })
+  },
 }

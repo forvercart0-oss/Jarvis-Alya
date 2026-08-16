@@ -13,6 +13,7 @@ import { PersonaSettings } from './PersonaSettings'
 import { MediaSettings } from './MediaSettings'
 import { GestureSettings } from './GestureSettings'
 import { CallSettings } from './CallSettings'
+import { VisionSettings } from './VisionSettings'
 
 interface SettingsPanelProps {
   settings: JarvisSettings | null
@@ -22,7 +23,7 @@ interface SettingsPanelProps {
   onClose: () => void
 }
 
-type SettingsTab = 'general' | 'persona' | 'ai' | 'local_ai' | 'voice' | 'memory' | 'appearance' | 'security' | 'advanced' | 'media' | 'gestures' | 'calls'
+type SettingsTab = 'general' | 'persona' | 'ai' | 'local_ai' | 'voice' | 'memory' | 'appearance' | 'security' | 'advanced' | 'media' | 'gestures' | 'calls' | 'vision'
 
 export function SettingsPanel({ settings, persona, onSwitchPersona, onUpdate, onClose }: SettingsPanelProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>('general')
@@ -59,6 +60,7 @@ export function SettingsPanel({ settings, persona, onSwitchPersona, onUpdate, on
             { id: 'media', label: 'Media' },
             { id: 'gestures', label: 'Gestures' },
             { id: 'calls', label: 'Calls' },
+            { id: 'vision', label: 'Vision' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -89,6 +91,7 @@ export function SettingsPanel({ settings, persona, onSwitchPersona, onUpdate, on
           {activeTab === 'media' && <MediaSettings settings={settings} onUpdate={onUpdate} />}
           {activeTab === 'gestures' && <GestureSettings settings={settings} onUpdate={onUpdate} />}
           {activeTab === 'calls' && <CallSettings settings={settings} onUpdate={onUpdate} />}
+          {activeTab === 'vision' && <VisionSettings settings={settings} onUpdate={onUpdate} />}
         </div>
       </div>
     </div>

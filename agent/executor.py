@@ -119,6 +119,12 @@ class AgentExecutor:
             TaskType.TEST: "run_project_command" if project else "terminal",
             TaskType.OBSERVE: "system_info",
             TaskType.MEMORY: "recall_memories",
+            TaskType.VISION_CAPTURE: "vision_capture_screen",
+            TaskType.VISION_ANALYZE: "vision_analyze_screen",
+            TaskType.VISION_FIND: "vision_find_target",
+            TaskType.VISION_OCR: "vision_ocr",
+            TaskType.COMPUTER_MOUSE: "computer_mouse_click",
+            TaskType.COMPUTER_KEYBOARD: "computer_keyboard_type",
         }
 
         tool_name = tool_map.get(task.type, "system_info")

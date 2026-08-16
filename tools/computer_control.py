@@ -17,9 +17,40 @@ from tools.registry import ToolResult
 logger = logging.getLogger("jarvis.tools.computer")
 
 
+async def _browser_vision_click(arguments: dict[str, Any]) -> ToolResult:
+    target = arguments.get("target", "")
+    if not target:
+        return ToolResult(success=False, error="Target required for vision click.")
+    try:
+        from vision.manager import vision_manager
+        result = await vision_manager.find(target)
+        if result.get("found"):
+            x = result.get("x", 0)
+            y = result.get("y", 0)
+            click_result = await computer_controller.click_at(x, y, 1)
+            if click_result.get("ok"):
+                return ToolResult(success=True, result={"x": x, "y": y, "confidence": result.get("confidence"), "method": "vision"})
+        return ToolResult(success=False, error=result.get("error", "Vision target not found."))
+    except Exception as exc:
+        return ToolResult(success=False, error=str(exc))
+
+
+async def _browser_vision_type(arguments: dict[str, Any]) -> ToolResult:
+    text = arguments.get("text", "")
+    if not text:
+        return ToolResult(success=False, error="Text required for vision type.")
+    try:
+        result = await computer_controller.type_text(text)
+        if result.get("ok"):
+            return ToolResult(success=True, result={"typed": len(text), "method": "vision"})
+        return ToolResult(success=False, error=result.get("error", "Vision type failed."))
+    except Exception as exc:
+        return ToolResult(success=False, error=str(exc))
+
+
 class ComputerControlTool:
     name = "computer_control"
-    description = "Control the computer or browser. Actions: open_application, close_application, type_text, click_at, take_screenshot, set_volume, lock_screen, shutdown, reboot, browser_navigate, browser_click, browser_type, browser_read, browser_screenshot."
+    description = "Control the computer or browser. Actions: open_application, close_application, type_text, click_at, take_screenshot, set_volume, lock_screen, shutdown, reboot, browser_navigate, browser_click, browser_type, browser_read, browser_screenshot, browser_vision_click, browser_vision_type."
     parameters = {
         "type": "object",
         "properties": {
@@ -35,6 +66,7 @@ class ComputerControlTool:
         confirmation_actions = {
             "open_application", "close_application", "type_text",
             "click_at", "browser_click", "browser_type",
+            "browser_vision_click", "browser_vision_type",
             "shutdown", "reboot",
         }
 
@@ -56,6 +88,10 @@ class ComputerControlTool:
         try:
             if action.startswith("browser_"):
                 browser_action = action[len("browser_"):]
+                if browser_action == "vision_click":
+                    return await _browser_vision_click(arguments)
+                if browser_action == "vision_type":
+                    return await _browser_vision_type(arguments)
                 browser = _get_browser()
                 handler = getattr(browser, browser_action, None)
                 if not handler:

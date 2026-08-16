@@ -26,6 +26,7 @@ import TitleBar from './components/TitleBar'
 import { AgentPanel } from './components/Agent/AgentPanel'
 import { BrowserPanel } from './components/Browser/BrowserPanel'
 import { ComputerPanel } from './components/Computer/ComputerPanel'
+import { VisionPanel } from './components/Vision/VisionPanel'
 import { useJarvis } from './hooks/useJarvis'
 import { api } from './services/api'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
@@ -543,6 +544,7 @@ export default function App() {
                   {activeTab === 'agent' && <AgentPanel />}
                   {activeTab === 'browser' && <BrowserPanel onNavigate={setActiveTab} />}
                   {activeTab === 'computer' && <ComputerPanel onNavigate={setActiveTab} />}
+                  {activeTab === 'vision' && <VisionPanel />}
                 </div>
                 {activeTab !== 'chat' && (
                   <div className="w-72 border-l border-cyan-500/10 hidden lg:block overflow-hidden">
