@@ -1,19 +1,38 @@
+"""Memory manager: unified interface for all memory subsystems."""
+
 from __future__ import annotations
 
-import contextlib
+import logging
+from typing import Any
 
-from memory.secret_filter import contains_secret
-from memory.sqlite_memory import SQLiteMemory
-from memory.store import SemanticIndex
-from memory.vector_memory import VectorMemory
+from memory.long_term import LongTermMemory
+from memory.preferences import PreferencesMemory
+from memory.projects import ProjectMemory
+from memory.privacy import PrivacyController
+from memory.reminders import ReminderManager
+from memory.short_term import ShortTermMemory
+from memory.summaries import ConversationSummaries
+from memory.tasks import TaskMemory
 
-# Logical long-term memory categories.
+logger = logging.getLogger("jarvis.memory.manager")
+
 MEMORY_CATEGORIES: tuple[str, ...] = (
     "preferences",
     "projects",
     "instructions",
     "conversation_context",
     "general",
+    "tasks",
+    "workflow",
+    "skill",
+    "device",
+    "non_sensitive_context",
+    "conversation_summary",
+    "user_preference",
+    "project",
+    "task",
+    "device",
+    "non_sensitive_context",
 )
 
 
@@ -23,19 +42,30 @@ def normalize_category(category: str | None) -> str:
     return cat if cat in MEMORY_CATEGORIES else "general"
 
 
+
 class SecretMemoryError(Exception):
-    """Raised when a memory write is refused because it contains secrets."""
+    pass
 
 
 class MemoryManager:
     def __init__(self, db_path: str = "data/jarvis.db", vector_dir: str | None = None):
-        self.store = SQLiteMemory(db_path)
-        self._vector: SemanticIndex | None = None
+        self.store = __import__("memory.sqlite_memory", fromlist=["SQLiteMemory"]).SQLiteMemory(db_path)
+        self._vector = None
         if vector_dir:
-            index = VectorMemory(persist_directory=vector_dir)
+            index = __import__("memory.vector_memory", fromlist=["VectorMemory"]).VectorMemory(persist_directory=vector_dir)
             if index.available():
                 self._vector = index
         self._current_conv: str | None = None
+
+        self.short_term = ShortTermMemory()
+        self.long_term = LongTermMemory(self)
+        self.preferences = PreferencesMemory(self)
+        self.projects = ProjectMemory(self)
+        self.tasks = TaskMemory(self)
+        self.summaries = ConversationSummaries(self)
+        self.privacy = PrivacyController(self)
+        self.reminders = ReminderManager(self)
+        self.semantic = __import__("memory.semantic", fromlist=["SemanticMemory"]).SemanticMemory(self, self._vector)
 
     @property
     def vector_enabled(self) -> bool:
@@ -117,21 +147,21 @@ class MemoryManager:
         self._current_conv = None
         return self.ensure_conversation(None)
 
-    def remember(self, key: str, value: str = "", category: str | None = None) -> dict:
-        """Store a long-term memory, refusing to persist secrets.
-
-        Args:
-            key: Memory key (or the content itself when value is empty).
-            value: Memory content.
-            category: One of MEMORY_CATEGORIES; unknown values fall back to "general".
-
-        Raises:
-            SecretMemoryError: When the content looks like a secret.
-        """
+    def remember(self, key: str, value: str = "", category: str | None = None, confidence: float = 1.0, source: str = "explicit_user", project: str = "", profile: str = "jarvis", expires_at: str | None = None) -> dict:
+        from memory.secret_filter import contains_secret
         content = value if value else key
         if contains_secret(key) or contains_secret(content):
             raise SecretMemoryError("Refusing to store secret material in memory.")
-        mem = self.store.remember(content, category=normalize_category(category), key_override=key if value else "")
+        mem = self.store.remember(
+            content,
+            category=normalize_category(category),
+            key_override=key if value else "",
+            confidence=confidence,
+            source=source,
+            project=project,
+            profile=profile,
+            expires_at=expires_at,
+        )
         if self._vector is not None:
             self._vector.add(mem["id"], mem["value"], {"key": mem["key"], "category": mem["category"]})
         return mem
@@ -151,8 +181,8 @@ class MemoryManager:
             self._vector.remove(row["id"])
         return count
 
-    def recall(self, query: str = "") -> list[dict]:
-        rows = self.store.recall(query)
+    def recall(self, query: str = "", category: str | None = None, project: str | None = None, profile: str | None = None, min_confidence: float = 0.0, limit: int = 50) -> list[dict]:
+        rows = self.store.recall(query=query, category=category, project=project, profile=profile, min_confidence=min_confidence, limit=limit)
         if not query or self._vector is None:
             return rows
         semantic = self._vector.search(query, limit=5)
@@ -170,16 +200,17 @@ class MemoryManager:
             row["semantic_score"] = hit.get("score")
         return merged
 
-    def get_all_memories(self) -> list[dict]:
-        return self.store.recall("")
+
+    def get_all_memories(self, category: str | None = None, project: str | None = None, profile: str | None = None, limit: int = 100) -> list[dict]:
+        return self.store.recall(category=category, project=project, profile=profile, limit=limit)
 
     def get_memory_by_id(self, memory_id: str) -> dict | None:
         return self.store.get_memory_by_id(memory_id)
 
     def delete_memory_by_id(self, memory_id: str) -> bool:
-        """Delete a single memory by id, keeping the vector index in sync."""
         removed = self.store.delete_memory_by_id(memory_id)
         if removed and self._vector is not None:
+            import contextlib
             with contextlib.suppress(Exception):
                 self._vector.remove(memory_id)
         return removed
@@ -188,7 +219,6 @@ class MemoryManager:
         return self.store.get_memory_stats()
 
     def retrieve_relevant(self, query: str, limit: int = 5) -> list[dict]:
-        """Relevance-based retrieval for memory context (never the full DB)."""
         if not query:
             return []
         return self.recall(query)[:limit]

@@ -61,11 +61,109 @@ export const api = {
     return request<MemoryItem[]>('/memory')
   },
 
-  async addMemory(content: string, category?: string): Promise<MemoryItem> {
-    return request<MemoryItem>('/memory', {
+  async addMemory(content: string, category?: string, project?: string, profile?: string): Promise<any> {
+    return request('/memory', {
       method: 'POST',
-      body: JSON.stringify({ content, category }),
+      body: JSON.stringify({ content, category, project, profile }),
     })
+  },
+
+  async searchMemory(query: string, category?: string, project?: string, profile?: string, minConfidence?: number, limit?: number): Promise<MemoryItem[]> {
+    const params = new URLSearchParams({ query })
+    if (category) params.set('category', category)
+    if (project) params.set('project', project)
+    if (profile) params.set('profile', profile)
+    if (minConfidence !== undefined) params.set('min_confidence', String(minConfidence))
+    if (limit) params.set('limit', String(limit))
+    return request<MemoryItem[]>(`/memory/search?${params.toString()}`)
+  },
+
+  async getMemoryStats(): Promise<any> {
+    return request('/memory/stats')
+  },
+
+  async getMemoryCategories(): Promise<{ categories: string[] }> {
+    return request('/memory/categories')
+  },
+
+  async updateMemory(id: string, content: string, confidence?: number, source?: string): Promise<any> {
+    return request(`/memory/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ content, confidence, source }),
+    })
+  },
+
+  async getPreferences(profile?: string): Promise<MemoryItem[]> {
+    const q = profile ? `?profile=${encodeURIComponent(profile)}` : ''
+    return request<MemoryItem[]>(`/memory/preferences${q}`)
+  },
+
+  async setPreference(key: string, value: string, profile?: string): Promise<any> {
+    return request('/memory/preferences', {
+      method: 'POST',
+      body: JSON.stringify({ key, value, profile }),
+    })
+  },
+
+  async getProjects(): Promise<{ projects: string[] }> {
+    return request('/memory/projects')
+  },
+
+  async getProjectMemory(project: string, query?: string, limit?: number): Promise<MemoryItem[]> {
+    const params = new URLSearchParams()
+    if (query) params.set('query', query)
+    if (limit) params.set('limit', String(limit))
+    const qs = params.toString() ? `?${params.toString()}` : ''
+    return request<MemoryItem[]>(`/memory/projects/${encodeURIComponent(project)}${qs}`)
+  },
+
+  async getConversationSummaries(conversationId?: string, limit?: number): Promise<any[]> {
+    const params = new URLSearchParams()
+    if (conversationId) params.set('conversation_id', conversationId)
+    if (limit) params.set('limit', String(limit))
+    const qs = params.toString() ? `?${params.toString()}` : ''
+    return request<any[]>(`/memory/summaries${qs}`)
+  },
+
+  async createConversationSummary(conversationId: string, summary: string, messageCount?: number): Promise<any> {
+    return request('/memory/summaries', {
+      method: 'POST',
+      body: JSON.stringify({ conversation_id: conversationId, summary, message_count: messageCount }),
+    })
+  },
+
+  async getPrivacySettings(): Promise<any> {
+    return request('/memory/privacy')
+  },
+
+  async setPrivacyMode(mode: string): Promise<any> {
+    return request('/memory/privacy', {
+      method: 'POST',
+      body: JSON.stringify({ mode }),
+    })
+  },
+
+  async getReminders(enabled?: boolean): Promise<any[]> {
+    const q = enabled !== undefined ? `?enabled=${enabled}` : ''
+    return request<any[]>(`/reminders${q}`)
+  },
+
+  async createReminder(title: string, description?: string, dueAt?: string, repeat?: string): Promise<any> {
+    return request('/reminders', {
+      method: 'POST',
+      body: JSON.stringify({ title, description, due_at: dueAt, repeat }),
+    })
+  },
+
+  async updateReminder(id: string, updates: Record<string, any>): Promise<any> {
+    return request(`/reminders/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    })
+  },
+
+  async deleteReminder(id: string): Promise<void> {
+    return request(`/reminders/${encodeURIComponent(id)}`, { method: 'DELETE' })
   },
 
   async deleteMemory(key: string): Promise<void> {

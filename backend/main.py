@@ -15,6 +15,7 @@ from backend.api.chat import router as chat_router
 from backend.api.memory import router as memory_router
 from backend.api.permissions import router as permissions_router
 from backend.api.persona import router as persona_router
+from backend.api.reminders import router as reminders_router
 from backend.api.settings import router as settings_router
 from backend.api.skills import router as skills_router
 from backend.api.system import router as system_router
@@ -220,6 +221,7 @@ app.include_router(settings_router, prefix="/api")
 app.include_router(tools_router, prefix="/api")
 app.include_router(automation_router, prefix="/api")
 app.include_router(tasks_router, prefix="/api")
+app.include_router(reminders_router, prefix="/api")
 app.include_router(persona_router, prefix="/api")
 app.include_router(skills_router, prefix="/api")
 app.include_router(permissions_router, prefix="/api")

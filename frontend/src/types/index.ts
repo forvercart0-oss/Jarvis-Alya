@@ -133,14 +133,6 @@ export interface ToolInfo {
   requires_confirmation: boolean
 }
 
-export interface MemoryItem {
-  id: string
-  key: string
-  value: string
-  category?: string
-  timestamp: string
-}
-
 export interface Automation {
   id: string
   name: string
@@ -158,6 +150,46 @@ export interface ConversationSummary {
   timestamp: string
   message_count: number
   preview?: string
+}
+
+export interface ConversationSummaryItem {
+  id: string
+  conversation_id: string
+  summary: string
+  message_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface ReminderItem {
+  id: string
+  title: string
+  description: string
+  due_at: string
+  repeat: string
+  enabled: boolean
+  notified: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface PrivacySettings {
+  privacy_mode?: string
+  cloud_sharing?: string
+}
+
+export interface MemoryItem {
+  id: string
+  key: string
+  value: string
+  category?: string
+  timestamp: string
+  confidence?: number
+  source?: string
+  project?: string
+  profile?: string
+  expires_at?: string
+  last_used_at?: string
 }
 
 export interface NotificationItem {

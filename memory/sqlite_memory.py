@@ -36,7 +36,55 @@ class SQLiteMemory:
                     key TEXT NOT NULL,
                     value TEXT NOT NULL,
                     category TEXT DEFAULT 'general',
-                    timestamp TEXT NOT NULL
+                    timestamp TEXT NOT NULL,
+                    confidence REAL DEFAULT 1.0,
+                    source TEXT DEFAULT 'explicit_user',
+                    project TEXT DEFAULT '',
+                    profile TEXT DEFAULT 'jarvis',
+                    expires_at TEXT,
+                    last_used_at TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+            """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS conversation_summaries (
+                    id TEXT PRIMARY KEY,
+                    conversation_id TEXT NOT NULL,
+                    summary TEXT NOT NULL,
+                    message_count INTEGER DEFAULT 0,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+            """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS reminders (
+                    id TEXT PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    description TEXT,
+                    due_at TEXT NOT NULL,
+                    repeat TEXT DEFAULT 'once',
+                    enabled INTEGER DEFAULT 1,
+                    notified INTEGER DEFAULT 0,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+            """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS memory_feedback (
+                    id TEXT PRIMARY KEY,
+                    memory_id TEXT,
+                    conversation_id TEXT,
+                    feedback TEXT NOT NULL,
+                    reason TEXT,
+                    created_at TEXT NOT NULL
+                )
+            """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS privacy_settings (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
                 )
             """)
             conn.execute("""
@@ -68,6 +116,37 @@ class SQLiteMemory:
                     result TEXT
                 )
             """)
+            conn.commit()
+        self._migrate()
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_memories_category ON memories(category)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_memories_project ON memories(project)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_memories_profile ON memories(profile)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_memories_timestamp ON memories(timestamp)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_summaries_conversation ON conversation_summaries(conversation_id)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_reminders_due ON reminders(due_at)")
+            conn.commit()
+
+    def _migrate(self):
+        with sqlite3.connect(self.db_path) as conn:
+            columns = {row[1] for row in conn.execute("PRAGMA table_info(memories)").fetchall()}
+            if "confidence" not in columns:
+                conn.execute("ALTER TABLE memories ADD COLUMN confidence REAL DEFAULT 1.0")
+            if "source" not in columns:
+                conn.execute("ALTER TABLE memories ADD COLUMN source TEXT DEFAULT 'explicit_user'")
+            if "project" not in columns:
+                conn.execute("ALTER TABLE memories ADD COLUMN project TEXT DEFAULT ''")
+            if "profile" not in columns:
+                conn.execute("ALTER TABLE memories ADD COLUMN profile TEXT DEFAULT 'jarvis'")
+            if "expires_at" not in columns:
+                conn.execute("ALTER TABLE memories ADD COLUMN expires_at TEXT")
+            if "last_used_at" not in columns:
+                conn.execute("ALTER TABLE memories ADD COLUMN last_used_at TEXT")
+            if "created_at" not in columns:
+                conn.execute("ALTER TABLE memories ADD COLUMN created_at TEXT NOT NULL DEFAULT ''")
+            if "updated_at" not in columns:
+                conn.execute("ALTER TABLE memories ADD COLUMN updated_at TEXT NOT NULL DEFAULT ''")
             conn.commit()
 
     def create_conversation(self, title: str | None = None) -> dict:
@@ -152,17 +231,17 @@ class SQLiteMemory:
             conn.execute("DELETE FROM messages WHERE conversation_id = ?", (conv_id,))
             conn.commit()
 
-    def remember(self, content: str, category: str = "general", key_override: str = "") -> dict:
+    def remember(self, content: str, category: str = "general", key_override: str = "", confidence: float = 1.0, source: str = "explicit_user", project: str = "", profile: str = "jarvis", expires_at: str | None = None) -> dict:
         mem_id = str(uuid.uuid4())
         timestamp = datetime.utcnow().isoformat()
         key = key_override if key_override else content[:64]
         with sqlite3.connect(self.db_path) as conn:
             conn.execute(
-                "INSERT INTO memories (id, key, value, category, timestamp) VALUES (?, ?, ?, ?, ?)",
-                (mem_id, key, content, category, timestamp),
+                "INSERT INTO memories (id, key, value, category, timestamp, confidence, source, project, profile, expires_at, last_used_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (mem_id, key, content, category, timestamp, confidence, source, project, profile, expires_at, timestamp, timestamp, timestamp),
             )
             conn.commit()
-        return {"id": mem_id, "key": key, "value": content, "category": category}
+        return {"id": mem_id, "key": key, "value": content, "category": category, "confidence": confidence, "source": source, "project": project, "profile": profile, "expires_at": expires_at, "timestamp": timestamp, "created_at": timestamp, "updated_at": timestamp}
 
     def forget(self, query: str) -> int:
         with sqlite3.connect(self.db_path) as conn:
@@ -173,9 +252,22 @@ class SQLiteMemory:
     def forget_matching(self, query: str) -> int:
         return self.forget(query)
 
-    def update_memory(self, memory_id: str, value: str) -> bool:
+    def update_memory(self, memory_id: str, value: str, confidence: float | None = None, source: str | None = None) -> bool:
+        timestamp = datetime.utcnow().isoformat()
         with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.execute("UPDATE memories SET value = ? WHERE id = ?", (value, memory_id))
+            if confidence is not None or source is not None:
+                existing = self.get_memory_by_id(memory_id)
+                if existing:
+                    new_confidence = confidence if confidence is not None else existing.get("confidence", 1.0)
+                    new_source = source if source is not None else existing.get("source", "explicit_user")
+                    cursor = conn.execute(
+                        "UPDATE memories SET value = ?, confidence = ?, source = ?, updated_at = ? WHERE id = ?",
+                        (value, new_confidence, new_source, timestamp, memory_id),
+                    )
+                else:
+                    return False
+            else:
+                cursor = conn.execute("UPDATE memories SET value = ?, updated_at = ? WHERE id = ?", (value, timestamp, memory_id))
             conn.commit()
             return cursor.rowcount > 0
 
@@ -185,16 +277,29 @@ class SQLiteMemory:
             conn.commit()
             return cursor.rowcount
 
-    def recall(self, query: str = "") -> list[dict]:
+    def recall(self, query: str = "", category: str | None = None, project: str | None = None, profile: str | None = None, min_confidence: float = 0.0, limit: int = 50) -> list[dict]:
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
+            sql = "SELECT * FROM memories WHERE 1=1"
+            params = []
             if query:
-                rows = conn.execute(
-                    "SELECT * FROM memories WHERE value LIKE ? OR key LIKE ? ORDER BY timestamp DESC",
-                    (f"%{query}%", f"%{query}%"),
-                ).fetchall()
-            else:
-                rows = conn.execute("SELECT * FROM memories ORDER BY timestamp DESC").fetchall()
+                sql += " AND (value LIKE ? OR key LIKE ?)"
+                params.extend([f"%{query}%", f"%{query}%"])
+            if category:
+                sql += " AND category = ?"
+                params.append(category)
+            if project:
+                sql += " AND project = ?"
+                params.append(project)
+            if profile:
+                sql += " AND profile = ?"
+                params.append(profile)
+            if min_confidence > 0:
+                sql += " AND confidence >= ?"
+                params.append(min_confidence)
+            sql += " ORDER BY timestamp DESC LIMIT ?"
+            params.append(limit)
+            rows = conn.execute(sql, params).fetchall()
             return [dict(row) for row in rows]
 
     def get_memory_by_id(self, memory_id: str) -> dict | None:
@@ -210,7 +315,6 @@ class SQLiteMemory:
             return cursor.rowcount > 0
 
     def get_memory_stats(self) -> dict:
-        """Return memory stats: count, storage path, DB size, category breakdown."""
         count = 0
         size_bytes = 0
         with sqlite3.connect(self.db_path) as conn:
@@ -326,6 +430,136 @@ class SQLiteMemory:
                 (status, timestamp, result, task_id),
             )
             conn.commit()
+
+    # ---------------------------------------------------------------- conversation summaries
+    def add_conversation_summary(self, conversation_id: str, summary: str, message_count: int = 0) -> dict:
+        summary_id = str(uuid.uuid4())
+        timestamp = datetime.utcnow().isoformat()
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute(
+                "INSERT INTO conversation_summaries (id, conversation_id, summary, message_count, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+                (summary_id, conversation_id, summary, message_count, timestamp, timestamp),
+            )
+            conn.commit()
+        return {"id": summary_id, "conversation_id": conversation_id, "summary": summary, "message_count": message_count, "created_at": timestamp}
+
+    def get_conversation_summaries(self, conversation_id: str | None = None, limit: int = 50) -> list[dict]:
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            if conversation_id:
+                rows = conn.execute(
+                    "SELECT * FROM conversation_summaries WHERE conversation_id = ? ORDER BY created_at DESC LIMIT ?",
+                    (conversation_id, limit),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT * FROM conversation_summaries ORDER BY created_at DESC LIMIT ?",
+                    (limit,),
+                ).fetchall()
+            return [dict(row) for row in rows]
+
+    def update_conversation_summary(self, summary_id: str, summary: str) -> bool:
+        timestamp = datetime.utcnow().isoformat()
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.execute(
+                "UPDATE conversation_summaries SET summary = ?, updated_at = ? WHERE id = ?",
+                (summary, timestamp, summary_id),
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def delete_conversation_summary(self, summary_id: str) -> bool:
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.execute("DELETE FROM conversation_summaries WHERE id = ?", (summary_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+
+    # ---------------------------------------------------------------- reminders
+    def add_reminder(self, title: str, description: str = "", due_at: str = "", repeat: str = "once") -> dict:
+        reminder_id = str(uuid.uuid4())
+        timestamp = datetime.utcnow().isoformat()
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute(
+                "INSERT INTO reminders (id, title, description, due_at, repeat, enabled, notified, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (reminder_id, title, description, due_at, repeat, 1, 0, timestamp, timestamp),
+            )
+            conn.commit()
+        return {"id": reminder_id, "title": title, "description": description, "due_at": due_at, "repeat": repeat, "enabled": True, "notified": False, "created_at": timestamp}
+
+    def get_reminders(self, enabled: bool | None = None) -> list[dict]:
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            if enabled is not None:
+                rows = conn.execute(
+                    "SELECT * FROM reminders WHERE enabled = ? ORDER BY due_at ASC",
+                    (1 if enabled else 0,),
+                ).fetchall()
+            else:
+                rows = conn.execute("SELECT * FROM reminders ORDER BY due_at ASC").fetchall()
+            return [dict(row) for row in rows]
+
+    def update_reminder(self, reminder_id: str, updates: dict) -> bool:
+        updates["updated_at"] = datetime.utcnow().isoformat()
+        set_clause = ", ".join(f"{k} = ?" for k in updates)
+        values = list(updates.values()) + [reminder_id]
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.execute(f"UPDATE reminders SET {set_clause} WHERE id = ?", values)
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def delete_reminder(self, reminder_id: str) -> bool:
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.execute("DELETE FROM reminders WHERE id = ?", (reminder_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+
+    # ---------------------------------------------------------------- memory feedback
+    def add_memory_feedback(self, memory_id: str | None, conversation_id: str | None, feedback: str, reason: str = "") -> dict:
+        feedback_id = str(uuid.uuid4())
+        timestamp = datetime.utcnow().isoformat()
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute(
+                "INSERT INTO memory_feedback (id, memory_id, conversation_id, feedback, reason, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                (feedback_id, memory_id, conversation_id, feedback, reason, timestamp),
+            )
+            conn.commit()
+        return {"id": feedback_id, "memory_id": memory_id, "conversation_id": conversation_id, "feedback": feedback, "reason": reason, "created_at": timestamp}
+
+    def get_memory_feedback(self, memory_id: str | None = None, limit: int = 50) -> list[dict]:
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            if memory_id:
+                rows = conn.execute(
+                    "SELECT * FROM memory_feedback WHERE memory_id = ? ORDER BY created_at DESC LIMIT ?",
+                    (memory_id, limit),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT * FROM memory_feedback ORDER BY created_at DESC LIMIT ?",
+                    (limit,),
+                ).fetchall()
+            return [dict(row) for row in rows]
+
+    # ---------------------------------------------------------------- privacy settings
+    def set_privacy_setting(self, key: str, value: str):
+        timestamp = datetime.utcnow().isoformat()
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute(
+                "INSERT OR REPLACE INTO privacy_settings (key, value, updated_at) VALUES (?, ?, ?)",
+                (key, value, timestamp),
+            )
+            conn.commit()
+
+    def get_privacy_setting(self, key: str, default: str | None = None) -> str | None:
+        with sqlite3.connect(self.db_path) as conn:
+            row = conn.execute("SELECT value FROM privacy_settings WHERE key = ?", (key,)).fetchone()
+            return row[0] if row else default
+
+    def get_all_privacy_settings(self) -> dict:
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute("SELECT key, value FROM privacy_settings").fetchall()
+            return {row["key"]: row["value"] for row in rows}
 
 
 from memory.store import MemoryStore  # noqa: E402

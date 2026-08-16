@@ -168,3 +168,164 @@ def test_retrieve_relevant_returns_limited(tmp_db):
         tmp_db.remember(f"key{i}", f"value{i}")
     results = tmp_db.retrieve_relevant("value", limit=5)
     assert len(results) <= 5
+
+
+# ---------------------------------------------------------------------------
+# Phase 6: Advanced Memory
+# ---------------------------------------------------------------------------
+
+
+def test_memory_confidence_and_source(tmp_db):
+    mem = tmp_db.remember("pref", "dark theme", category="preferences", confidence=0.96, source="explicit_user")
+    assert mem["confidence"] == 0.96
+    assert mem["source"] == "explicit_user"
+
+
+def test_memory_profile(tmp_db):
+    tmp_db.remember("voice", "male", category="preferences", profile="jarvis")
+    tmp_db.remember("voice", "female", category="preferences", profile="alya")
+    jarvis = tmp_db.store.recall("", category="preferences", profile="jarvis")
+    alya = tmp_db.store.recall("", category="preferences", profile="alya")
+    assert len(jarvis) == 1
+    assert len(alya) == 1
+    assert jarvis[0]["value"] == "male"
+    assert alya[0]["value"] == "female"
+
+
+def test_memory_project_filter(tmp_db):
+    tmp_db.remember("proj1", "backend uses FastAPI", category="projects", project="Jarvis2.0")
+    tmp_db.remember("proj2", "frontend uses React", category="projects", project="Jarvis2.0")
+    tmp_db.remember("proj3", "ecommerce uses Django", category="projects", project="Ecommerce")
+    results = tmp_db.store.recall(category="projects", project="Jarvis2.0")
+    assert len(results) == 2
+
+
+def test_memory_update_confidence(tmp_db):
+    mem = tmp_db.remember("old", "old value", confidence=0.5)
+    tmp_db.store.update_memory(mem["id"], "new value", confidence=0.9)
+    updated = tmp_db.store.get_memory_by_id(mem["id"])
+    assert updated["value"] == "new value"
+    assert updated["confidence"] == 0.9
+
+
+def test_memory_recall_with_filters(tmp_db):
+    tmp_db.remember("a", "1", category="preferences", profile="jarvis")
+    tmp_db.remember("b", "2", category="preferences", profile="alya")
+    tmp_db.remember("c", "3", category="projects", profile="jarvis")
+    results = tmp_db.store.recall(category="preferences", profile="jarvis")
+    assert len(results) == 1
+    assert results[0]["key"] == "a"
+
+
+def test_conversation_summaries(tmp_db):
+    conv_id = tmp_db.ensure_conversation(None)
+    summary = tmp_db.store.add_conversation_summary(conv_id, "User discussed Phase 6", 10)
+    assert summary["summary"] == "User discussed Phase 6"
+    summaries = tmp_db.store.get_conversation_summaries(conv_id)
+    assert len(summaries) == 1
+    assert summaries[0]["message_count"] == 10
+
+
+def test_reminders_crud(tmp_db):
+    reminder = tmp_db.store.add_reminder("Test reminder", "Description", "2026-08-17T10:00:00", "once")
+    assert reminder["title"] == "Test reminder"
+    assert reminder["enabled"] is True
+    all_reminders = tmp_db.store.get_reminders()
+    assert len(all_reminders) == 1
+    updated = tmp_db.store.update_reminder(reminder["id"], {"enabled": 0})
+    assert updated is True
+    deleted = tmp_db.store.delete_reminder(reminder["id"])
+    assert deleted is True
+    assert tmp_db.store.get_reminders() == []
+
+
+def test_memory_feedback(tmp_db):
+    mem = tmp_db.remember("fb", "test")
+    feedback = tmp_db.store.add_memory_feedback(mem["id"], None, "up", "useful")
+    assert feedback["feedback"] == "up"
+    all_feedback = tmp_db.store.get_memory_feedback()
+    assert len(all_feedback) == 1
+
+
+def test_privacy_settings(tmp_db):
+    tmp_db.store.set_privacy_setting("privacy_mode", "private")
+    mode = tmp_db.store.get_privacy_setting("privacy_mode")
+    assert mode == "private"
+    all_settings = tmp_db.store.get_all_privacy_settings()
+    assert all_settings["privacy_mode"] == "private"
+
+
+def test_memory_cleanup_retention(tmp_db):
+    for i in range(5):
+        tmp_db.remember(f"expire{i}", f"value{i}", expires_at="2000-01-01T00:00:00")
+    tmp_db.remember("keep", "keep")
+    from memory.cleanup import MemoryCleanup
+    cleanup = MemoryCleanup(tmp_db)
+    count = cleanup.cleanup_expired_memories()
+    assert count == 5
+    remaining = tmp_db.store.recall("keep")
+    assert len(remaining) == 1
+
+
+def test_short_term_memory_ttl():
+    from memory.short_term import ShortTermMemory
+    stm = ShortTermMemory(ttl_seconds=0.1, max_items=10)
+    stm.set("key", "value")
+    assert stm.get("key") == "value"
+    import time
+    time.sleep(0.2)
+    assert stm.get("key") is None
+
+
+def test_long_term_memory_wrapper(tmp_db):
+    from memory.long_term import LongTermMemory
+    ltm = LongTermMemory(tmp_db)
+    mem = ltm.remember("wrapped", "value", category="preferences")
+    assert mem["category"] == "preferences"
+    results = ltm.recall("wrapped")
+    assert len(results) == 1
+
+
+def test_preferences_memory(tmp_db):
+    from memory.preferences import PreferencesMemory
+    prefs = PreferencesMemory(tmp_db)
+    prefs.set("theme", "dark", profile="jarvis")
+    prefs.set("theme", "light", profile="alya")
+    assert prefs.get("theme", profile="jarvis") == "dark"
+    assert prefs.get("theme", profile="alya") == "light"
+    all_prefs = prefs.get_all(profile="jarvis")
+    assert len(all_prefs) == 1
+
+
+def test_project_memory(tmp_db):
+    from memory.projects import ProjectMemory
+    proj_mem = ProjectMemory(tmp_db)
+    proj_mem.remember("Jarvis2.0", "Backend uses FastAPI")
+    proj_mem.remember("Jarvis2.0", "Frontend uses React")
+    results = proj_mem.recall("Jarvis2.0")
+    assert len(results) == 2
+    projects = proj_mem.list_projects()
+    assert "Jarvis2.0" in projects
+
+
+def test_task_memory(tmp_db):
+    from memory.tasks import TaskMemory
+    task_mem = TaskMemory(tmp_db)
+    task_mem.remember("task-1", "WebSocket failed", category="tasks")
+    results = task_mem.recall("task-1")
+    assert len(results) == 1
+
+
+def test_semantic_memory(tmp_db):
+    from memory.semantic import SemanticMemory
+    sem = SemanticMemory(tmp_db, None)
+    assert not sem.is_available()
+    results = sem.search("test")
+    assert isinstance(results, list)
+
+
+def test_normalize_category_phase6():
+    from memory.manager import normalize_category
+    assert normalize_category("USER_PREFERENCE") == "user_preference"
+    assert normalize_category("PROJECT") == "project"
+    assert normalize_category("UNKNOWN") == "general"

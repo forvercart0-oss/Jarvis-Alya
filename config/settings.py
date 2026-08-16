@@ -48,6 +48,16 @@ PUBLIC_SETTING_KEYS = {
     "wake_word",
     "memory_enabled",
     "vector_memory_enabled",
+    "auto_memory_enabled",
+    "project_memory_enabled",
+    "conversation_summaries_enabled",
+    "memory_retrieval_enabled",
+    "cloud_memory_sharing",
+    "memory_retention_short_term_hours",
+    "memory_retention_task_history_days",
+    "memory_retention_summaries_days",
+    "proactive_mode",
+    "proactive_min_interval_minutes",
     "message_notifications_enabled",
     "browser_notifications_enabled",
     "voice_notifications_enabled",
@@ -143,6 +153,16 @@ class Settings(BaseSettings):
     # Memory
     memory_enabled: bool = True
     vector_memory_enabled: bool = False
+    auto_memory_enabled: bool = False
+    project_memory_enabled: bool = True
+    conversation_summaries_enabled: bool = True
+    memory_retrieval_enabled: bool = True
+    cloud_memory_sharing: str = "ask"
+    memory_retention_short_term_hours: int = 24
+    memory_retention_task_history_days: int = 30
+    memory_retention_summaries_days: int = 30
+    proactive_mode: bool = False
+    proactive_min_interval_minutes: int = 10
 
     # Notifications
     message_notifications_enabled: bool = True

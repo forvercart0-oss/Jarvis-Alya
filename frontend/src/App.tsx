@@ -81,6 +81,9 @@ export default function App() {
     reconnect,
     tasks,
     taskPlan,
+    reminders,
+    summaries,
+    privacyMode,
     createTask,
     startTask,
     pauseTask,
@@ -169,9 +172,9 @@ export default function App() {
   )
 
   const handleMemoryAdd = useCallback(
-    async (content: string, category?: string) => {
+    async (content: string, category?: string, project?: string, profile?: string) => {
       try {
-        await api.addMemory(content, category)
+        await api.addMemory(content, category, project, profile)
         fetchData()
       } catch {
         window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: 'Failed to add memory', type: 'error' } }))
@@ -180,16 +183,75 @@ export default function App() {
     [fetchData]
   )
 
-  const handleMemoryDelete = useCallback(
-    async (key: string) => {
+  const handleMemoryUpdate = useCallback(
+    async (id: string, content: string, confidence?: number, source?: string) => {
       try {
-        await api.deleteMemory(key)
+        await api.updateMemory(id, content, confidence, source)
         fetchData()
       } catch {
         // ignore
       }
     },
     [fetchData]
+  )
+
+  const handleMemoryDelete = useCallback(
+    async (id: string) => {
+      try {
+        await api.deleteMemory(id)
+        fetchData()
+      } catch {
+        // ignore
+      }
+    },
+    [fetchData]
+  )
+
+  const handleAddReminder = useCallback(
+    async (title: string, description: string, dueAt: string, repeat: string) => {
+      try {
+        await api.createReminder(title, description, dueAt, repeat)
+        fetchData()
+      } catch {
+        // ignore
+      }
+    },
+    [fetchData]
+  )
+
+  const handleUpdateReminder = useCallback(
+    async (id: string, updates: Record<string, any>) => {
+      try {
+        await api.updateReminder(id, updates)
+        fetchData()
+      } catch {
+        // ignore
+      }
+    },
+    [fetchData]
+  )
+
+  const handleDeleteReminder = useCallback(
+    async (id: string) => {
+      try {
+        await api.deleteReminder(id)
+        fetchData()
+      } catch {
+        // ignore
+      }
+    },
+    [fetchData]
+  )
+
+  const handleSetPrivacyMode = useCallback(
+    async (mode: string) => {
+      try {
+        await api.setPrivacyMode(mode)
+      } catch {
+        // ignore
+      }
+    },
+    []
   )
 
   const handleConversationDelete = useCallback(
@@ -504,7 +566,26 @@ export default function App() {
                   {activeTab === 'memory' && (
                     <div className="h-full flex">
                       <div className="flex-1 min-w-0">
-                        <MemoryPanel memories={memories} onAdd={handleMemoryAdd} onDelete={handleMemoryDelete} onRefresh={fetchData} />
+                        <MemoryPanel
+                          memories={memories}
+                          onAdd={handleMemoryAdd}
+                          onDelete={handleMemoryDelete}
+                          onUpdate={handleMemoryUpdate}
+                          onRefresh={fetchData}
+                          reminders={reminders}
+                          onAddReminder={handleAddReminder}
+                          onUpdateReminder={handleUpdateReminder}
+                          onDeleteReminder={handleDeleteReminder}
+                          summaries={summaries}
+                          privacy={privacyMode ? { privacy_mode: privacyMode } : null}
+                          onSetPrivacyMode={handleSetPrivacyMode}
+                          projects={projects.map((p) => p.name)}
+                          profile={persona?.id || 'jarvis'}
+                          onSearchMemory={async (query: string, category?: string, project?: string) => {
+                            const results = await api.searchMemory(query, category, project)
+                            return results
+                          }}
+                        />
                       </div>
                       <div className="w-80 border-l border-cyan-500/10 hidden md:block">
                         <ConversationHistory

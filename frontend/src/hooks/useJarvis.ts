@@ -30,6 +30,9 @@ export function useJarvis() {
   const [tasks, setTasks] = useState<TaskItem[]>([])
   const [activeTask, setActiveTask] = useState<TaskItem | null>(null)
   const [taskPlan, setTaskPlan] = useState<TaskPlan | null>(null)
+  const [reminders, setReminders] = useState<any[]>([])
+  const [summaries, setSummaries] = useState<any[]>([])
+  const [privacyMode, setPrivacyMode] = useState<string>('normal')
 
   const wsRef = useRef<WebSocketManager | null>(null)
   const abortRef = useRef(false)
@@ -301,9 +304,30 @@ export function useJarvis() {
     })
 
     ws.on('task_denied', (_event, _data: any) => {
-      setTaskPlan((prev) => prev ? { ...prev, approved: false } : prev)
+      setTaskPlan((prev) => prev && prev.task_id === _data.task_id ? { ...prev, approved: false } : prev)
+    })
+
+    ws.on('memory_created', (_event, data: any) => {
+      _setMemories((prev) => [data, ...prev])
+    })
+
+    ws.on('memory_updated', (_event, data: any) => {
+      _setMemories((prev) => prev.map((m) => m.id === data.id ? { ...m, ...data } : m))
+    })
+
+    ws.on('memory_deleted', (_event, data: any) => {
+      _setMemories((prev) => prev.filter((m) => m.id !== data.id))
+    })
+
+    ws.on('reminder_triggered', (_event, data: any) => {
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: data.title || 'Reminder', type: 'info', data } }))
+    })
+
+    ws.on('notification_created', (_event, data: any) => {
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: data }))
     })
   }, [])
+
 
   const sendChat = useCallback(
     async (text: string) => {
@@ -430,7 +454,7 @@ export function useJarvis() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [h, s, t, a, m, set, v, d, pr, per, sk, vs, tk] = await Promise.all([
+      const [h, s, t, a, m, set, v, d, pr, per, sk, vs, tk, r, sum, p] = await Promise.all([
         api.getHealth().catch(() => null),
         api.getSystemStats().catch(() => null),
         api.getTools().catch(() => []),
@@ -444,6 +468,9 @@ export function useJarvis() {
         api.listSkills().catch(() => []),
         api.getVisionStatus().catch(() => null),
         api.getTasks().catch(() => []),
+        api.getReminders().catch(() => []),
+        api.getConversationSummaries().catch(() => []),
+        api.getPrivacySettings().catch(() => ({ privacy_mode: 'normal' })),
       ])
       if (h) setHealth(h)
       if (s) setStats(s)
@@ -458,6 +485,9 @@ export function useJarvis() {
       if (sk) setSkills(sk)
       if (vs) setVisionStatus(vs)
       if (tk) setTasks(tk)
+      setReminders(r)
+      setSummaries(sum)
+      setPrivacyMode(p?.privacy_mode || 'normal')
     } catch {
       // ignore
     }
@@ -529,6 +559,78 @@ export function useJarvis() {
     } catch { /* ignore */ }
   }, [])
 
+  const addMemory = useCallback(async (content: string, category = 'general', project?: string, profile?: string) => {
+    try {
+      await api.addMemory(content, category, project, profile)
+      fetchData()
+    } catch { /* ignore */ }
+  }, [fetchData])
+
+  const updateMemory = useCallback(async (id: string, content: string, confidence?: number, source?: string) => {
+    try {
+      await api.updateMemory(id, content, confidence, source)
+      fetchData()
+    } catch { /* ignore */ }
+  }, [fetchData])
+
+  const deleteMemory = useCallback(async (id: string) => {
+    try {
+      await api.deleteMemory(id)
+      fetchData()
+    } catch { /* ignore */ }
+  }, [fetchData])
+
+  const searchMemory = useCallback(async (query: string, category?: string, project?: string, profile?: string) => {
+    try {
+      return await api.searchMemory(query, category, project, profile)
+    } catch {
+      return []
+    }
+  }, [])
+
+  const addReminder = useCallback(async (title: string, description = '', dueAt = '', repeat = 'once') => {
+    try {
+      await api.createReminder(title, description, dueAt, repeat)
+      fetchData()
+    } catch { /* ignore */ }
+  }, [fetchData])
+
+  const updateReminder = useCallback(async (id: string, updates: Record<string, any>) => {
+    try {
+      await api.updateReminder(id, updates)
+      fetchData()
+    } catch { /* ignore */ }
+  }, [fetchData])
+
+  const deleteReminder = useCallback(async (id: string) => {
+    try {
+      await api.deleteReminder(id)
+      fetchData()
+    } catch { /* ignore */ }
+  }, [fetchData])
+
+  const updatePrivacyMode = useCallback(async (mode: string) => {
+    try {
+      await api.setPrivacyMode(mode)
+      setPrivacyMode(mode)
+    } catch { /* ignore */ }
+  }, [])
+
+  const refreshMemory = useCallback(async () => {
+    try {
+      const [m, r, s, p] = await Promise.all([
+        api.getMemory().catch(() => []),
+        api.getReminders().catch(() => []),
+        api.getConversationSummaries().catch(() => []),
+        api.getPrivacySettings().catch(() => ({ privacy_mode: 'normal' })),
+      ])
+      _setMemories(m)
+      setReminders(r)
+      setSummaries(s)
+      setPrivacyMode(p?.privacy_mode || 'normal')
+    } catch { /* ignore */ }
+  }, [])
+
   useEffect(() => {
     connect()
     return () => {
@@ -588,6 +690,9 @@ export function useJarvis() {
     tasks,
     activeTask,
     taskPlan,
+    reminders,
+    summaries,
+    privacyMode,
     createTask,
     startTask,
     pauseTask,
@@ -596,5 +701,14 @@ export function useJarvis() {
     approveTaskPlan,
     denyTaskPlan,
     setTaskPlan,
+    addMemory,
+    updateMemory,
+    deleteMemory,
+    searchMemory,
+    addReminder,
+    updateReminder,
+    deleteReminder,
+    updatePrivacyMode,
+    refreshMemory,
   }
 }

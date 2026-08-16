@@ -1,23 +1,29 @@
-"""Memory subsystem for JARVIS 2.0 (SQLite + optional vector memory)."""
+"""JARVIS memory package."""
 
-from __future__ import annotations
+from memory.manager import MemoryManager, SecretMemoryError, normalize_category
+from memory.short_term import ShortTermMemory
+from memory.long_term import LongTermMemory
+from memory.semantic import SemanticMemory
+from memory.preferences import PreferencesMemory
+from memory.projects import ProjectMemory
+from memory.tasks import TaskMemory
+from memory.summaries import ConversationSummaries
+from memory.privacy import PrivacyController
+from memory.cleanup import MemoryCleanup
+from memory.reminders import ReminderManager
 
-from pathlib import Path
-
-from memory.manager import MemoryManager
-
-_memory: MemoryManager | None = None
-
-
-def get_memory(db_path: Path | None = None) -> MemoryManager:
-    """Return the process-wide MemoryManager singleton."""
-    global _memory
-    if _memory is None:
-        _memory = MemoryManager(db_path)
-    return _memory
-
-
-def reset_memory_singleton() -> None:
-    """Reset the singleton (used in tests)."""
-    global _memory
-    _memory = None
+__all__ = [
+    "MemoryManager",
+    "SecretMemoryError",
+    "normalize_category",
+    "ShortTermMemory",
+    "LongTermMemory",
+    "SemanticMemory",
+    "PreferencesMemory",
+    "ProjectMemory",
+    "TaskMemory",
+    "ConversationSummaries",
+    "PrivacyController",
+    "MemoryCleanup",
+    "ReminderManager",
+]
