@@ -18,6 +18,7 @@ from backend.api.persona import router as persona_router
 from backend.api.settings import router as settings_router
 from backend.api.skills import router as skills_router
 from backend.api.system import router as system_router
+from backend.api.tasks import router as tasks_router
 from backend.api.tools import router as tools_router
 from backend.api.vision import router as vision_router
 from backend.api.voice import router as voice_router
@@ -123,6 +124,21 @@ automation_service = AutomationService(
     command_callback=_automation_command,
 )
 
+task_manager = None
+
+
+def get_task_manager_instance():
+    global task_manager
+    if task_manager is None:
+        from automation.manager import TaskManager
+        task_manager = TaskManager(
+            memory_manager=memory_manager,
+            tool_execute=lambda name, confirmed=False, **kwargs: tool_registry.execute(name, confirmed=confirmed, **kwargs),
+            ai_service=ai_service,
+            tts_callback=lambda text: voice_service.speak(text) if voice_service._started else None,
+        )
+    return task_manager
+
 
 async def _execute_automation_handler(automation_id: str):
     for automation in memory_manager.store.get_automations():
@@ -163,6 +179,8 @@ async def lifespan(app: FastAPI):
     await tts_manager.start()
     await voice_service.start()
     await automation_service.start()
+    _task_mgr = get_task_manager_instance()
+    await _task_mgr.start()
     vision_manager.enabled = settings.vision_enabled
     vision_manager.set_broadcast(ws_manager.broadcast)
     if settings.vision_provider:
@@ -178,6 +196,7 @@ async def lifespan(app: FastAPI):
     logger.info("JARVIS 2.0 ready.")
     yield
     logger.info("JARVIS 2.0 shutting down...")
+    await _task_mgr.stop()
     await automation_service.stop()
     await voice_service.stop()
     await tts_manager.stop()
@@ -200,6 +219,7 @@ app.include_router(memory_router, prefix="/api")
 app.include_router(settings_router, prefix="/api")
 app.include_router(tools_router, prefix="/api")
 app.include_router(automation_router, prefix="/api")
+app.include_router(tasks_router, prefix="/api")
 app.include_router(persona_router, prefix="/api")
 app.include_router(skills_router, prefix="/api")
 app.include_router(permissions_router, prefix="/api")
@@ -405,6 +425,39 @@ async def websocket_endpoint(websocket: WebSocket):
                 await ws_manager.send(websocket, "conversation_created", {"conversation_id": conv_id})
             elif event == "get_system_stats":
                 await ws_manager.send(websocket, "system_stats", system_service.full_stats())
+            elif event == "task_create":
+                mgr = get_task_manager_instance()
+                task = await mgr.create_task(
+                    description=data.get("description", ""),
+                    task_type=data.get("task_type", "general"),
+                    auto_execute=data.get("auto_execute", False),
+                    context=data.get("context"),
+                )
+                await ws_manager.send(websocket, "task_created", task)
+            elif event == "task_start":
+                mgr = get_task_manager_instance()
+                result = await mgr.start_task(data.get("task_id", ""))
+                await ws_manager.send(websocket, "task_started", result)
+            elif event == "task_pause":
+                mgr = get_task_manager_instance()
+                result = await mgr.pause_task(data.get("task_id", ""))
+                await ws_manager.send(websocket, "task_paused", result)
+            elif event == "task_resume":
+                mgr = get_task_manager_instance()
+                result = await mgr.resume_task(data.get("task_id", ""))
+                await ws_manager.send(websocket, "task_resumed", result)
+            elif event == "task_cancel":
+                mgr = get_task_manager_instance()
+                result = await mgr.cancel_task(data.get("task_id", ""))
+                await ws_manager.send(websocket, "task_cancelled", result)
+            elif event == "task_approve":
+                mgr = get_task_manager_instance()
+                result = await mgr.approve_plan(data.get("task_id", ""))
+                await ws_manager.send(websocket, "task_approved", result)
+            elif event == "task_deny":
+                mgr = get_task_manager_instance()
+                result = await mgr.deny_plan(data.get("task_id", ""))
+                await ws_manager.send(websocket, "task_denied", result)
             elif event == "ping":
                 await ws_manager.send(websocket, "pong", {"t": __import__("time").time()})
     except WebSocketDisconnect:

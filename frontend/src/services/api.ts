@@ -105,6 +105,54 @@ export const api = {
     return request(`/automations/${encodeURIComponent(id)}`, { method: 'DELETE' })
   },
 
+  async getTasks(status?: string): Promise<any[]> {
+    const q = status ? `?status=${encodeURIComponent(status)}` : ''
+    return request<any[]>(`/tasks${q}`)
+  },
+
+  async getActiveTasks(): Promise<any[]> {
+    return request<any[]>('/tasks/active')
+  },
+
+  async getTask(id: string): Promise<any> {
+    return request<any>(`/tasks/${encodeURIComponent(id)}`)
+  },
+
+  async createTask(payload: { description: string; task_type?: string; auto_execute?: boolean; context?: Record<string, any> }): Promise<any> {
+    return request<any>('/tasks', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
+
+  async startTask(id: string): Promise<any> {
+    return request<any>(`/tasks/${encodeURIComponent(id)}/start`, { method: 'POST' })
+  },
+
+  async pauseTask(id: string): Promise<any> {
+    return request<any>(`/tasks/${encodeURIComponent(id)}/pause`, { method: 'POST' })
+  },
+
+  async resumeTask(id: string): Promise<any> {
+    return request<any>(`/tasks/${encodeURIComponent(id)}/resume`, { method: 'POST' })
+  },
+
+  async cancelTask(id: string): Promise<any> {
+    return request<any>(`/tasks/${encodeURIComponent(id)}/cancel`, { method: 'POST' })
+  },
+
+  async approveTask(id: string): Promise<any> {
+    return request<any>(`/tasks/${encodeURIComponent(id)}/approve`, { method: 'POST' })
+  },
+
+  async denyTask(id: string): Promise<any> {
+    return request<any>(`/tasks/${encodeURIComponent(id)}/deny`, { method: 'POST' })
+  },
+
+  async deleteTask(id: string): Promise<void> {
+    return request(`/tasks/${encodeURIComponent(id)}`, { method: 'DELETE' })
+  },
+
   async speak(text: string): Promise<{ success: boolean }> {
     return request<{ success: boolean }>('/voice/speak', {
       method: 'POST',

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { OrbState, Message, ToolCall, SystemStats, JarvisSettings, MemoryItem, Automation, ToolInfo, HealthStatus, VoiceInfo, DiagnosticInfo, CodingProject, PersonaInfo, Skill } from '../types'
+import type { OrbState, Message, ToolCall, SystemStats, JarvisSettings, MemoryItem, Automation, ToolInfo, HealthStatus, VoiceInfo, DiagnosticInfo, CodingProject, PersonaInfo, Skill, TaskItem, TaskPlan } from '../types'
 import { api } from '../services/api'
 import { WebSocketManager } from '../services/websocket'
 
@@ -27,6 +27,9 @@ export function useJarvis() {
   const [pendingToolConfirmation, setPendingToolConfirmation] = useState<{ tool: string; arguments: Record<string, any>; message: string; tool_call_id: string } | null>(null)
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null)
   const [visionStatus, setVisionStatus] = useState<{ enabled: boolean; provider?: string | null } | null>(null)
+  const [tasks, setTasks] = useState<TaskItem[]>([])
+  const [activeTask, setActiveTask] = useState<TaskItem | null>(null)
+  const [taskPlan, setTaskPlan] = useState<TaskPlan | null>(null)
 
   const wsRef = useRef<WebSocketManager | null>(null)
   const abortRef = useRef(false)
@@ -228,6 +231,78 @@ export function useJarvis() {
     ws.on('vision_ready', () => {
       setVisionStatus((prev) => ({ ...prev, enabled: true }))
     })
+
+    ws.on('task_created', (_event, data: any) => {
+      setTasks((prev) => [data, ...prev])
+    })
+
+    ws.on('task_planning', (_event, data: any) => {
+      setTaskPlan(data.plan || null)
+    })
+
+    ws.on('task_started', (_event, data: any) => {
+      setTasks((prev) => prev.map((t) => t.id === data.task_id ? { ...t, status: 'running' } : t))
+    })
+
+    ws.on('task_step_started', (_event, data: any) => {
+      setActiveTask((prev) => prev ? { ...prev, current_action: data.current_action, current_step: data.step_index + 1 } : prev)
+    })
+
+    ws.on('task_step_completed', (_event, data: any) => {
+      setTasks((prev) => prev.map((t) => {
+        if (t.id !== data.task_id) return t
+        const logs = [...(t.logs || []), { timestamp: new Date().toISOString(), action: data.current_action || `Step ${data.step_index}`, result: data.success ? 'success' : `Failed: ${data.error}`, duration_ms: data.duration_ms || 0 }]
+        return { ...t, logs, current_step: (t.current_step || 0) + 1 }
+      }))
+    })
+
+    ws.on('task_step_failed', (_event, data: any) => {
+      setTasks((prev) => prev.map((t) => t.id === data.task_id ? { ...t, error: data.error } : t))
+    })
+
+    ws.on('task_verifying', (_event, data: any) => {
+      setTasks((prev) => prev.map((t) => t.id === data.task_id ? { ...t, status: 'verifying' } : t))
+    })
+
+    ws.on('task_completed', (_event, data: any) => {
+      setTasks((prev) => prev.map((t) => t.id === data.task_id ? { ...t, status: data.status || 'completed', result: data.result || 'Task completed.' } : t))
+      setActiveTask((prev) => prev && prev.id === data.task_id ? { ...prev, status: data.status || 'completed' } : prev)
+    })
+
+    ws.on('task_failed', (_event, data: any) => {
+      setTasks((prev) => prev.map((t) => t.id === data.task_id ? { ...t, status: 'failed', error: data.error } : t))
+      setActiveTask((prev) => prev && prev.id === data.task_id ? { ...prev, status: 'failed' } : prev)
+    })
+
+    ws.on('task_cancelled', (_event, data: any) => {
+      setTasks((prev) => prev.map((t) => t.id === data.task_id ? { ...t, status: 'cancelled' } : t))
+      setActiveTask((prev) => prev && prev.id === data.task_id ? { ...prev, status: 'cancelled' } : prev)
+    })
+
+    ws.on('task_paused', (_event, data: any) => {
+      setTasks((prev) => prev.map((t) => t.id === data.task_id ? { ...t, status: 'paused' } : t))
+    })
+
+    ws.on('task_resumed', (_event, data: any) => {
+      setTasks((prev) => prev.map((t) => t.id === data.task_id ? { ...t, status: 'running' } : t))
+    })
+
+    ws.on('task_permission_required', (_event, data: any) => {
+      setPendingToolConfirmation({
+        tool: data.tool || 'task_step',
+        arguments: data.arguments || {},
+        message: data.message || 'Confirmation required for task step.',
+        tool_call_id: data.request_id || '',
+      })
+    })
+
+    ws.on('task_approved', (_event, _data: any) => {
+      setTaskPlan((prev) => prev ? { ...prev, approved: true } : prev)
+    })
+
+    ws.on('task_denied', (_event, _data: any) => {
+      setTaskPlan((prev) => prev ? { ...prev, approved: false } : prev)
+    })
   }, [])
 
   const sendChat = useCallback(
@@ -355,7 +430,7 @@ export function useJarvis() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [h, s, t, a, m, set, v, d, pr, per, sk, vs] = await Promise.all([
+      const [h, s, t, a, m, set, v, d, pr, per, sk, vs, tk] = await Promise.all([
         api.getHealth().catch(() => null),
         api.getSystemStats().catch(() => null),
         api.getTools().catch(() => []),
@@ -368,6 +443,7 @@ export function useJarvis() {
         api.getPersona().catch(() => null),
         api.listSkills().catch(() => []),
         api.getVisionStatus().catch(() => null),
+        api.getTasks().catch(() => []),
       ])
       if (h) setHealth(h)
       if (s) setStats(s)
@@ -381,6 +457,7 @@ export function useJarvis() {
       if (per) setPersona(per)
       if (sk) setSkills(sk)
       if (vs) setVisionStatus(vs)
+      if (tk) setTasks(tk)
     } catch {
       // ignore
     }
@@ -399,6 +476,58 @@ export function useJarvis() {
       return null
     }
   }, [fetchData])
+
+  const createTask = useCallback(async (description: string, auto_execute = false) => {
+    try {
+      const task = await api.createTask({ description, auto_execute })
+      setTasks((prev) => [task, ...prev])
+      return task
+    } catch {
+      return null
+    }
+  }, [])
+
+  const startTask = useCallback(async (id: string) => {
+    try {
+      await api.startTask(id)
+      setTasks((prev) => prev.map((t) => t.id === id ? { ...t, status: 'running' } : t))
+    } catch { /* ignore */ }
+  }, [])
+
+  const pauseTask = useCallback(async (id: string) => {
+    try {
+      await api.pauseTask(id)
+      setTasks((prev) => prev.map((t) => t.id === id ? { ...t, status: 'paused' } : t))
+    } catch { /* ignore */ }
+  }, [])
+
+  const resumeTask = useCallback(async (id: string) => {
+    try {
+      await api.resumeTask(id)
+      setTasks((prev) => prev.map((t) => t.id === id ? { ...t, status: 'running' } : t))
+    } catch { /* ignore */ }
+  }, [])
+
+  const cancelTask = useCallback(async (id: string) => {
+    try {
+      await api.cancelTask(id)
+      setTasks((prev) => prev.map((t) => t.id === id ? { ...t, status: 'cancelled' } : t))
+    } catch { /* ignore */ }
+  }, [])
+
+  const approveTaskPlan = useCallback(async (id: string) => {
+    try {
+      await api.approveTask(id)
+      setTaskPlan((prev) => prev && prev.task_id === id ? { ...prev, approved: true } : prev)
+    } catch { /* ignore */ }
+  }, [])
+
+  const denyTaskPlan = useCallback(async (id: string) => {
+    try {
+      await api.denyTask(id)
+      setTaskPlan((prev) => prev && prev.task_id === id ? { ...prev, approved: false } : prev)
+    } catch { /* ignore */ }
+  }, [])
 
   useEffect(() => {
     connect()
@@ -456,5 +585,16 @@ export function useJarvis() {
     confirmTool,
     reconnect,
     visionStatus,
+    tasks,
+    activeTask,
+    taskPlan,
+    createTask,
+    startTask,
+    pauseTask,
+    resumeTask,
+    cancelTask,
+    approveTaskPlan,
+    denyTaskPlan,
+    setTaskPlan,
   }
 }

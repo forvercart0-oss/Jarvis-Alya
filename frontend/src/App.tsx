@@ -27,6 +27,7 @@ import { AgentPanel } from './components/Agent/AgentPanel'
 import { BrowserPanel } from './components/Browser/BrowserPanel'
 import { ComputerPanel } from './components/Computer/ComputerPanel'
 import { VisionPanel } from './components/Vision/VisionPanel'
+import { TasksPanel } from './components/Tasks/TasksPanel'
 import { useJarvis } from './hooks/useJarvis'
 import { api } from './services/api'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
@@ -78,6 +79,16 @@ export default function App() {
     pendingToolConfirmation,
     confirmTool,
     reconnect,
+    tasks,
+    taskPlan,
+    createTask,
+    startTask,
+    pauseTask,
+    resumeTask,
+    cancelTask,
+    approveTaskPlan,
+    denyTaskPlan,
+    setTaskPlan,
   } = useJarvis()
 
   useKeyboardShortcuts([
@@ -512,6 +523,20 @@ export default function App() {
                       onUpdate={handleAutomationUpdate}
                       onDelete={handleAutomationDelete}
                       onExecute={handleAutomationExecute}
+                    />
+                  )}
+                  {activeTab === 'tasks' && (
+                    <TasksPanel
+                      tasks={tasks}
+                      taskPlan={taskPlan}
+                      onCreate={createTask}
+                      onStart={startTask}
+                      onPause={pauseTask}
+                      onResume={resumeTask}
+                      onCancel={cancelTask}
+                      onApprove={approveTaskPlan}
+                      onDeny={denyTaskPlan}
+                      onClearPlan={() => setTaskPlan(null)}
                     />
                   )}
                   {activeTab === 'media' && (

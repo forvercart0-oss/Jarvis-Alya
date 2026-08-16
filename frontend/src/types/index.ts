@@ -1,6 +1,6 @@
 export type OrbState = 'idle' | 'listening' | 'thinking' | 'processing' | 'speaking' | 'error'
 
-export type TabId = 'home' | 'chat' | 'voice' | 'system' | 'tools' | 'coding' | 'memory' | 'automations' | 'media' | 'settings' | 'diagnostics' | 'health' | 'about' | 'skills' | 'agent' | 'browser' | 'computer' | 'vision'
+export type TabId = 'home' | 'chat' | 'voice' | 'system' | 'tools' | 'coding' | 'memory' | 'automations' | 'tasks' | 'media' | 'settings' | 'diagnostics' | 'health' | 'about' | 'skills' | 'agent' | 'browser' | 'computer' | 'vision'
 
 export type ConnectionState = 'connecting' | 'online' | 'offline'
 
@@ -356,4 +356,50 @@ export interface GitDiff {
   deleted?: boolean
   renamed?: boolean
   hunks: Array<Record<string, any>>
+}
+
+export interface TaskStep {
+  step_id: string
+  title: string
+  action: string
+  tool?: string
+  arguments: Record<string, any>
+  risk: string
+  verify?: string
+  fallback: string[]
+  estimated_duration: number
+}
+
+export interface TaskPlan {
+  plan_id: string
+  task_id: string
+  title: string
+  description: string
+  complexity: 'simple' | 'moderate' | 'complex'
+  steps: TaskStep[]
+  approved: boolean
+  dry_run: boolean
+  variables: Record<string, any>
+  created_at: string
+}
+
+export interface TaskItem {
+  id: string
+  description: string
+  status: string
+  task_type: string
+  complexity: string
+  created_at: string
+  updated_at: string
+  result?: string
+  metadata?: Record<string, any>
+  retries: number
+  max_retries: number
+  current_step: number
+  total_steps: number
+  elapsed_seconds: number
+  pid?: number
+  schedule?: string
+  checkpoints?: Array<Record<string, any>>
+  logs?: Array<{ timestamp: string; action: string; result: string; duration_ms: number }>
 }

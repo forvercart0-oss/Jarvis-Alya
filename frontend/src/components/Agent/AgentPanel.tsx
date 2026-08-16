@@ -1,13 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import {
-  Play, Square, CheckCircle2, XCircle, Loader2, ChevronRight,
-  FileCode2, Terminal, GitBranch, AlertTriangle, RefreshCw, Undo2,
-  Send, Bot
+  CheckCircle2, XCircle, Loader2,
+  GitBranch, Send, Bot
 } from 'lucide-react'
 import { Button } from '../Common/Button'
 import { api } from '../../services/api'
-import type { AgentSession, AgentPlan, AgentTask, GitStatus } from '../../types'
+import type { AgentSession, AgentTask, GitStatus } from '../../types'
 
 const STATE_COLORS: Record<string, string> = {
   idle: 'text-slate-400',
@@ -122,7 +121,7 @@ export function AgentPanel() {
     }
   }
 
-  const renderTask = (task: AgentTask, index: number) => {
+  const renderTask = (task: AgentTask, _index: number) => {
     const statusIcon = task.status === 'completed' ? (
       <CheckCircle2 className="w-4 h-4 text-emerald-400" />
     ) : task.status === 'running' ? (
