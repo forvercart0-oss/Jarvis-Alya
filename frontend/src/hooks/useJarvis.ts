@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { OrbState, Message, ToolCall, SystemStats, JarvisSettings, MemoryItem, Automation, ToolInfo, HealthStatus, VoiceInfo, DiagnosticInfo, CodingProject, PersonaInfo, Skill, TaskItem, TaskPlan } from '../types'
+import type { OrbState, Message, ToolCall, SystemStats, JarvisSettings, MemoryItem, Automation, ToolInfo, HealthStatus, VoiceInfo, DiagnosticInfo, CodingProject, PersonaInfo, Skill, TaskItem, TaskPlan, SeriousModeState, ResearchJob } from '../types'
 import { api } from '../services/api'
 import { WebSocketManager } from '../services/websocket'
 
@@ -33,6 +33,13 @@ export function useJarvis() {
   const [reminders, setReminders] = useState<any[]>([])
   const [summaries, setSummaries] = useState<any[]>([])
   const [privacyMode, setPrivacyMode] = useState<string>('normal')
+  const [seriousMode, setSeriousMode] = useState<SeriousModeState>('inactive')
+  const [researchJob, _setResearchJob] = useState<ResearchJob | null>(null)
+  const [researchPhase, setResearchPhase] = useState<string>('')
+  const [researchSourcesFound, setResearchSourcesFound] = useState(0)
+  const [researchSourcesProcessed, setResearchSourcesProcessed] = useState(0)
+  const [researchClaimsChecked, setResearchClaimsChecked] = useState(0)
+  const [researchHistory, setResearchHistory] = useState<ResearchJob[]>([])
 
   const wsRef = useRef<WebSocketManager | null>(null)
   const abortRef = useRef(false)
@@ -326,13 +333,204 @@ export function useJarvis() {
     ws.on('notification_created', (_event, data: any) => {
       window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: data }))
     })
+
+    ws.on('serious_mode_started', () => {
+      setSeriousMode('active')
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: 'Serious Mode Activated', type: 'warning' } }))
+    })
+
+    ws.on('serious_mode_stopped', () => {
+      setSeriousMode('inactive')
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: 'Normal Mode Restored', type: 'info' } }))
+    })
+
+    ws.on('research_started', (_event, data: any) => {
+      _setResearchJob({
+        id: data.job_id,
+        topic: data.topic,
+        status: data.status || 'running',
+        phase: data.phase || '',
+        started_at: Date.now(),
+        completed_at: null,
+        sources_found: 0,
+        sources_processed: 0,
+        claims_checked: 0,
+        document_path: '',
+        error: '',
+      })
+      setResearchPhase('starting')
+      setResearchSourcesFound(0)
+      setResearchSourcesProcessed(0)
+      setResearchClaimsChecked(0)
+      setOrbState('processing')
+    })
+
+    ws.on('research_query_updated', (_event, data: any) => {
+      setResearchPhase(data.phase || '')
+      if (data.topic) {
+        _setResearchJob((prev: any) => prev ? { ...prev, topic: data.topic } : prev)
+      }
+    })
+
+    ws.on('research_source_found', (_event, data: any) => {
+      setResearchSourcesFound(data.sources_found || 0)
+    })
+
+    ws.on('research_source_processed', (_event, data: any) => {
+      setResearchSourcesProcessed(data.sources_processed || 0)
+      setResearchSourcesFound(data.sources_found || 0)
+      if (data.claims_checked !== undefined) {
+        setResearchClaimsChecked(data.claims_checked || 0)
+      }
+      if (data.status) {
+        _setResearchJob((prev: any) => prev ? { ...prev, ...data } : prev)
+      }
+    })
+
+    ws.on('research_analysis_started', (_event, _data: any) => {
+      setResearchPhase('analyzing')
+    })
+
+    ws.on('research_writing_started', (_event, _data: any) => {
+      setResearchPhase('writing')
+    })
+
+    ws.on('research_completed', (_event, data: any) => {
+      const completedJob: ResearchJob = {
+        id: data.job_id,
+        topic: data.topic || '',
+        status: 'completed',
+        phase: 'completed',
+        started_at: Date.now(),
+        completed_at: Date.now(),
+        sources_found: data.sources_found || 0,
+        sources_processed: data.sources_processed || 0,
+        claims_checked: data.claims_checked || 0,
+        document_path: data.document_path || '',
+        error: '',
+      }
+      _setResearchJob((prev: any) => prev ? {
+        ...prev,
+        ...completedJob,
+      } : completedJob)
+      setResearchPhase('completed')
+      setOrbState('idle')
+      setResearchHistory((prev) => {
+        if (!prev.find((j) => j.id === completedJob.id)) {
+          return [completedJob, ...prev]
+        }
+        return prev
+      })
+    })
+
+    ws.on('research_failed', (_event, data: any) => {
+      _setResearchJob((prev: any) => prev ? { ...prev, status: 'failed', error: data.error || 'Unknown error' } : prev)
+      setResearchPhase('failed')
+      setOrbState('idle')
+    })
+
+    ws.on('research_cancelled', (_event, _data: any) => {
+      _setResearchJob((prev: any) => prev ? { ...prev, status: 'cancelled' } : prev)
+      setResearchPhase('cancelled')
+      setOrbState('idle')
+    })
+
+    ws.on('research_document_created', (_event, data: any) => {
+      _setResearchJob((prev: any) => prev ? { ...prev, document_path: data.document_path || '' } : prev)
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: `Research document created: ${data.document_path}`, type: 'success' } }))
+    })
   }, [])
 
+
+  const startSeriousMode = useCallback(() => {
+    const sysMsg: Message = {
+      id: nextId(),
+      role: 'system',
+      content: 'SERIOUS MODE ACTIVATED',
+      timestamp: Date.now(),
+    }
+    setMessages((prev) => [...prev, sysMsg])
+    wsRef.current?.send('serious_mode_start', {})
+  }, [])
+
+  const stopSeriousMode = useCallback(() => {
+    const sysMsg: Message = {
+      id: nextId(),
+      role: 'system',
+      content: 'NORMAL MODE RESTORED',
+      timestamp: Date.now(),
+    }
+    setMessages((prev) => [...prev, sysMsg])
+    wsRef.current?.send('serious_mode_stop', {})
+  }, [])
+
+  const startResearch = useCallback((topic: string) => {
+    const sysMsg: Message = {
+      id: nextId(),
+      role: 'system',
+      content: `DEEP RESEARCH STARTED: ${topic}`,
+      timestamp: Date.now(),
+    }
+    setMessages((prev) => [...prev, sysMsg])
+    wsRef.current?.send('research_start', { topic })
+  }, [])
+
+  const cancelResearch = useCallback((jobId: string) => {
+    wsRef.current?.send('research_cancel', { job_id: jobId })
+  }, [])
+
+  const loadResearchHistory = useCallback(async () => {
+    try {
+      const res = await api.getResearchJobs()
+      if (res?.jobs) {
+        setResearchHistory(res.jobs.map((j: any) => ({
+          id: j.id,
+          topic: j.topic,
+          status: j.status,
+          phase: j.phase,
+          started_at: j.started_at,
+          completed_at: j.completed_at,
+          sources_found: j.sources_found,
+          sources_processed: j.sources_processed,
+          claims_checked: j.claims_checked,
+          document_path: j.document_path,
+          error: j.error,
+        })))
+      }
+    } catch {
+      // ignore
+    }
+  }, [])
 
   const sendChat = useCallback(
     async (text: string) => {
       if (!text.trim() || !wsRef.current) return
       abortRef.current = false
+
+      const lower = text.toLowerCase().trim()
+      if (lower.includes('go into serious mode') || lower.includes('enter serious mode') || lower === 'serious mode') {
+        startSeriousMode()
+        return
+      }
+      if (lower.includes('exit serious mode') || lower.includes('leave serious mode') || lower === 'normal mode' || lower.includes('cancel serious mode')) {
+        stopSeriousMode()
+        return
+      }
+      if ((lower.includes('deep search on') || lower.includes('deep research on') || lower.includes('deep search'))) {
+        const topicMatch = text.match(/(?:deep search on|deep research on|deep search)\s+(.+)/i)
+        const topic = topicMatch ? topicMatch[1].trim() : text
+        if (topic) {
+          startResearch(topic)
+          return
+        }
+      }
+      if (lower === 'stop research' || lower === 'cancel research') {
+        if (researchJob?.id) {
+          cancelResearch(researchJob.id)
+        }
+        return
+      }
+
       const userMsg: Message = {
         id: nextId(),
         role: 'user',
@@ -363,7 +561,7 @@ export function useJarvis() {
         }
       }
     },
-    [currentConversationId]
+    [currentConversationId, startSeriousMode, stopSeriousMode, startResearch, cancelResearch, researchJob]
   )
 
   const stopGeneration = useCallback(() => {
@@ -628,7 +826,9 @@ export function useJarvis() {
       setReminders(r)
       setSummaries(s)
       setPrivacyMode(p?.privacy_mode || 'normal')
-    } catch { /* ignore */ }
+    } catch {
+      // ignore
+    }
   }, [])
 
   useEffect(() => {
@@ -710,5 +910,18 @@ export function useJarvis() {
     deleteReminder,
     updatePrivacyMode,
     refreshMemory,
+    seriousMode,
+    researchJob,
+    researchPhase,
+    researchSourcesFound,
+    researchSourcesProcessed,
+    researchClaimsChecked,
+    researchHistory,
+    startSeriousMode,
+    stopSeriousMode,
+    startResearch,
+    cancelResearch,
+    loadResearchHistory,
+    setResearchJob: _setResearchJob,
   }
 }

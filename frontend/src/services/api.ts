@@ -1,4 +1,4 @@
-import type { JarvisSettings, HealthStatus, MemoryItem, Automation, ToolInfo, Message, SystemStats, ConversationSummary, NotificationItem, DiagnosticInfo, VoiceInfo, CodingProject, ProjectFileEntry, PersonaInfo, Skill, SkillActivity, GitStatus } from '../types'
+import type { JarvisSettings, HealthStatus, MemoryItem, Automation, ToolInfo, Message, SystemStats, ConversationSummary, NotificationItem, DiagnosticInfo, VoiceInfo, CodingProject, ProjectFileEntry, PersonaInfo, Skill, SkillActivity, GitStatus, ResearchJob } from '../types'
 
 const isTauri = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__
 const API_BASE = isTauri ? 'http://127.0.0.1:8000/api' : '/api'
@@ -569,6 +569,36 @@ export const api = {
     return request('/vision/keyboard/press', {
       method: 'POST',
       body: JSON.stringify({ key }),
+    })
+  },
+
+  async startResearch(topic: string): Promise<{ job_id: string; topic: string; status: string }> {
+    return request('/research/start', {
+      method: 'POST',
+      body: JSON.stringify({ topic }),
+    })
+  },
+
+  async cancelResearch(jobId: string): Promise<{ cancelled: boolean }> {
+    return request(`/research/${encodeURIComponent(jobId)}/cancel`, { method: 'POST' })
+  },
+
+  async getResearchJobs(): Promise<{ jobs: ResearchJob[] }> {
+    return request('/research/jobs')
+  },
+
+  async getResearchJob(jobId: string): Promise<any> {
+    return request(`/research/${encodeURIComponent(jobId)}`)
+  },
+
+  async getResearchSettings(): Promise<{ max_sources: number; research_depth: string; document_format: string }> {
+    return request('/research/settings')
+  },
+
+  async updateResearchSettings(patch: Record<string, any>): Promise<any> {
+    return request('/research/settings', {
+      method: 'PUT',
+      body: JSON.stringify(patch),
     })
   },
 }

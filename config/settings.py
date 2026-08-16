@@ -82,6 +82,9 @@ PUBLIC_SETTING_KEYS = {
     "vision_max_retries",
     "vision_cache_ttl",
     "vision_capture_hotkey",
+    "research_max_sources",
+    "research_depth",
+    "research_document_format",
 }
 
 # Secret keys stored in `.env` but never returned unmasked to the browser.
@@ -209,6 +212,11 @@ class Settings(BaseSettings):
     vision_max_retries: int = 3
     vision_cache_ttl: float = 30.0
     vision_capture_hotkey: str = "ctrl+shift+j"
+
+    # Deep Research
+    research_max_sources: int = 20
+    research_depth: str = "deep"
+    research_document_format: str = "markdown"
 
     # ---- persistence -------------------------------------------------
     def apply_db_overrides(self, overrides: dict[str, str]) -> None:

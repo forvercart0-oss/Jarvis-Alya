@@ -28,6 +28,8 @@ import { BrowserPanel } from './components/Browser/BrowserPanel'
 import { ComputerPanel } from './components/Computer/ComputerPanel'
 import { VisionPanel } from './components/Vision/VisionPanel'
 import { TasksPanel } from './components/Tasks/TasksPanel'
+import { ResearchPanel } from './components/Research/ResearchPanel'
+import { ResearchHistory } from './components/Research/ResearchHistory'
 import { useJarvis } from './hooks/useJarvis'
 import { api } from './services/api'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
@@ -49,6 +51,8 @@ export default function App() {
   const [notifications, setNotifications] = useState<{ id: string; message: string; type: 'info' | 'warning' | 'error' }[]>([])
   const [copiedContent, setCopiedContent] = useState('')
   const [showFirstRun, setShowFirstRun] = useState(false)
+  const [seriousMode, setSeriousMode] = useState(false)
+  const [showResearchPanel, setShowResearchPanel] = useState(false)
 
   const {
     connection,
@@ -92,6 +96,18 @@ export default function App() {
     approveTaskPlan,
     denyTaskPlan,
     setTaskPlan,
+    seriousMode: hookSeriousMode,
+    researchJob,
+    researchPhase: _researchPhase,
+    researchSourcesFound: _researchSourcesFound,
+    researchSourcesProcessed: _researchSourcesProcessed,
+    researchClaimsChecked: _researchClaimsChecked,
+    researchHistory,
+    startSeriousMode,
+    stopSeriousMode,
+    cancelResearch,
+    loadResearchHistory,
+    setResearchJob,
   } = useJarvis()
 
   useKeyboardShortcuts([
@@ -300,6 +316,20 @@ export default function App() {
   }, [handleNotification])
 
   useEffect(() => {
+    if (hookSeriousMode) {
+      setSeriousMode(true)
+    } else {
+      setSeriousMode(false)
+    }
+  }, [hookSeriousMode])
+
+  useEffect(() => {
+    if (activeTab === 'research') {
+      loadResearchHistory()
+    }
+  }, [activeTab, loadResearchHistory])
+
+  useEffect(() => {
     const handleAccent = (e: Event) => {
       const color = (e as CustomEvent).detail?.color
       if (color) setAccentColor(color)
@@ -432,18 +462,22 @@ export default function App() {
   )
 
   const leftPanel = viewMode === 'split' && activeTab === 'chat' ? (
-    <div className="w-72 border-r border-cyan-500/10 flex flex-col items-center bg-black/20 overflow-hidden">
+    <div className={`w-72 border-r flex flex-col items-center bg-black/20 overflow-hidden ${seriousMode ? 'border-red-500/20' : 'border-cyan-500/10'}`}>
       <div className="flex-1 flex flex-col items-center justify-center p-4 w-full">
         <Orb
           state={orbState}
           assistantName={settings?.assistant_name || 'JARVIS'}
-          accentColor={accentColor}
+          accentColor={seriousMode ? '#ff1a1a' : accentColor}
           size={88}
           onClick={handleOrbClick}
         />
-        <div className="mt-4 text-[10px] tracking-[0.3em] text-slate-500 uppercase">
-          {orbState === 'listening' ? 'Listening...' : orbState === 'thinking' ? 'Thinking' : orbState === 'speaking' ? 'Speaking' : 'Click to speak'}
+        <div className="mt-4 text-[10px] tracking-[0.3em] uppercase flex items-center gap-2" style={{ color: seriousMode ? '#ff1a1a' : undefined }}>
+          {seriousMode && <span className="w-2 h-2 rounded-full bg-red-500 serious-pulse" />}
+          {orbState === 'listening' ? 'Listening...' : orbState === 'thinking' ? 'Thinking' : orbState === 'speaking' ? 'Speaking' : orbState === 'processing' ? 'Processing' : 'Click to speak'}
         </div>
+        {seriousMode && (
+          <div className="mt-2 text-[10px] tracking-[0.2em] text-red-400/70 uppercase font-bold">Serious Mode Active</div>
+        )}
       </div>
     </div>
   ) : null
@@ -462,8 +496,34 @@ export default function App() {
 
   const isChatTab = activeTab === 'chat'
 
+  const handleOpenDocument = useCallback(() => {
+    if (researchJob?.document_path) {
+      window.open(`file://${researchJob.document_path}`, '_blank')
+    }
+  }, [researchJob])
+
+  const handleOpenFolder = useCallback(() => {
+    if (researchJob?.document_path) {
+      const folder = researchJob.document_path.split('/').slice(0, -1).join('/')
+      window.open(`file://${folder}`, '_blank')
+    }
+  }, [researchJob])
+
+  const handleCopyPath = useCallback(() => {
+    if (researchJob?.document_path) {
+      navigator.clipboard.writeText(researchJob.document_path)
+      setCopiedContent(researchJob.document_path)
+      setTimeout(() => setCopiedContent(''), 2000)
+    }
+  }, [researchJob])
+
+  const handleResearchHistorySelect = useCallback((job: any) => {
+    setResearchJob(job)
+    setShowResearchPanel(true)
+  }, [])
+
   return (
-    <div className="h-screen w-screen flex flex-col bg-jarvis-dark relative overflow-hidden">
+    <div className={`h-screen w-screen flex flex-col bg-jarvis-dark relative overflow-hidden ${seriousMode ? 'serious-mode' : ''}`}>
       <TitleBar />
       {/* HUD overlay effects */}
       <div className="fixed inset-0 pointer-events-none z-0">
@@ -490,7 +550,7 @@ export default function App() {
       )}
 
       <div className="flex-1 flex overflow-hidden relative z-10">
-        <Sidebar activeTab={activeTab} onTabChange={setActiveTab} connection={connection} persona={persona} onSwitchPersona={(id) => switchPersona(id)} accentColor={accentColor} />
+        <Sidebar activeTab={activeTab} onTabChange={setActiveTab} connection={connection} persona={persona} onSwitchPersona={(id) => switchPersona(id)} accentColor={accentColor} seriousMode={seriousMode} onToggleSeriousMode={() => seriousMode ? stopSeriousMode() : startSeriousMode()} />
 
         <div className="flex-1 flex min-w-0">
           {isChatTab && viewMode === 'split' ? (
@@ -651,6 +711,29 @@ export default function App() {
                   {activeTab === 'browser' && <BrowserPanel onNavigate={setActiveTab} />}
                   {activeTab === 'computer' && <ComputerPanel onNavigate={setActiveTab} />}
                   {activeTab === 'vision' && <VisionPanel />}
+                  {activeTab === 'research' && (
+                    <div className="h-full flex">
+                      <div className="flex-1 min-w-0">
+                        {showResearchPanel && researchJob ? (
+                          <ResearchPanel
+                            job={researchJob}
+                            onClose={() => setShowResearchPanel(false)}
+                            onCancel={() => cancelResearch(researchJob.id)}
+                            onOpenDocument={handleOpenDocument}
+                            onOpenFolder={handleOpenFolder}
+                            onCopyPath={handleCopyPath}
+                          />
+                        ) : (
+                          <div className="h-full flex items-center justify-center text-slate-500 text-sm">
+                            Select a research item from history or start new research
+                          </div>
+                        )}
+                      </div>
+                      <div className="w-80 border-l border-red-500/10 hidden md:block">
+                        <ResearchHistory jobs={researchHistory} onSelect={handleResearchHistorySelect} onRefresh={loadResearchHistory} />
+                      </div>
+                    </div>
+                  )}
                 </div>
                 {activeTab !== 'chat' && (
                   <div className="w-72 border-l border-cyan-500/10 hidden lg:block overflow-hidden">

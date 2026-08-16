@@ -18,6 +18,14 @@ export function MessageBubble({ message, onCopy }: MessageBubbleProps) {
   }
 
   const isUser = message.role === 'user'
+  const isSystem = message.role === 'system'
+  const isSerious = isSystem && message.content.includes('SERIOUS MODE')
+  const isResearch = isSystem && message.content.includes('DEEP RESEARCH')
+
+  let bubbleColor = 'bg-slate-800/60 text-slate-200 border border-slate-600/30 rounded-bl-sm'
+  if (isUser) bubbleColor = 'bg-cyan-500/10 text-cyan-100 border border-cyan-400/20 rounded-br-sm'
+  if (isSerious) bubbleColor = 'bg-red-500/10 text-red-200 border border-red-500/30 rounded-sm'
+  if (isResearch) bubbleColor = 'bg-red-500/10 text-red-200 border border-red-500/30 rounded-sm'
 
   return (
     <motion.div
@@ -28,13 +36,17 @@ export function MessageBubble({ message, onCopy }: MessageBubbleProps) {
       <div
         className={[
           'max-w-[85%] px-3 py-2 rounded-lg text-sm leading-relaxed break-words relative group',
-          isUser
-            ? 'bg-cyan-500/10 text-cyan-100 border border-cyan-400/20 rounded-br-sm'
-            : 'bg-slate-800/60 text-slate-200 border border-slate-600/30 rounded-bl-sm',
+          bubbleColor,
         ].join(' ')}
       >
-        {!isUser && (
+        {!isUser && !isSystem && (
           <div className="text-[9px] tracking-[0.3em] text-cyan-400/50 uppercase mb-1">JARVIS</div>
+        )}
+        {isSerious && (
+          <div className="text-[9px] tracking-[0.3em] text-red-400/70 uppercase mb-1 font-bold">SERIOUS MODE</div>
+        )}
+        {isResearch && !isSerious && (
+          <div className="text-[9px] tracking-[0.3em] text-red-400/70 uppercase mb-1 font-bold">DEEP RESEARCH</div>
         )}
         <div className="whitespace-pre-wrap">{message.content}</div>
         {message.toolCalls && message.toolCalls.length > 0 && (
@@ -49,7 +61,7 @@ export function MessageBubble({ message, onCopy }: MessageBubbleProps) {
             ))}
           </div>
         )}
-        {!isUser && (
+        {!isUser && !isSystem && (
           <button
             onClick={handleCopy}
             className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-slate-500 hover:text-cyan-400 text-xs"

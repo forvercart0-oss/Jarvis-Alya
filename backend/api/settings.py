@@ -80,6 +80,9 @@ class SettingsUpdate(BaseModel):
     vision_max_retries: Optional[int] = None
     vision_cache_ttl: Optional[float] = None
     vision_capture_hotkey: Optional[str] = None
+    research_max_sources: Optional[int] = None
+    research_depth: Optional[str] = None
+    research_document_format: Optional[str] = None
 
 
 def _mask_api_key(key: str) -> str:
@@ -167,6 +170,9 @@ async def get_settings_api():
         "vision_max_retries": getattr(s, "vision_max_retries", 3),
         "vision_cache_ttl": getattr(s, "vision_cache_ttl", 30.0),
         "vision_capture_hotkey": getattr(s, "vision_capture_hotkey", "ctrl+shift+j"),
+        "research_max_sources": getattr(s, "research_max_sources", 20),
+        "research_depth": getattr(s, "research_depth", "deep"),
+        "research_document_format": getattr(s, "research_document_format", "markdown"),
         "db_settings": db_settings,
     }
 

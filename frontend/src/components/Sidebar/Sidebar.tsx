@@ -1,4 +1,4 @@
-import { MessageSquare, Cpu, Wrench, Zap, Settings, AudioLines, FileCode2, Activity, Home, BookOpen, ImageIcon, HeartPulse, Puzzle, Bot, Globe, Monitor, Eye, ListTodo } from 'lucide-react'
+import { MessageSquare, Cpu, Wrench, Zap, Settings, AudioLines, FileCode2, Activity, Home, BookOpen, ImageIcon, HeartPulse, Puzzle, Bot, Globe, Monitor, Eye, ListTodo, FlaskConical } from 'lucide-react'
 import type { TabId, PersonaInfo } from '../../types'
 
 interface SidebarItemProps {
@@ -8,9 +8,11 @@ interface SidebarItemProps {
   active: boolean
   accent: string
   onClick: () => void
+  serious?: boolean
 }
 
-function SidebarItem({ label, icon, active, accent, onClick }: SidebarItemProps) {
+function SidebarItem({ label, icon, active, accent, onClick, serious }: SidebarItemProps) {
+  const color = serious && active ? '#ff1a1a' : active ? accent : undefined
   return (
     <button
       onClick={onClick}
@@ -18,7 +20,7 @@ function SidebarItem({ label, icon, active, accent, onClick }: SidebarItemProps)
         'w-12 h-12 flex flex-col items-center justify-center gap-1 rounded-lg transition-all relative',
         active ? 'bg-slate-800/40' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50',
       ].join(' ')}
-      style={active ? { color: accent } : undefined}
+      style={color ? { color } : undefined}
       title={label}
     >
       {icon}
@@ -26,7 +28,7 @@ function SidebarItem({ label, icon, active, accent, onClick }: SidebarItemProps)
       {active && (
         <div
           className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-5 rounded-r"
-          style={{ background: accent, boxShadow: `0 0 8px ${accent}` }}
+          style={{ background: color || accent, boxShadow: `0 0 8px ${color || accent}` }}
         />
       )}
     </button>
@@ -40,9 +42,11 @@ interface SidebarProps {
   persona?: PersonaInfo | null
   onSwitchPersona?: (personaId: string) => void
   accentColor?: string
+  seriousMode?: boolean
+  onToggleSeriousMode?: () => void
 }
 
-export function Sidebar({ activeTab, onTabChange, connection, persona, onSwitchPersona, accentColor = '#00f0ff' }: SidebarProps) {
+export function Sidebar({ activeTab, onTabChange, connection, persona, onSwitchPersona, accentColor = '#00f0ff', seriousMode, onToggleSeriousMode }: SidebarProps) {
   const currentPersona = persona?.id || 'jarvis'
   const nextPersona = currentPersona === 'jarvis' ? 'alya' : 'jarvis'
   const logoId = persona?.logo_id || currentPersona
@@ -97,9 +101,33 @@ export function Sidebar({ activeTab, onTabChange, connection, persona, onSwitchP
       <SidebarItem id="browser" label="Browser" icon={<Globe className="w-5 h-5" />} active={activeTab === 'browser'} accent={accentColor} onClick={() => onTabChange('browser')} />
       <SidebarItem id="computer" label="Computer" icon={<Monitor className="w-5 h-5" />} active={activeTab === 'computer'} accent={accentColor} onClick={() => onTabChange('computer')} />
       <SidebarItem id="vision" label="Vision" icon={<Eye className="w-5 h-5" />} active={activeTab === 'vision'} accent={accentColor} onClick={() => onTabChange('vision')} />
+      <SidebarItem id="research" label="Research" icon={<FlaskConical className="w-5 h-5" />} active={activeTab === 'research'} accent={accentColor} serious={seriousMode} onClick={() => onTabChange('research')} />
       <SidebarItem id="settings" label="Settings" icon={<Settings className="w-5 h-5" />} active={activeTab === 'settings'} accent={accentColor} onClick={() => onTabChange('settings')} />
 
       <div className="mt-auto flex flex-col items-center gap-3">
+        {onToggleSeriousMode && (
+          <button
+            onClick={onToggleSeriousMode}
+            title={seriousMode ? 'Exit Serious Mode' : 'Enter Serious Mode'}
+            className={`group relative w-9 h-9 rounded-full flex items-center justify-center border transition-all hover:scale-110 ${seriousMode ? 'serious-pulse' : ''}`}
+            style={{
+              borderColor: seriousMode ? 'rgba(255,26,26,0.6)' : `${accentColor}66`,
+              background: seriousMode ? 'rgba(255,26,26,0.15)' : `radial-gradient(circle, ${accentColor}22, transparent 70%)`,
+              boxShadow: seriousMode ? '0 0 12px rgba(255,26,26,0.4)' : `0 0 12px ${accentColor}44`,
+            }}
+          >
+            <span className="text-[11px] font-bold tracking-wider" style={{ color: seriousMode ? '#ff1a1a' : accentColor }}>
+              {seriousMode ? '!' : 'S'}
+            </span>
+            <span
+              className="absolute right-11 whitespace-nowrap text-[9px] tracking-wider uppercase px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+              style={{ background: '#0a0f1a', color: seriousMode ? '#ff1a1a' : accentColor, border: `1px ${seriousMode ? 'rgba(255,26,26,0.4)' : `${accentColor}44`}` }}
+            >
+              {seriousMode ? 'Exit Serious Mode' : 'Serious Mode'}
+            </span>
+          </button>
+        )}
+
         {onSwitchPersona && (
           <button
             onClick={() => onSwitchPersona(nextPersona)}

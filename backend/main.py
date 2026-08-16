@@ -25,6 +25,7 @@ from backend.api.vision import router as vision_router
 from backend.api.voice import router as voice_router
 from backend.api.agent import router as agent_router
 from backend.api.git import router as git_router
+from backend.api.research import router as research_router
 from backend.services.ai_service import AIService
 from backend.services.automation_service import AutomationService
 from backend.services.memory_service import MemoryService
@@ -93,6 +94,20 @@ image_mgr = ImageGenerationManager(settings)
 video_mgr = VideoGenerationManager(settings)
 call_mgr = CallManager(settings)
 gesture_detector = GestureDetector(settings)
+
+research_manager = None
+
+
+def get_research_manager_instance():
+    global research_manager
+    if research_manager is None:
+        from research.manager import ResearchManager
+        research_manager = ResearchManager(
+            ai_provider=ai_service,
+            max_sources=getattr(settings, "research_max_sources", 20),
+            on_event=ws_manager.broadcast,
+        )
+    return research_manager
 
 _agent_manager = None
 
@@ -182,6 +197,7 @@ async def lifespan(app: FastAPI):
     await automation_service.start()
     _task_mgr = get_task_manager_instance()
     await _task_mgr.start()
+    _research_mgr = get_research_manager_instance()
     vision_manager.enabled = settings.vision_enabled
     vision_manager.set_broadcast(ws_manager.broadcast)
     if settings.vision_provider:
@@ -229,6 +245,7 @@ app.include_router(activity_router, prefix="/api")
 app.include_router(agent_router, prefix="/api")
 app.include_router(git_router, prefix="/api")
 app.include_router(vision_router, prefix="/api")
+app.include_router(research_router, prefix="/api")
 
 
 # ---------------------------------------------------------------- health
@@ -462,6 +479,22 @@ async def websocket_endpoint(websocket: WebSocket):
                 await ws_manager.send(websocket, "task_denied", result)
             elif event == "ping":
                 await ws_manager.send(websocket, "pong", {"t": __import__("time").time()})
+            elif event == "serious_mode_start":
+                await ws_manager.broadcast("serious_mode_started", {"persona": settings.persona, "assistant_name": settings.assistant_name})
+            elif event == "serious_mode_stop":
+                await ws_manager.broadcast("serious_mode_stopped", {"persona": settings.persona, "assistant_name": settings.assistant_name})
+            elif event == "research_start":
+                mgr = get_research_manager_instance()
+                topic = data.get("topic", "")
+                if not topic:
+                    await ws_manager.send(websocket, "research_failed", {"error": "empty_topic"})
+                else:
+                    job = await mgr.start_research(topic)
+                    await ws_manager.send(websocket, "research_started", {"job_id": job.id, "topic": job.topic, "status": job.status.value})
+            elif event == "research_cancel":
+                mgr = get_research_manager_instance()
+                ok = await mgr.cancel_research(data.get("job_id", ""))
+                await ws_manager.send(websocket, "research_cancelled" if ok else "research_failed", {"job_id": data.get("job_id", "")})
     except WebSocketDisconnect:
         await ws_manager.disconnect(websocket)
     except Exception as e:

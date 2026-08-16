@@ -1,6 +1,6 @@
 export type OrbState = 'idle' | 'listening' | 'thinking' | 'processing' | 'speaking' | 'error'
 
-export type TabId = 'home' | 'chat' | 'voice' | 'system' | 'tools' | 'coding' | 'memory' | 'automations' | 'tasks' | 'media' | 'settings' | 'diagnostics' | 'health' | 'about' | 'skills' | 'agent' | 'browser' | 'computer' | 'vision'
+export type TabId = 'home' | 'chat' | 'voice' | 'system' | 'tools' | 'coding' | 'memory' | 'automations' | 'tasks' | 'media' | 'settings' | 'diagnostics' | 'health' | 'about' | 'skills' | 'agent' | 'browser' | 'computer' | 'vision' | 'research'
 
 export type ConnectionState = 'connecting' | 'online' | 'offline'
 
@@ -101,6 +101,9 @@ export interface JarvisSettings {
   vision_max_retries?: number
   vision_cache_ttl?: number
   vision_capture_hotkey?: string
+  research_max_sources?: number
+  research_depth?: string
+  research_document_format?: string
 }
 
 export interface PersonaInfo {
@@ -434,4 +437,28 @@ export interface TaskItem {
   schedule?: string
   checkpoints?: Array<Record<string, any>>
   logs?: Array<{ timestamp: string; action: string; result: string; duration_ms: number }>
+}
+
+export type SeriousModeState = 'inactive' | 'active'
+
+export interface ResearchJob {
+  id: string
+  topic: string
+  status: 'queued' | 'running' | 'completed' | 'cancelled' | 'failed'
+  phase: string
+  started_at: number
+  completed_at: number | null
+  sources_found: number
+  sources_processed: number
+  claims_checked: number
+  document_path: string
+  error: string
+}
+
+export interface ResearchSource {
+  title: string
+  url: string
+  publisher: string
+  publication_date: string
+  source_type: string
 }

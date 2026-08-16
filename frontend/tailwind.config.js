@@ -11,6 +11,12 @@ export default {
           dark: '#050a14',
           panel: 'rgba(5, 15, 30, 0.85)',
           'panel-strong': 'rgba(5, 15, 30, 0.95)',
+          serious: {
+            red: '#ff1a1a',
+            dark: '#1a0505',
+            panel: 'rgba(30, 5, 5, 0.9)',
+            glow: 'rgba(255, 26, 26, 0.4)',
+          },
         },
       },
       animation: {
