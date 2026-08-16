@@ -9,18 +9,32 @@ Supports Roman Urdu/Hinglish responses based on detected language.
 
 from __future__ import annotations
 
-from typing import Optional
-
-from safety.classifier import SafetyClassification, SafetyCategory, Severity
+from safety.classifier import SafetyCategory, SafetyClassification
 
 
 class ResponseStyle:
     """Base class for safety response styles."""
-    pass
 
 
 class JARVISResponseStyle(ResponseStyle):
     """Professional, calm, slightly witty refusal style for JARVIS."""
+
+    # Roman Urdu / Hinglish refusals used when the detected language is
+    # roman_urdu, mixed, or Urdu.
+    ROMAN_URDU_REFUSALS: dict[str, list[str]] = {
+        "general": [
+            "Sorry, main is tarah ka kaam nahi kar sakta, Sir.",
+            "Main yeh request fulfil nahi kar sakta, Sir. Kuch aur jo safe ho, bata dijiye.",
+        ],
+        "harmful": [
+            "Sorry, main is tarah ka harmful kaam nahi kar sakta, Sir.",
+            "Yeh request mere safety protocols ke khilaf hai, Sir. Main is mein madad nahi kar sakta.",
+        ],
+        "unauthorized_access": [
+            "Sorry, main is tarah ka unauthorized kaam nahi kar sakta, Sir.",
+            "Unauthorized access mein main help nahi kar sakta, Sir.",
+        ],
+    }
 
     REFUSALS: dict[str, list[str]] = {
         "general": [
@@ -80,6 +94,23 @@ class JARVISResponseStyle(ResponseStyle):
 
 class ALYAResponseStyle(ResponseStyle):
     """Friendly, warm, respectful refusal style for ALYA."""
+
+    # Roman Urdu / Hinglish refusals used when the detected language is
+    # roman_urdu, mixed, or Urdu.
+    ROMAN_URDU_REFUSALS: dict[str, list[str]] = {
+        "general": [
+            "Sorryy, main is kaam mein help nahi kar sakti. Chalo kuch aur karte hain!",
+            "Yeh main nahi kar sakti, magar aapki madad kisi aur tareeqay se zaroor karungi!",
+        ],
+        "harmful": [
+            "Sorryy, main kisi ko harm karne mein help nahi kar sakti.",
+            "Yeh cheez main kabhi nahi kar sakti, main sabko safe rakhna chahti hoon!",
+        ],
+        "unauthorized_access": [
+            "Sorryy, main unauthorized access mein help nahi kar sakti.",
+            "Main kisi ke account mein bina permission ke jaane mein help nahi kar sakti, sorryy!",
+        ],
+    }
 
     REFUSALS: dict[str, list[str]] = {
         "general": [
@@ -179,6 +210,20 @@ class SafetyResponseGenerator:
 
         return self._pick(style.REFUSALS["general"])
 
+    def generate_roman_urdu_refusal(
+        self,
+        classification: SafetyClassification,
+        user_message: str = "",
+    ) -> str:
+        """Generate a refusal in Roman Urdu / Hinglish for the active persona."""
+        style = self._alya_style if self.persona == "alya" else self._jarvis_style
+        if classification.category == SafetyCategory.SAFE:
+            return ""
+        subcategory = classification.subcategory or "general"
+        bucket = getattr(style, "ROMAN_URDU_REFUSALS", {})
+        options = bucket.get(subcategory) or bucket.get("harmful") or bucket.get("general")
+        return self._pick(options) if options else ""
+
     def generate_confirmation_request(
         self,
         tool_name: str,
@@ -197,7 +242,7 @@ class SafetyResponseGenerator:
             return f"{summary} Kya aap isay karna chahte hain?"
         return f"{summary} Are you sure you want to proceed, Sir?"
 
-    def _get_alternative(self, subcategory: str, style: ResponseStyle) -> Optional[str]:
+    def _get_alternative(self, subcategory: str, style: ResponseStyle) -> str | None:
         """Get a safe alternative suggestion."""
         alternatives = style.ALTERNATIVES.get(subcategory, style.ALTERNATIVES.get("general", []))
         return self._pick(alternatives) if alternatives else None
@@ -230,4 +275,6 @@ def get_refusal_response(
 ) -> str:
     """Convenience function to get a refusal response."""
     generator = SafetyResponseGenerator(persona, language, personality_level)
+    if language in ("roman_urdu", "mixed", "ur", "hi"):
+        return generator.generate_roman_urdu_refusal(classification)
     return generator.generate_response(classification)

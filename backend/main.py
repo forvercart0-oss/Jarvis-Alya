@@ -1,9 +1,7 @@
-import asyncio
 import json
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Optional
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,35 +9,42 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from config.settings import get_settings
-from memory.manager import MemoryManager
-from tools.registry import build_registry
-from backend.services.ai_service import AIService
-from backend.services.voice_service import VoiceManager
-from backend.services.memory_service import MemoryService
-from backend.services.tool_service import ToolService
-from backend.services.system_service import SystemService
-from backend.services.automation_service import AutomationService
-from backend.services.notification_service import NotificationService
-from backend.services.ws_manager import ws_manager
-from backend.services.persona_service import persona_service
-from safety import classify_request, get_confirmation_manager, SafetyCategory
-from voice.tts_manager import TTSManager
-from backend.api.chat import router as chat_router
-from backend.api.voice import router as voice_router
-from backend.api.system import router as system_router
-from backend.api.memory import router as memory_router
-from backend.api.settings import router as settings_router
-from backend.api.tools import router as tools_router
+from backend.api.activity import router as activity_router
 from backend.api.automation import router as automation_router
+from backend.api.chat import router as chat_router
+from backend.api.memory import router as memory_router
+from backend.api.permissions import router as permissions_router
 from backend.api.persona import router as persona_router
+from backend.api.settings import router as settings_router
 from backend.api.skills import router as skills_router
+from backend.api.system import router as system_router
+from backend.api.tools import router as tools_router
+from backend.api.voice import router as voice_router
+from backend.api.agent import router as agent_router
+from backend.api.git import router as git_router
+from backend.services.ai_service import AIService
+from backend.services.automation_service import AutomationService
+from backend.services.memory_service import MemoryService
+from backend.services.notification_service import NotificationService
+from backend.services.persona_service import persona_service
+from backend.services.system_service import SystemService
+from backend.services.tool_service import ToolService
+from backend.services.voice_service import VoiceManager
+from backend.services.ws_manager import ws_manager
+from communications.calls.manager import CallManager
+from config.settings import get_settings
 from generation.image.manager import ImageGenerationManager
 from generation.video.manager import VideoGenerationManager
-from communications.calls.manager import CallManager
-from vision.gesture.detector import GestureDetector
-from skills.registry import SkillRegistry
+from memory.manager import MemoryManager
+from permissions.manager import PermissionManager
+from safety import SafetyCategory, classify_request, get_confirmation_manager
+from safety.activity import get_activity_logger
+from skills.executor import SkillExecutor
 from skills.manager import SkillManager
+from skills.registry import SkillRegistry
+from tools.registry import build_registry
+from vision.gesture.detector import GestureDetector
+from voice.tts_manager import TTSManager
 
 settings = get_settings()
 
@@ -65,7 +70,16 @@ tts_manager = TTSManager(settings)
 skill_registry = SkillRegistry()
 skill_registry.load()
 skill_manager = SkillManager(skill_registry)
-ai_service = AIService(memory_manager, tts_manager, tool_registry, skill_registry=skill_registry)
+permission_manager = PermissionManager(Path(settings.data_dir) / "permissions.json")
+activity_logger = get_activity_logger(Path(settings.logs_dir) / "activity.jsonl")
+skill_executor = SkillExecutor(skill_registry, permission_manager)
+ai_service = AIService(
+    memory_manager,
+    tts_manager,
+    tool_registry,
+    skill_registry=skill_registry,
+    permission_manager=permission_manager,
+)
 voice_service = VoiceManager(memory_manager, ai_service)
 memory_service = MemoryService(memory_manager)
 tool_service = ToolService(tool_registry)
@@ -75,6 +89,20 @@ image_mgr = ImageGenerationManager(settings)
 video_mgr = VideoGenerationManager(settings)
 call_mgr = CallManager(settings)
 gesture_detector = GestureDetector(settings)
+
+_agent_manager = None
+
+
+def get_agent_manager_instance():
+    global _agent_manager
+    if _agent_manager is None:
+        from agent.manager import get_agent_manager
+        _agent_manager = get_agent_manager(
+            tool_execute=lambda name, confirmed=False, **kwargs: tool_registry.execute(name, confirmed=confirmed, **kwargs),
+            memory=memory_manager,
+            permission_manager=permission_manager,
+        )
+    return _agent_manager
 
 
 async def _automation_command(cmd: str) -> dict:
@@ -156,6 +184,10 @@ app.include_router(tools_router, prefix="/api")
 app.include_router(automation_router, prefix="/api")
 app.include_router(persona_router, prefix="/api")
 app.include_router(skills_router, prefix="/api")
+app.include_router(permissions_router, prefix="/api")
+app.include_router(activity_router, prefix="/api")
+app.include_router(agent_router, prefix="/api")
+app.include_router(git_router, prefix="/api")
 
 
 # ---------------------------------------------------------------- health
@@ -214,7 +246,7 @@ class SafetyCheckResponse(BaseModel):
     category: str
     confidence: float
     safe: bool
-    subcategory: Optional[str] = None
+    subcategory: str | None = None
     severity: str = "low"
     is_exception: bool = False
 
@@ -272,7 +304,6 @@ async def safety_pending():
 # ---------------------------------------------------------------- diagnostics
 @app.get("/api/system/diagnostics")
 async def system_diagnostics():
-    from brain.provider_registry import create_providers
 
     provider_status = await ai_service.health()
     active = ai_service._select_provider()

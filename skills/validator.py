@@ -1,9 +1,19 @@
-"""Skill schema validator."""
+"""Skill schema validator.
+
+Skills are JSON configuration, never code. Invalid skills are rejected and
+never loaded. Both the JSON Schema and targeted semantic checks run here.
+"""
 
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
+
+import jsonschema
+
+from skills.models import CANONICAL_PERMISSION_IDS, LEGACY_PERMISSION_KEYS
+from skills.schema import skill_schema
 
 logger = logging.getLogger("jarvis.skills.validator")
 
@@ -22,18 +32,16 @@ REQUIRED_FIELDS: dict[str, type] = {
 }
 
 VALID_PRIORITIES: set[str] = {"high", "normal", "low"}
-VALID_PERMISSION_KEYS: set[str] = {
-    "network",
-    "filesystem_read",
-    "filesystem_write",
-    "terminal",
-    "camera",
-    "microphone",
-}
+VALID_PERMISSION_KEYS: set[str] = set(CANONICAL_PERMISSION_IDS) | set(LEGACY_PERMISSION_KEYS)
 
 
 class SkillValidationError(Exception):
     """Raised when a skill JSON fails schema validation."""
+
+
+def _strip_error_prefix(message: str) -> str:
+    """Trim jsonschema's 'Failed validating ...' / instance-path noise."""
+    return re.sub(r"^.*? -> ", "", message)
 
 
 def validate_skill(data: dict[str, Any], skill_id: str = "<unknown>") -> None:
@@ -48,6 +56,15 @@ def validate_skill(data: dict[str, Any], skill_id: str = "<unknown>") -> None:
     """
     if not isinstance(data, dict):
         raise SkillValidationError(f"Skill {skill_id!r} must be a JSON object.")
+
+    try:
+        jsonschema.validate(instance=data, schema=skill_schema())
+    except jsonschema.ValidationError as exc:
+        path = "/".join(str(p) for p in exc.absolute_path)
+        location = f" at '{path}'" if path else ""
+        raise SkillValidationError(
+            f"Skill {skill_id!r} is invalid{location}: {_strip_error_prefix(exc.message)}"
+        ) from exc
 
     for field, expected_type in REQUIRED_FIELDS.items():
         if field not in data:
@@ -88,15 +105,7 @@ def validate_skill(data: dict[str, Any], skill_id: str = "<unknown>") -> None:
                 f"Skill {skill_id!r} has an empty instruction entry."
             )
 
-    permissions = data.get("permissions", {})
-    for key in permissions:
-        if key not in VALID_PERMISSION_KEYS:
-            logger.warning(
-                "Skill %s has unknown permission key %r.", skill_id, key
-            )
-    for key in VALID_PERMISSION_KEYS:
-        if key not in permissions:
-            permissions[key] = False
+    _validate_permissions(data.get("permissions", {}), skill_id)
 
     version = data.get("version", "")
     if not _is_valid_version(version):
@@ -105,6 +114,15 @@ def validate_skill(data: dict[str, Any], skill_id: str = "<unknown>") -> None:
         )
 
     logger.debug("Skill %s passed validation.", skill_id)
+
+
+def _validate_permissions(permissions: dict[str, Any], skill_id: str) -> None:
+    for key in permissions:
+        if key not in VALID_PERMISSION_KEYS:
+            raise SkillValidationError(
+                f"Skill {skill_id!r} has unknown permission key {key!r}. "
+                f"Supported: {', '.join(sorted(VALID_PERMISSION_KEYS))}."
+            )
 
 
 def _is_valid_version(version: str) -> bool:

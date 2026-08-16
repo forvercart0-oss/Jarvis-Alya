@@ -2,7 +2,6 @@ import sqlite3
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
 
 
 class SQLiteMemory:
@@ -71,7 +70,7 @@ class SQLiteMemory:
             """)
             conn.commit()
 
-    def create_conversation(self, title: Optional[str] = None) -> dict:
+    def create_conversation(self, title: str | None = None) -> dict:
         conv_id = str(uuid.uuid4())
         timestamp = datetime.utcnow().isoformat()
         with sqlite3.connect(self.db_path) as conn:
@@ -82,7 +81,7 @@ class SQLiteMemory:
             conn.commit()
         return {"id": conv_id, "title": title, "timestamp": timestamp, "created_at": timestamp}
 
-    def get_conversation(self, conv_id: str) -> Optional[dict]:
+    def get_conversation(self, conv_id: str) -> dict | None:
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
             row = conn.execute("SELECT * FROM conversations WHERE id = ?", (conv_id,)).fetchone()
@@ -198,6 +197,34 @@ class SQLiteMemory:
                 rows = conn.execute("SELECT * FROM memories ORDER BY timestamp DESC").fetchall()
             return [dict(row) for row in rows]
 
+    def get_memory_by_id(self, memory_id: str) -> dict | None:
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute("SELECT * FROM memories WHERE id = ?", (memory_id,)).fetchone()
+            return dict(row) if row else None
+
+    def delete_memory_by_id(self, memory_id: str) -> bool:
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.execute("DELETE FROM memories WHERE id = ?", (memory_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def get_memory_stats(self) -> dict:
+        """Return memory stats: count, storage path, DB size, category breakdown."""
+        count = 0
+        size_bytes = 0
+        with sqlite3.connect(self.db_path) as conn:
+            row = conn.execute("SELECT COUNT(*) FROM memories").fetchone()
+            count = row[0] if row else 0
+        path = Path(self.db_path)
+        if path.exists():
+            size_bytes = path.stat().st_size
+        return {
+            "count": count,
+            "storage": str(path),
+            "size_bytes": size_bytes,
+        }
+
     def set_setting(self, key: str, value: str):
         timestamp = datetime.utcnow().isoformat()
         with sqlite3.connect(self.db_path) as conn:
@@ -207,7 +234,7 @@ class SQLiteMemory:
             )
             conn.commit()
 
-    def get_setting(self, key: str, default: Optional[str] = None) -> Optional[str]:
+    def get_setting(self, key: str, default: str | None = None) -> str | None:
         with sqlite3.connect(self.db_path) as conn:
             row = conn.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
             return row[0] if row else default
@@ -248,7 +275,7 @@ class SQLiteMemory:
 
     def update_automation(self, automation_id: str, updates: dict):
         updates["updated_at"] = datetime.utcnow().isoformat()
-        set_clause = ", ".join(f"{k} = ?" for k in updates.keys())
+        set_clause = ", ".join(f"{k} = ?" for k in updates)
         values = list(updates.values()) + [automation_id]
         with sqlite3.connect(self.db_path) as conn:
             conn.execute(f"UPDATE automations SET {set_clause} WHERE id = ?", values)
@@ -279,7 +306,7 @@ class SQLiteMemory:
             conn.commit()
         return task_id
 
-    def get_tasks(self, status: Optional[str] = None) -> list[dict]:
+    def get_tasks(self, status: str | None = None) -> list[dict]:
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
             if status:
@@ -291,7 +318,7 @@ class SQLiteMemory:
                 rows = conn.execute("SELECT * FROM tasks ORDER BY created_at DESC").fetchall()
             return [dict(row) for row in rows]
 
-    def update_task(self, task_id: str, status: str, result: Optional[str] = None):
+    def update_task(self, task_id: str, status: str, result: str | None = None):
         timestamp = datetime.utcnow().isoformat()
         with sqlite3.connect(self.db_path) as conn:
             conn.execute(

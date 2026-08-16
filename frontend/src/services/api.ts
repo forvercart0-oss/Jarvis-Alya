@@ -307,4 +307,29 @@ export const api = {
       body: JSON.stringify({ json: jsonString }),
     })
   },
+
+  async agentStart(message: string, project?: string): Promise<any> {
+    return request('/agent/start', {
+      method: 'POST',
+      body: JSON.stringify({ message, project }),
+    })
+  },
+
+  async agentApprove(sessionId: string): Promise<any> {
+    return request('/agent/approve', {
+      method: 'POST',
+      body: JSON.stringify({ session_id: sessionId }),
+    })
+  },
+
+  async agentCancel(sessionId: string): Promise<any> {
+    return request('/agent/cancel', {
+      method: 'POST',
+      body: JSON.stringify({ session_id: sessionId }),
+    })
+  },
+
+  async getGitStatus(path: string): Promise<GitStatus> {
+    return request<GitStatus>(`/git/status?path=${encodeURIComponent(path)}`)
+  },
 }

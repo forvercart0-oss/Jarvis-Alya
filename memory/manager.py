@@ -1,21 +1,41 @@
 from __future__ import annotations
 
-from typing import Optional
+import contextlib
 
+from memory.secret_filter import contains_secret
 from memory.sqlite_memory import SQLiteMemory
 from memory.store import SemanticIndex
 from memory.vector_memory import VectorMemory
 
+# Logical long-term memory categories.
+MEMORY_CATEGORIES: tuple[str, ...] = (
+    "preferences",
+    "projects",
+    "instructions",
+    "conversation_context",
+    "general",
+)
+
+
+def normalize_category(category: str | None) -> str:
+    """Coerce a category to a known one, falling back to 'general'."""
+    cat = (category or "general").strip().lower()
+    return cat if cat in MEMORY_CATEGORIES else "general"
+
+
+class SecretMemoryError(Exception):
+    """Raised when a memory write is refused because it contains secrets."""
+
 
 class MemoryManager:
-    def __init__(self, db_path: str = "data/jarvis.db", vector_dir: Optional[str] = None):
+    def __init__(self, db_path: str = "data/jarvis.db", vector_dir: str | None = None):
         self.store = SQLiteMemory(db_path)
-        self._vector: Optional[SemanticIndex] = None
+        self._vector: SemanticIndex | None = None
         if vector_dir:
             index = VectorMemory(persist_directory=vector_dir)
             if index.available():
                 self._vector = index
-        self._current_conv: Optional[str] = None
+        self._current_conv: str | None = None
 
     @property
     def vector_enabled(self) -> bool:
@@ -97,13 +117,21 @@ class MemoryManager:
         self._current_conv = None
         return self.ensure_conversation(None)
 
-    def remember(self, key: str, value: str = "") -> dict:
-        if not value:
-            content = key
-            key = key[:64]
-        else:
-            content = value
-        mem = self.store.remember(content, category="general", key_override=key)
+    def remember(self, key: str, value: str = "", category: str | None = None) -> dict:
+        """Store a long-term memory, refusing to persist secrets.
+
+        Args:
+            key: Memory key (or the content itself when value is empty).
+            value: Memory content.
+            category: One of MEMORY_CATEGORIES; unknown values fall back to "general".
+
+        Raises:
+            SecretMemoryError: When the content looks like a secret.
+        """
+        content = value if value else key
+        if contains_secret(key) or contains_secret(content):
+            raise SecretMemoryError("Refusing to store secret material in memory.")
+        mem = self.store.remember(content, category=normalize_category(category), key_override=key if value else "")
         if self._vector is not None:
             self._vector.add(mem["id"], mem["value"], {"key": mem["key"], "category": mem["category"]})
         return mem
@@ -144,3 +172,23 @@ class MemoryManager:
 
     def get_all_memories(self) -> list[dict]:
         return self.store.recall("")
+
+    def get_memory_by_id(self, memory_id: str) -> dict | None:
+        return self.store.get_memory_by_id(memory_id)
+
+    def delete_memory_by_id(self, memory_id: str) -> bool:
+        """Delete a single memory by id, keeping the vector index in sync."""
+        removed = self.store.delete_memory_by_id(memory_id)
+        if removed and self._vector is not None:
+            with contextlib.suppress(Exception):
+                self._vector.remove(memory_id)
+        return removed
+
+    def get_memory_stats(self) -> dict:
+        return self.store.get_memory_stats()
+
+    def retrieve_relevant(self, query: str, limit: int = 5) -> list[dict]:
+        """Relevance-based retrieval for memory context (never the full DB)."""
+        if not query:
+            return []
+        return self.recall(query)[:limit]

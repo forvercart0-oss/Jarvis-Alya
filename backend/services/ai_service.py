@@ -2,20 +2,21 @@ import asyncio
 import json
 import logging
 import re
-from typing import Any, AsyncGenerator, Optional
+from collections.abc import AsyncGenerator
+from typing import Any
 
-from brain.provider_registry import create_providers, select_provider
 from brain.conversation import ConversationManager
-from brain.router import Router
 from brain.offline import offline_reply
 from brain.prompts import build_persona_prompt
-from tools.registry import ToolRegistry
-from memory.manager import MemoryManager
-from voice.tts_manager import TTSManager
+from brain.provider_registry import create_providers, select_provider
+from brain.router import Router
 from config.settings import get_settings
-from safety.classifier import SafetyClassification, SafetyCategory, classify_request
-from safety.policy import PolicyEngine, get_policy_engine, PolicyAction
-from safety.response import SafetyResponseGenerator, get_refusal_response
+from memory.manager import MemoryManager
+from safety.classifier import SafetyCategory, classify_request
+from safety.policy import PolicyAction, get_policy_engine
+from safety.response import get_refusal_response
+from tools.registry import ToolRegistry
+from voice.tts_manager import TTSManager
 
 logger = logging.getLogger("jarvis.ai")
 
@@ -40,7 +41,14 @@ def chunk_text(text: str, max_chunk: int = 6) -> list[str]:
 
 
 class AIService:
-    def __init__(self, memory: MemoryManager, tts: TTSManager, tool_registry: ToolRegistry, skill_registry=None):
+    def __init__(
+        self,
+        memory: MemoryManager,
+        tts: TTSManager,
+        tool_registry: ToolRegistry,
+        skill_registry=None,
+        permission_manager=None,
+    ):
         settings = get_settings()
         self.providers = create_providers(settings)
         self.groq = self.providers["groq"]
@@ -54,18 +62,21 @@ class AIService:
         self.tools = tool_registry
         self.settings = settings
         self.skill_registry = skill_registry
-        self._current_conv: Optional[str] = None
-        self._current_provider: Optional[Any] = None
-        self._pending_confirmation: Optional[dict] = None
-        self._confirmation_event: Optional[asyncio.Event] = None
-        self._confirmation_result: Optional[bool] = None
+        self.permission_manager = permission_manager
+        self._current_conv: str | None = None
+        self._current_provider: Any | None = None
+        self._pending_confirmation: dict | None = None
+        self._confirmation_event: asyncio.Event | None = None
+        self._confirmation_result: bool | None = None
+        self._active_skill_id: str | None = None
+        self._last_tool_results: list[dict] = []
 
     # ------------------------------------------------------------- providers
     def reconfigure_providers(self):
         for provider in self.providers.values():
             provider.reconfigure()
 
-    def _get_or_create_conv(self, conversation_id: Optional[str] = None) -> str:
+    def _get_or_create_conv(self, conversation_id: str | None = None) -> str:
         if conversation_id:
             conv = self.memory.store.get_conversation(conversation_id)
             if conv:
@@ -151,6 +162,41 @@ class AIService:
             tool_args = tc.get("arguments", {}) or {}
             yield {"event": "tool_start", "data": {"tool": tool_name, "arguments": tool_args}}
 
+            # Permission enforcement: when a skill is active, the tool call must
+            # stay within the user-granted permissions for that skill.
+            if self._active_skill_id and self.permission_manager:
+                skill = self.skill_registry.get(self._active_skill_id) if self.skill_registry else None
+                if skill:
+                    allowed = self.permission_manager.is_tool_allowed(
+                        self._active_skill_id, tool_name, skill
+                    )
+                    if not allowed:
+                        message = (
+                            f"Skill '{skill.get('name', self._active_skill_id)}' is not "
+                            f"permitted to use tool '{tool_name}'."
+                        )
+                        from safety.activity import get_activity_logger
+                        get_activity_logger().log(
+                            skill=self._active_skill_id,
+                            action="tool.denied",
+                            permission=tool_name,
+                            result="denied",
+                            risk="high",
+                        )
+                        data = {"success": False, "error": message}
+                        yield {"event": "tool_result", "data": {
+                            "tool": tool_name,
+                            "result": data,
+                            "success": False,
+                        }}
+                        results.append({
+                            "tool_call_id": tc.get("id", ""),
+                            "role": "tool",
+                            "name": tool_name,
+                            "content": json.dumps(data),
+                        })
+                        continue
+
             # Safety check before tool execution
             allowed, safety_message = await self._check_tool_safety(tool_name, tool_args)
             if not allowed:
@@ -201,7 +247,7 @@ class AIService:
         self._last_tool_results = results
 
     # --------------------------------------------------------------- safety
-    async def _safety_check(self, user_message: str) -> Optional[dict]:
+    async def _safety_check(self, user_message: str) -> dict | None:
         """Run the outermost safety check on user input.
 
         Returns a refusal event dict if the request is blocked,
@@ -236,7 +282,7 @@ class AIService:
 
         return None
 
-    async def _check_tool_safety(self, tool_name: str, tool_args: dict) -> tuple[bool, Optional[str]]:
+    async def _check_tool_safety(self, tool_name: str, tool_args: dict) -> tuple[bool, str | None]:
         """Check if a tool call is safe to execute.
 
         Returns (allowed, message) where message is an error if not allowed.
@@ -311,7 +357,7 @@ class AIService:
             await asyncio.sleep(0.015)
         yield {"event": "_final_content", "data": {"content": content}}
 
-    async def process_message(self, user_message: str, conversation_id: Optional[str] = None) -> AsyncGenerator[dict, None]:
+    async def process_message(self, user_message: str, conversation_id: str | None = None) -> AsyncGenerator[dict, None]:
         conv_id = self._get_or_create_conv(conversation_id)
         self.conversation.add_message(conv_id, "user", user_message)
         self._last_tool_results = []
@@ -341,6 +387,8 @@ class AIService:
             assistant_name=self.settings.assistant_name,
         )
 
+        # Active skill tracking + skill context injection.
+        self._active_skill_id = None
         if self.skill_registry:
             try:
                 matched = self.router.match_skill(user_message, self.skill_registry)
@@ -348,6 +396,7 @@ class AIService:
                     top = matched[0]
                     skill = self.skill_registry.get(top.skill_id)
                     if skill:
+                        self._active_skill_id = top.skill_id
                         skill_context = (
                             f"\n\n[Active Skill: {skill['name']}]\n"
                             f"Instructions: {' '.join(skill.get('instructions', []))}\n"
@@ -356,8 +405,31 @@ class AIService:
                         )
                         system_prompt = system_prompt + skill_context
                         logger.debug("Injected skill %s into system prompt.", top.skill_id)
+                        from safety.activity import get_activity_logger
+                        get_activity_logger().log(
+                            skill=top.skill_id,
+                            action="skill.activated",
+                            result="ok",
+                            risk="low",
+                        )
             except Exception as exc:
                 logger.warning("Skill matching failed: %s", exc)
+
+        # Relevant long-term memory context (never the full memory store).
+        try:
+            relevant = self.memory.retrieve_relevant(user_message, limit=5)
+            if relevant:
+                memory_lines = []
+                for row in relevant:
+                    memory_lines.append(f"- {row.get('value', '')[:300]}")
+                system_prompt = (
+                    system_prompt
+                    + "\n\n[Relevant Memories]\n"
+                    + "\n".join(memory_lines)
+                    + "\n[/Relevant Memories]"
+                )
+        except Exception as exc:
+            logger.warning("Memory context injection failed: %s", exc)
 
         messages = self.conversation.build_messages_with_system(conv_id, user_message, system_prompt)
         full_response = ""
@@ -401,7 +473,7 @@ class AIService:
             await self.tts.speak_chunks(full_response)
         yield {"event": "done", "data": {"response": full_response, "conversation_id": conv_id, "provider": active_provider.name}}
 
-    def get_conversation_id(self) -> Optional[str]:
+    def get_conversation_id(self) -> str | None:
         return self._current_conv
 
     async def reset_conversation(self) -> str:

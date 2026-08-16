@@ -1,6 +1,6 @@
 export type OrbState = 'idle' | 'listening' | 'thinking' | 'processing' | 'speaking' | 'error'
 
-export type TabId = 'home' | 'chat' | 'voice' | 'system' | 'tools' | 'coding' | 'memory' | 'automations' | 'media' | 'settings' | 'diagnostics' | 'health' | 'about' | 'skills'
+export type TabId = 'home' | 'chat' | 'voice' | 'system' | 'tools' | 'coding' | 'memory' | 'automations' | 'media' | 'settings' | 'diagnostics' | 'health' | 'about' | 'skills' | 'agent'
 
 export type ConnectionState = 'connecting' | 'online' | 'offline'
 
@@ -275,4 +275,70 @@ export interface SkillActivity {
   timestamp: string
   permission: string
   result: 'success' | 'error' | 'denied'
+}
+
+export type AgentState = 'idle' | 'planning' | 'waiting_approval' | 'executing' | 'waiting_confirmation' | 'testing' | 'completed' | 'failed' | 'cancelled'
+
+export interface AgentTask {
+  task_id: string
+  title: string
+  type: string
+  status: string
+  risk: string
+  arguments: Record<string, any>
+  result?: any
+  error?: string
+  started_at?: string
+  finished_at?: string
+  retries: number
+  max_retries: number
+}
+
+export interface AgentPlan {
+  plan_id: string
+  title: string
+  description: string
+  tasks: AgentTask[]
+  approved: boolean
+  project?: string
+  created_at: string
+}
+
+export interface AgentSession {
+  session_id: string
+  state: AgentState
+  context?: {
+    user_request: string
+    project?: string
+    project_root?: string
+    language?: string
+    persona?: string
+  }
+  plan?: AgentPlan
+  current_task_index: number
+  history: Array<Record<string, any>>
+  created_at: string
+  updated_at: string
+}
+
+export interface GitStatus {
+  path: string
+  branch?: string
+  ahead: number
+  behind: number
+  modified: string[]
+  added: string[]
+  deleted: string[]
+  untracked: string[]
+  clean: boolean
+  error?: string
+}
+
+export interface GitDiff {
+  path: string
+  old_path?: string
+  added?: boolean
+  deleted?: boolean
+  renamed?: boolean
+  hunks: Array<Record<string, any>>
 }

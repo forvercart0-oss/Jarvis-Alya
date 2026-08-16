@@ -23,6 +23,7 @@ import { OfflineScreen } from './components/Common/OfflineScreen'
 import { MediaGenerationPanel } from './components/Media/MediaGenerationPanel'
 import { FirstRunSetup } from './components/Common/FirstRunSetup'
 import TitleBar from './components/TitleBar'
+import { AgentPanel } from './components/Agent/AgentPanel'
 import { useJarvis } from './hooks/useJarvis'
 import { api } from './services/api'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
@@ -537,6 +538,7 @@ export default function App() {
                   )}
                   {activeTab === 'about' && <AboutPanel />}
                   {activeTab === 'skills' && <SkillsPanel />}
+                  {activeTab === 'agent' && <AgentPanel />}
                 </div>
                 {activeTab !== 'chat' && (
                   <div className="w-72 border-l border-cyan-500/10 hidden lg:block overflow-hidden">

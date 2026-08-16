@@ -1,4 +1,4 @@
-from memory.manager import MemoryManager
+from memory.manager import MEMORY_CATEGORIES, MemoryManager
 
 
 class MemoryService:
@@ -17,8 +17,26 @@ class MemoryService:
     def get_all_memories(self):
         return self.memory.get_all_memories()
 
+    def get_memory_by_id(self, memory_id: str):
+        return self.memory.get_memory_by_id(memory_id)
+
     def remember(self, content: str, category: str = "general"):
-        return self.memory.store.remember(content, category=category)
+        return self.memory.remember(content, category=category)
 
     def forget(self, key: str):
         self.memory.forget(key)
+
+    def delete_by_id(self, memory_id: str) -> bool:
+        return self.memory.delete_memory_by_id(memory_id)
+
+    def clear_all(self) -> int:
+        return self.memory.clear_all_memories()
+
+    def get_stats(self) -> dict:
+        return self.memory.get_memory_stats()
+
+    def categories(self):
+        return list(MEMORY_CATEGORIES)
+
+    def retrieve_relevant(self, query: str, limit: int = 5):
+        return self.memory.retrieve_relevant(query, limit)
