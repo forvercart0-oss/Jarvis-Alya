@@ -161,16 +161,25 @@ $WshShell = New-Object -ComObject WScript.Shell
 $DesktopPath = [Environment]::GetFolderPath("Desktop")
 $StartMenuPath = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs"
 
+# Prefer the built desktop app (it auto-starts the backend); fall back to run.bat
+$TargetPath = "$PWD\src-tauri\target\release\jarvis.exe"
+if (-not (Test-Path $TargetPath)) {
+    Write-Warn "Release app not found, shortcut will use run.bat (development mode)"
+    $TargetPath = "$PWD\run.bat"
+}
+
 $Shortcut = $WshShell.CreateShortcut("$DesktopPath\JARVIS 2.0.lnk")
-$Shortcut.TargetPath = "$PWD\run.bat"
+$Shortcut.TargetPath = $TargetPath
 $Shortcut.WorkingDirectory = $PWD
-$Shortcut.IconLocation = "$PWD\assets\app-icon.ico"
+$Shortcut.IconLocation = "$PWD\assets\app-icon.ico,0"
+$Shortcut.Description = "JARVIS 2.0 - Advanced Personal AI Assistant"
 $Shortcut.Save()
 
 $Shortcut = $WshShell.CreateShortcut("$StartMenuPath\JARVIS 2.0.lnk")
-$Shortcut.TargetPath = "$PWD\run.bat"
+$Shortcut.TargetPath = $TargetPath
 $Shortcut.WorkingDirectory = $PWD
-$Shortcut.IconLocation = "$PWD\assets\app-icon.ico"
+$Shortcut.IconLocation = "$PWD\assets\app-icon.ico,0"
+$Shortcut.Description = "JARVIS 2.0 - Advanced Personal AI Assistant"
 $Shortcut.Save()
 
 Write-Ok "Shortcuts created"

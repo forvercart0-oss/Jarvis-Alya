@@ -32,6 +32,9 @@ const STATE_TO_ORB: Record<string, 'working' | 'searching' | 'solving' | 'listen
 export function Orb({ state, accentColor = '#00f0ff', size = 64, onStatusChange, onClick }: OrbProps) {
   const [pulse, setPulse] = useState(false)
 
+  const renderSize: 20 | 64 = size <= 42 ? 20 : 64
+  const scale = size / renderSize
+
   useEffect(() => {
     if (onStatusChange) onStatusChange(STATUS_LABELS[state] || state.toUpperCase())
     if (state === 'thinking' || state === 'processing' || state === 'speaking') {
@@ -64,13 +67,17 @@ export function Orb({ state, accentColor = '#00f0ff', size = 64, onStatusChange,
           transition={{ repeat: pulse ? Infinity : 0, duration: 2 }}
           className="relative"
         >
-          <ThinkingOrb
-            state={STATE_TO_ORB[state] || 'working'}
-            size={size as import('thinking-orbs').OrbSize}
-            theme="dark"
-            speed={1.2}
-            style={{ color: glowColor }}
-          />
+          <div style={{ width: size, height: size }}>
+            <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: renderSize, height: renderSize }}>
+              <ThinkingOrb
+                state={STATE_TO_ORB[state] || 'working'}
+                size={renderSize}
+                theme="dark"
+                speed={1.2}
+                style={{ color: glowColor }}
+              />
+            </div>
+          </div>
         </motion.div>
       </div>
 

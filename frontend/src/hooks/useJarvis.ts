@@ -29,6 +29,7 @@ export function useJarvis() {
 
   const wsRef = useRef<WebSocketManager | null>(null)
   const abortRef = useRef(false)
+  const errorSinceRef = useRef<number | null>(null)
 
   const connect = useCallback(() => {
     const isTauri = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__
@@ -39,6 +40,7 @@ export function useJarvis() {
     wsRef.current = ws
 
     ws.on('connected', () => {
+      errorSinceRef.current = null
       setConnection('online')
       setOrbState((s) => (s === 'thinking' || s === 'listening' ? s : 'idle'))
     })
@@ -56,6 +58,14 @@ export function useJarvis() {
     })
 
     ws.on('error', (_event, data: any) => {
+      const now = Date.now()
+      errorSinceRef.current ??= now
+      // The backend takes a few seconds to boot on app launch and the WebSocket
+      // manager keeps retrying. Only show the offline screen for real outages.
+      if (now - errorSinceRef.current < 6000) {
+        setConnection('connecting')
+        return
+      }
       setConnection('offline')
       setLastError(data?.message || 'WebSocket connection error')
       setOrbState('error')
@@ -336,6 +346,7 @@ export function useJarvis() {
   }, [fetchData])
 
   const reconnect = useCallback(() => {
+    errorSinceRef.current = null
     wsRef.current?.disconnect()
     setConnection('connecting')
     setLastError(null)

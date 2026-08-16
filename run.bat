@@ -37,6 +37,14 @@ start "JARVIS Backend" /B python main.py
 timeout /t 5 /nobreak >nul
 
 echo [JARVIS] Launching JARVIS desktop application...
+if exist "src-tauri\target\release\jarvis.exe" (
+    echo [JARVIS] Launching release build...
+    start "" "src-tauri\target\release\jarvis.exe"
+    exit /b 0
+)
+
+echo [JARVIS] Release build not found, falling back to development mode...
+echo [JARVIS] Run install-windows.ps1 to build the application.
 cd frontend
 npm run tauri:dev
 cd ..

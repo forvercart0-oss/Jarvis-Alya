@@ -101,6 +101,14 @@ echo -e "${GREEN}║   JARVIS 2.0  —  Desktop Mode       ║${NC}"
 echo -e "${GREEN}╚══════════════════════════════════════╝${NC}"
 echo ""
 
+RELEASE_BIN="$SCRIPT_DIR/src-tauri/target/release/jarvis"
+if [[ -f "$RELEASE_BIN" ]]; then
+  info "Launching release build..."
+  exec "$RELEASE_BIN"
+fi
+
+warn "Release build not found. Falling back to development mode..."
+warn "Run ./install.sh (or npm run tauri:build) once to build the application."
 if [[ -f "frontend/node_modules/.bin/tauri" ]] || command -v tauri &>/dev/null; then
   if [[ -f "frontend/node_modules/.bin/tauri" ]]; then
     "$SCRIPT_DIR/frontend/node_modules/.bin/tauri" dev

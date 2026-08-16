@@ -129,26 +129,55 @@ fi
 mkdir -p data/generated/images data/generated/videos logs
 ok "Data directories prepared"
 
-# ---------------------------------------------------------------- Desktop launcher
-info "Creating desktop launcher..."
-mkdir -p "$HOME/Applications"
+# ---------------------------------------------------------------- Build Tauri app
+info "Building Tauri desktop application..."
+cd frontend
+npm install @tauri-apps/cli 2>/dev/null || true
+npm run tauri:build
+cd ..
 
-SCRIPT_ABS="$(cd "$SCRIPT_DIR" && pwd)/run-macos.sh"
+# ---------------------------------------------------------------- Install .app bundle
+info "Installing desktop application..."
+APPS_DIR="$HOME/Applications"
+mkdir -p "$APPS_DIR"
 
-cat > "$HOME/Applications/JARVIS 2.0.command" << LAUNCHER
+APP_SRC="$SCRIPT_DIR/src-tauri/target/release/bundle/macos/JARVIS 2.0.app"
+APP_DST="$APPS_DIR/JARVIS 2.0.app"
+
+if [[ -d "$APP_SRC" ]]; then
+    rm -rf "$APP_DST"
+    ditto "$APP_SRC" "$APP_DST"
+    # Tell the app where the Python backend lives so it can start it on launch.
+    echo "$SCRIPT_DIR" > "$APP_DST/Contents/Resources/backend_path"
+    # Remove the quarantine attribute so it opens without Gatekeeper warnings.
+    xattr -dr com.apple.quarantine "$APP_DST" 2>/dev/null || true
+    ok "Installed to $APP_DST"
+else
+    warn "App bundle not found. Falling back to .command launcher."
+fi
+
+# ---------------------------------------------------------------- Desktop shortcut
+info "Creating desktop shortcut..."
+DESKTOP_DIR="$HOME/Desktop"
+if [[ ! -d "$DESKTOP_DIR" ]]; then
+    DESKTOP_DIR="$HOME/Desktop"
+fi
+if [[ -d "$APP_DST" ]]; then
+    if [[ ! -e "$DESKTOP_DIR/JARVIS 2.0.app" ]]; then
+        ln -s "$APP_DST" "$DESKTOP_DIR/JARVIS 2.0.app"
+    fi
+    ok "Desktop shortcut created: $DESKTOP_DIR/JARVIS 2.0.app"
+else
+    mkdir -p "$APPS_DIR"
+    SCRIPT_ABS="$(cd "$SCRIPT_DIR" && pwd)/run-macos.sh"
+    cat > "$APPS_DIR/JARVIS 2.0.command" << LAUNCHER
 #!/bin/bash
 cd "$SCRIPT_DIR"
 ./run-macos.sh
 LAUNCHER
-
-chmod +x "$HOME/Applications/JARVIS 2.0.command"
-ok "Desktop launcher created"
-
-# ---------------------------------------------------------------- Tauri CLI
-info "Setting up Tauri..."
-cd frontend
-npm install @tauri-apps/cli 2>/dev/null || true
-cd ..
+    chmod +x "$APPS_DIR/JARVIS 2.0.command"
+    ok "Desktop launcher created (development mode)"
+fi
 
 # ---------------------------------------------------------------- Done
 echo ""
@@ -157,4 +186,5 @@ echo -e "${GREEN}║   JARVIS INSTALLATION COMPLETE       ║${NC}"
 echo -e "${GREEN}╚══════════════════════════════════════╝${NC}"
 echo ""
 info "Run: ./run-macos.sh"
-info "Or from Applications folder: JARVIS 2.0"
+info "Or double-click: $HOME/Applications/JARVIS 2.0.app"
+info "Desktop shortcut: $HOME/Desktop/JARVIS 2.0.app"

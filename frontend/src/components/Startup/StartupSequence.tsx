@@ -37,6 +37,8 @@ export function StartupSequence({ onComplete }: StartupSequenceProps) {
     { id: 'openrouter', label: 'OPENROUTER', status: 'pending' },
   ])
   const doneRef = useRef(false)
+  const onCompleteRef = useRef(onComplete)
+  onCompleteRef.current = onComplete
 
   const setStep = (id: string, patch: Partial<BootStep>) => {
     setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)))
@@ -55,13 +57,15 @@ export function StartupSequence({ onComplete }: StartupSequenceProps) {
         if (cancelled) return
         if (ok) {
           setStatus('ready')
-          setTimeout(onComplete, 500)
+          setTimeout(() => onCompleteRef.current(), 500)
         } else {
           setStatus('error')
-          setTimeout(onComplete, 800)
+          setTimeout(() => onCompleteRef.current(), 800)
         }
       }, wait)
     }
+
+    const watchdog = setTimeout(() => finish(true), 20000)
 
     const run = async () => {
       let diag: DiagnosticInfo | null = null
@@ -89,7 +93,7 @@ export function StartupSequence({ onComplete }: StartupSequenceProps) {
       if (!health || health.status !== 'ok') {
         setStep('ai_core', { status: 'fail', detail: 'backend unreachable' })
         setStatus('error')
-        setTimeout(onComplete, 700)
+        setTimeout(() => onCompleteRef.current(), 700)
         return
       }
       await mark('ai_core', true, health.assistant ? `${health.assistant} core online` : 'online', 8, stepDuration(0))
@@ -144,8 +148,9 @@ export function StartupSequence({ onComplete }: StartupSequenceProps) {
     run()
     return () => {
       cancelled = true
+      clearTimeout(watchdog)
     }
-  }, [onComplete])
+  }, [])
 
   return (
     <motion.div

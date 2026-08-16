@@ -77,5 +77,23 @@ echo -e "${GREEN}║   JARVIS 2.0  —  Desktop Mode       ║${NC}"
 echo -e "${GREEN}╚══════════════════════════════════════╝${NC}"
 echo ""
 
+APP_BUNDLE="$SCRIPT_DIR/src-tauri/target/release/bundle/macos/JARVIS 2.0.app"
+RELEASE_BIN="$SCRIPT_DIR/src-tauri/target/release/jarvis"
+
+if [[ -d "$APP_BUNDLE" ]]; then
+    ok "Launching release application..."
+    # Record where the backend lives so the app can find it from anywhere.
+    echo "$SCRIPT_DIR" > "$APP_BUNDLE/Contents/Resources/backend_path"
+    open "$APP_BUNDLE"
+    exit 0
+fi
+
+if [[ -x "$RELEASE_BIN" ]]; then
+    ok "Launching release build..."
+    exec "$RELEASE_BIN"
+fi
+
+warn "Release build not found. Falling back to development mode..."
+warn "Run ./install-macos.sh (or npm run tauri:build) once to build the application."
 cd frontend
 npm run tauri:dev

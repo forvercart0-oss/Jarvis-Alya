@@ -10,6 +10,7 @@ export class WebSocketManager {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null
   private lastPong: number = 0
+  private lastPingAt: number = 0
   private manualClose = false
   private reconnectDelay = 1000
   private maxReconnectDelay = 30000
@@ -32,6 +33,7 @@ export class WebSocketManager {
     this.ws.onopen = () => {
       this.reconnectDelay = 1000
       this.lastPong = Date.now()
+      this.lastPingAt = 0
       this.startHeartbeat()
       this.emit('connected', null)
     }
@@ -90,12 +92,19 @@ export class WebSocketManager {
     this.heartbeatTimer = setInterval(() => {
       if (this.ws?.readyState !== WebSocket.OPEN) return
       const now = Date.now()
-      if (now - this.lastPong > HEARTBEAT_TIMEOUT_MS) {
+      // Only enforce the timeout for a ping that was actually sent and never
+      // answered. lastPong is updated when the server responds.
+      if (
+        this.lastPingAt > 0 &&
+        this.lastPong < this.lastPingAt &&
+        now - this.lastPingAt > HEARTBEAT_TIMEOUT_MS
+      ) {
         // Server unresponsive — force reconnect.
         this.emit('status', { state: 'reconnecting', reason: 'heartbeat_timeout' })
         this.ws.close()
         return
       }
+      this.lastPingAt = now
       this.send('ping', {})
     }, HEARTBEAT_INTERVAL_MS)
   }
