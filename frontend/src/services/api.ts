@@ -1,6 +1,6 @@
-import type { JarvisSettings, HealthStatus, MemoryItem, Automation, ToolInfo, Message, SystemStats, ConversationSummary, NotificationItem, DiagnosticInfo, VoiceInfo, CodingProject, ProjectFileEntry, PersonaInfo } from '../types'
+import type { JarvisSettings, HealthStatus, MemoryItem, Automation, ToolInfo, Message, SystemStats, ConversationSummary, NotificationItem, DiagnosticInfo, VoiceInfo, CodingProject, ProjectFileEntry, PersonaInfo, Skill, SkillActivity } from '../types'
 
-const isTauri = !!(window as any).__TAURI__
+const isTauri = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__
 const API_BASE = isTauri ? 'http://127.0.0.1:8000/api' : '/api'
 
 async function request<T>(
@@ -249,6 +249,62 @@ export const api = {
     return request('/generate/video', {
       method: 'POST',
       body: JSON.stringify({ prompt, provider, duration, resolution, aspect_ratio: aspectRatio }),
+    })
+  },
+
+  async listSkills(): Promise<Skill[]> {
+    return request<Skill[]>('/skills')
+  },
+
+  async getSkill(id: string): Promise<Skill> {
+    return request<Skill>(`/skills/${encodeURIComponent(id)}`)
+  },
+
+  async createSkill(skill: Partial<Skill>): Promise<{ id: string }> {
+    return request<{ id: string }>('/skills', {
+      method: 'POST',
+      body: JSON.stringify(skill),
+    })
+  },
+
+  async updateSkill(id: string, patch: Partial<Skill>): Promise<Skill> {
+    return request<Skill>(`/skills/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(patch),
+    })
+  },
+
+  async deleteSkill(id: string): Promise<void> {
+    return request(`/skills/${encodeURIComponent(id)}`, { method: 'DELETE' })
+  },
+
+  async toggleSkill(id: string, enabled: boolean): Promise<Skill> {
+    return request<Skill>(`/skills/${encodeURIComponent(id)}/toggle`, {
+      method: 'POST',
+      body: JSON.stringify({ enabled }),
+    })
+  },
+
+  async reloadSkills(): Promise<{ status: string }> {
+    return request('/skills/reload', { method: 'POST' })
+  },
+
+  async getSkillActivity(id?: string): Promise<SkillActivity[]> {
+    const path = id ? `/skills/${encodeURIComponent(id)}/activity` : '/skills/activity'
+    return request<SkillActivity[]>(path)
+  },
+
+  async exportSkill(id: string): Promise<string> {
+    const res = await fetch(`${API_BASE}/skills/${encodeURIComponent(id)}/export`)
+    if (!res.ok) throw new Error(`API ${res.status}: ${res.statusText}`)
+    const data = await res.json()
+    return data.json
+  },
+
+  async importSkill(jsonString: string): Promise<{ id: string }> {
+    return request<{ id: string }>('/skills/import', {
+      method: 'POST',
+      body: JSON.stringify({ json: jsonString }),
     })
   },
 }

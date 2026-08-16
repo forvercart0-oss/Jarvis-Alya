@@ -1,6 +1,6 @@
 export type OrbState = 'idle' | 'listening' | 'thinking' | 'processing' | 'speaking' | 'error'
 
-export type TabId = 'home' | 'chat' | 'voice' | 'system' | 'tools' | 'coding' | 'memory' | 'automations' | 'media' | 'settings' | 'diagnostics' | 'health' | 'about'
+export type TabId = 'home' | 'chat' | 'voice' | 'system' | 'tools' | 'coding' | 'memory' | 'automations' | 'media' | 'settings' | 'diagnostics' | 'health' | 'about' | 'skills'
 
 export type ConnectionState = 'connecting' | 'online' | 'offline'
 
@@ -228,4 +228,51 @@ export interface SystemHistoryPoint {
 export interface WsEvent {
   event: string
   data: any
+}
+
+export type SkillPriority = 'high' | 'normal' | 'low'
+
+export interface SkillPermissions {
+  network?: boolean
+  filesystem_read?: boolean
+  filesystem_write?: boolean
+  terminal?: boolean
+  camera?: boolean
+  microphone?: boolean
+  notifications?: boolean
+  clipboard_read?: boolean
+  clipboard_write?: boolean
+  calls?: boolean
+  messages?: boolean
+  browser_read?: boolean
+  browser_control?: boolean
+}
+
+export interface Skill {
+  id: string
+  name: string
+  version: string
+  description: string
+  author: string
+  enabled: boolean
+  priority: SkillPriority
+  triggers: string[]
+  capabilities: string[]
+  instructions: string[]
+  permissions: SkillPermissions
+  uses_memory?: boolean
+  category?: string
+  icon?: string
+  created_at?: string
+  updated_at?: string
+}
+
+export interface SkillActivity {
+  id: string
+  skill_id: string
+  skill_name: string
+  action: string
+  timestamp: string
+  permission: string
+  result: 'success' | 'error' | 'denied'
 }

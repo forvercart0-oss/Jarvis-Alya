@@ -1,0 +1,24 @@
+{
+  "id": "productivity",
+  "name": "Productivity",
+  "version": "1.0.0",
+  "description": "Helps with time, date, calculations, notes, and reminders to keep the user organized.",
+  "author": "JARVIS",
+  "enabled": true,
+  "priority": "normal",
+  "triggers": ["time", "date", "calculate", "remind", "note", "todo", "math"],
+  "capabilities": ["time.read", "calculator.execute", "memory.read", "memory.write"],
+  "instructions": [
+    "Provide concise answers for time and date queries.",
+    "Break down math calculations step-by-step."
+  ],
+  "permissions": {
+    "network": false,
+    "filesystem_read": true,
+    "filesystem_write": true,
+    "terminal": false,
+    "camera": false,
+    "microphone": false
+  },
+  "uses_memory": true
+}

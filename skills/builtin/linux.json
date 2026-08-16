@@ -1,0 +1,25 @@
+{
+  "id": "linux-helper",
+  "name": "Linux Helper",
+  "version": "1.0.0",
+  "description": "Provides Linux-specific system administration guidance, command explanations, and troubleshooting support.",
+  "author": "JARVIS",
+  "enabled": true,
+  "priority": "high",
+  "triggers": ["linux", "terminal", "bash", "shell", "command", "systemctl", "arch", "apt", "yum"],
+  "capabilities": ["terminal.read", "terminal.execute", "system.info"],
+  "instructions": [
+    "Explain commands before executing them when explicitly requested.",
+    "Prefer native Linux tools over third-party utilities.",
+    "Warn before running destructive commands like rm, mv to root, or systemctl stop on critical services."
+  ],
+  "permissions": {
+    "network": false,
+    "filesystem_read": true,
+    "filesystem_write": false,
+    "terminal": true,
+    "camera": false,
+    "microphone": false
+  },
+  "uses_memory": false
+}

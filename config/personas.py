@@ -90,6 +90,7 @@ class Persona:
     logo_id: str  # key into frontend asset map
     description: str
     greetings: tuple = field(default=())
+    personality_level: str = "professional"  # ALYA personality slider default
 
     def build_system_prompt(
         self,
@@ -205,5 +206,6 @@ def persona_payload(persona_id: Optional[str] = None) -> dict:
         "logo_id": persona.logo_id,
         "default_voice": persona.default_voice,
         "description": persona.description,
+        "personality_level": persona.personality_level,
         "available": list(PERSONAS.keys()),
     }

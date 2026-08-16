@@ -10,6 +10,14 @@ class Route:
         self.arguments = arguments
 
 
+class SkillMatch:
+    def __init__(self, skill_id: str, name: str, priority: str, triggers: list[str]):
+        self.skill_id = skill_id
+        self.name = name
+        self.priority = priority
+        self.triggers = triggers
+
+
 class Router:
     def __init__(self, groq=None):
         self.groq = groq
@@ -90,6 +98,26 @@ class Router:
             return Route("tool", "generate_video", {"prompt": prompt or text})
 
         return Route("respond", "", {})
+
+    def match_skill(self, text: str, skill_registry) -> list[SkillMatch]:
+        """Match text against registered skills using trigger keywords.
+
+        Returns a list of SkillMatch objects sorted by priority (high first).
+        """
+        if skill_registry is None:
+            return []
+        matched_skills = skill_registry.match(text)
+        results: list[SkillMatch] = []
+        for skill in matched_skills:
+            results.append(
+                SkillMatch(
+                    skill_id=skill["id"],
+                    name=skill["name"],
+                    priority=skill.get("priority", "normal"),
+                    triggers=skill.get("triggers", []),
+                )
+            )
+        return results
 
     async def decide(self, messages: list[dict]) -> Route:
         groq = self.groq

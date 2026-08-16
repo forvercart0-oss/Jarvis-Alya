@@ -1,0 +1,24 @@
+{
+  "id": "media-generator",
+  "name": "Media Generator",
+  "version": "1.0.0",
+  "description": "Generates images and videos using AI providers based on user descriptions.",
+  "author": "JARVIS",
+  "enabled": true,
+  "priority": "normal",
+  "triggers": ["image", "video", "generate", "picture", "photo", "cinematic", "wallpaper"],
+  "capabilities": ["image.generate", "video.generate", "network.http"],
+  "instructions": [
+    "Always confirm the prompt before generating media.",
+    "Prefer shorter prompts unless the user provides detailed descriptions."
+  ],
+  "permissions": {
+    "network": true,
+    "filesystem_read": false,
+    "filesystem_write": true,
+    "terminal": false,
+    "camera": false,
+    "microphone": false
+  },
+  "uses_memory": false
+}

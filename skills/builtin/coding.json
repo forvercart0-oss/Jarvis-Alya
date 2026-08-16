@@ -1,0 +1,25 @@
+{
+  "id": "coding-assistant",
+  "name": "Coding Assistant",
+  "version": "1.0.0",
+  "description": "Assists with software development tasks including debugging, refactoring, and explaining code.",
+  "author": "JARVIS",
+  "enabled": true,
+  "priority": "high",
+  "triggers": ["code", "debug", "refactor", "function", "class", "python", "javascript", "typescript", "rust", "go", "api"],
+  "capabilities": ["terminal.read", "terminal.execute", "filesystem.read", "filesystem.write"],
+  "instructions": [
+    "Always read the relevant file before suggesting changes.",
+    "Explain the 'why' behind every refactor suggestion.",
+    "Do not auto-format code unless explicitly asked."
+  ],
+  "permissions": {
+    "network": true,
+    "filesystem_read": true,
+    "filesystem_write": true,
+    "terminal": true,
+    "camera": false,
+    "microphone": false
+  },
+  "uses_memory": true
+}

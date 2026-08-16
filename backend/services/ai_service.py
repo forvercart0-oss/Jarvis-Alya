@@ -13,6 +13,9 @@ from tools.registry import ToolRegistry
 from memory.manager import MemoryManager
 from voice.tts_manager import TTSManager
 from config.settings import get_settings
+from safety.classifier import SafetyClassification, SafetyCategory, classify_request
+from safety.policy import PolicyEngine, get_policy_engine, PolicyAction
+from safety.response import SafetyResponseGenerator, get_refusal_response
 
 logger = logging.getLogger("jarvis.ai")
 
@@ -37,7 +40,7 @@ def chunk_text(text: str, max_chunk: int = 6) -> list[str]:
 
 
 class AIService:
-    def __init__(self, memory: MemoryManager, tts: TTSManager, tool_registry: ToolRegistry):
+    def __init__(self, memory: MemoryManager, tts: TTSManager, tool_registry: ToolRegistry, skill_registry=None):
         settings = get_settings()
         self.providers = create_providers(settings)
         self.groq = self.providers["groq"]
@@ -50,6 +53,7 @@ class AIService:
         self.tts = tts
         self.tools = tool_registry
         self.settings = settings
+        self.skill_registry = skill_registry
         self._current_conv: Optional[str] = None
         self._current_provider: Optional[Any] = None
         self._pending_confirmation: Optional[dict] = None
@@ -147,6 +151,23 @@ class AIService:
             tool_args = tc.get("arguments", {}) or {}
             yield {"event": "tool_start", "data": {"tool": tool_name, "arguments": tool_args}}
 
+            # Safety check before tool execution
+            allowed, safety_message = await self._check_tool_safety(tool_name, tool_args)
+            if not allowed:
+                data = {"success": False, "error": safety_message}
+                yield {"event": "tool_result", "data": {
+                    "tool": tool_name,
+                    "result": data,
+                    "success": False,
+                }}
+                results.append({
+                    "tool_call_id": tc.get("id", ""),
+                    "role": "tool",
+                    "name": tool_name,
+                    "content": json.dumps(data),
+                })
+                continue
+
             result = await self.tools.execute(tool_name, confirmed=False, **tool_args)
             data = self._tool_result_data(result)
 
@@ -178,6 +199,54 @@ class AIService:
             }}
 
         self._last_tool_results = results
+
+    # --------------------------------------------------------------- safety
+    async def _safety_check(self, user_message: str) -> Optional[dict]:
+        """Run the outermost safety check on user input.
+
+        Returns a refusal event dict if the request is blocked,
+        or None if the request is safe to proceed.
+        """
+        classification = classify_request(user_message)
+
+        if classification.category in (SafetyCategory.HARMFUL, SafetyCategory.UNSAFE):
+            persona = self.settings.persona
+            language = self.settings.language
+            refusal = get_refusal_response(classification, persona, language)
+            if refusal:
+                logger.info(
+                    "Safety block: %s request blocked (category=%s, confidence=%.2f)",
+                    user_message[:50],
+                    classification.category.value,
+                    classification.confidence,
+                )
+                return {
+                    "event": "token",
+                    "data": {
+                        "chunk": refusal,
+                        "provider": "safety",
+                    },
+                }
+
+        if classification.category == SafetyCategory.CYBERSECURITY:
+            if classification.is_exception:
+                logger.info(
+                    "Cybersecurity exception: %s", classification.exception_reason
+                )
+
+        return None
+
+    async def _check_tool_safety(self, tool_name: str, tool_args: dict) -> tuple[bool, Optional[str]]:
+        """Check if a tool call is safe to execute.
+
+        Returns (allowed, message) where message is an error if not allowed.
+        """
+        policy_engine = get_policy_engine()
+        action, message = policy_engine.evaluate_request(tool_name, tool_args)
+
+        if action == PolicyAction.DENY:
+            return False, message or f"Tool {tool_name} is not permitted."
+        return True, None
 
     # --------------------------------------------------------------- offline
     async def _handle_offline(self, user_message: str, conv_id: str) -> AsyncGenerator[dict, None]:
@@ -249,6 +318,15 @@ class AIService:
 
         yield {"event": "thinking", "data": {}}
 
+        # OUTERMOST SAFETY CHECK: classify the user request before any processing
+        safety_block = await self._safety_check(user_message)
+        if safety_block is not None:
+            self.conversation.add_message(conv_id, "assistant", safety_block["data"]["chunk"])
+            yield safety_block
+            yield {"event": "speaking", "data": {"text": safety_block["data"]["chunk"]}}
+            yield {"event": "done", "data": {"response": safety_block["data"]["chunk"], "conversation_id": conv_id, "provider": "safety"}}
+            return
+
         provider = self._select_provider()
         self._current_provider = provider
 
@@ -262,6 +340,25 @@ class AIService:
             user_name=self.settings.user_name,
             assistant_name=self.settings.assistant_name,
         )
+
+        if self.skill_registry:
+            try:
+                matched = self.router.match_skill(user_message, self.skill_registry)
+                if matched:
+                    top = matched[0]
+                    skill = self.skill_registry.get(top.skill_id)
+                    if skill:
+                        skill_context = (
+                            f"\n\n[Active Skill: {skill['name']}]\n"
+                            f"Instructions: {' '.join(skill.get('instructions', []))}\n"
+                            f"Capabilities: {', '.join(skill.get('capabilities', []))}\n"
+                            f"Permissions: {', '.join(f'{k}={v}' for k, v in skill.get('permissions', {}).items())}\n"
+                        )
+                        system_prompt = system_prompt + skill_context
+                        logger.debug("Injected skill %s into system prompt.", top.skill_id)
+            except Exception as exc:
+                logger.warning("Skill matching failed: %s", exc)
+
         messages = self.conversation.build_messages_with_system(conv_id, user_message, system_prompt)
         full_response = ""
         active_provider = provider

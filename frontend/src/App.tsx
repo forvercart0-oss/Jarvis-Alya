@@ -14,6 +14,7 @@ import { CodingPanel } from './components/Coding/CodingPanel'
 import { DiagnosticsPanel } from './components/Diagnostics/DiagnosticsPanel'
 import { HealthDashboard } from './components/System/HealthDashboard'
 import { AboutPanel } from './components/About/AboutPanel'
+import { SkillsPanel } from './components/Skills/SkillsPanel'
 import { Sidebar } from './components/Sidebar/Sidebar'
 import { ActivityFeed } from './components/Activity/ActivityFeed'
 import { HomePanel } from './components/Home/HomePanel'
@@ -72,6 +73,7 @@ export default function App() {
     switchPersona,
     pendingToolConfirmation,
     confirmTool,
+    reconnect,
   } = useJarvis()
 
   useKeyboardShortcuts([
@@ -203,8 +205,8 @@ export default function App() {
   )
 
   const handleRetry = useCallback(() => {
-    window.location.reload()
-  }, [])
+    reconnect()
+  }, [reconnect])
 
   const handleNotification = useCallback((e: Event) => {
     const detail = (e as CustomEvent).detail
@@ -534,6 +536,7 @@ export default function App() {
                     />
                   )}
                   {activeTab === 'about' && <AboutPanel />}
+                  {activeTab === 'skills' && <SkillsPanel />}
                 </div>
                 {activeTab !== 'chat' && (
                   <div className="w-72 border-l border-cyan-500/10 hidden lg:block overflow-hidden">

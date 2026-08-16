@@ -42,6 +42,8 @@ def main():
         host=settings.backend_host,
         port=settings.backend_port,
         log_level=settings.log_level.lower(),
+        ws_ping_interval=60,
+        ws_ping_timeout=30,
     )
 
 

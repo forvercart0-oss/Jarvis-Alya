@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { OrbState, Message, ToolCall, SystemStats, JarvisSettings, MemoryItem, Automation, ToolInfo, HealthStatus, VoiceInfo, DiagnosticInfo, CodingProject, PersonaInfo } from '../types'
+import type { OrbState, Message, ToolCall, SystemStats, JarvisSettings, MemoryItem, Automation, ToolInfo, HealthStatus, VoiceInfo, DiagnosticInfo, CodingProject, PersonaInfo, Skill } from '../types'
 import { api } from '../services/api'
 import { WebSocketManager } from '../services/websocket'
 
@@ -21,6 +21,7 @@ export function useJarvis() {
   const [diagnostics, setDiagnostics] = useState<DiagnosticInfo | null>(null)
   const [projects, setProjects] = useState<CodingProject[]>([])
   const [persona, setPersona] = useState<PersonaInfo | null>(null)
+  const [skills, setSkills] = useState<Skill[]>([])
   const [lastError, setLastError] = useState<string | null>(null)
   const [streaming, setStreaming] = useState(false)
   const [pendingToolConfirmation, setPendingToolConfirmation] = useState<{ tool: string; arguments: Record<string, any>; message: string; tool_call_id: string } | null>(null)
@@ -30,7 +31,7 @@ export function useJarvis() {
   const abortRef = useRef(false)
 
   const connect = useCallback(() => {
-    const isTauri = !!(window as any).__TAURI__
+    const isTauri = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__
     const wsUrl = isTauri
       ? 'ws://127.0.0.1:8000/ws/jarvis'
       : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws/jarvis`
@@ -43,7 +44,9 @@ export function useJarvis() {
     })
 
     ws.on('disconnected', () => {
-      setConnection('offline')
+      if (connection === 'online') {
+        setConnection('connecting')
+      }
     })
 
     ws.on('status', (_event, data: any) => {
@@ -52,8 +55,12 @@ export function useJarvis() {
       }
     })
 
-    ws.on('error', () => {
+    ws.on('error', (_event, data: any) => {
       setConnection('offline')
+      setLastError(data?.message || 'WebSocket connection error')
+      setOrbState('error')
+      setStreaming(false)
+      setTimeout(() => setOrbState((s) => (s === 'error' ? 'idle' : s)), 4000)
     })
 
     ws.connect()
@@ -142,18 +149,9 @@ export function useJarvis() {
       window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: data }))
     })
 
-    ws.on('error', (_event, data: any) => {
-      setLastError(data?.message || 'Unknown error')
-      setOrbState('error')
-      setStreaming(false)
-      setTimeout(() => setOrbState((s) => (s === 'error' ? 'idle' : s)), 4000)
-    })
-
     ws.on('history', (_event, data: Message[]) => {
       setMessages(data.map((m) => ({ ...m, id: m.id || nextId() })))
     })
-
-    ws.connect()
   }, [])
 
   const sendChat = useCallback(
@@ -281,7 +279,7 @@ export function useJarvis() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [h, s, t, a, m, set, v, d, pr, per] = await Promise.all([
+      const [h, s, t, a, m, set, v, d, pr, per, sk] = await Promise.all([
         api.getHealth().catch(() => null),
         api.getSystemStats().catch(() => null),
         api.getTools().catch(() => []),
@@ -292,6 +290,7 @@ export function useJarvis() {
         api.getDiagnostics().catch(() => null),
         api.listProjects().catch(() => null),
         api.getPersona().catch(() => null),
+        api.listSkills().catch(() => []),
       ])
       if (h) setHealth(h)
       if (s) setStats(s)
@@ -303,6 +302,7 @@ export function useJarvis() {
       if (d) setDiagnostics(d)
       if (pr?.projects) setProjects(pr.projects)
       if (per) setPersona(per)
+      if (sk) setSkills(sk)
     } catch {
       // ignore
     }
@@ -335,6 +335,14 @@ export function useJarvis() {
     return () => clearInterval(timer)
   }, [fetchData])
 
+  const reconnect = useCallback(() => {
+    wsRef.current?.disconnect()
+    setConnection('connecting')
+    setLastError(null)
+    setMessages([])
+    connect()
+  }, [connect])
+
   return {
     connection,
     orbState,
@@ -351,6 +359,7 @@ export function useJarvis() {
     diagnostics,
     projects,
     persona,
+    skills,
     lastError,
     sendChat,
     stopGeneration,
@@ -366,5 +375,6 @@ export function useJarvis() {
     switchPersona,
     pendingToolConfirmation,
     confirmTool,
+    reconnect,
   }
 }

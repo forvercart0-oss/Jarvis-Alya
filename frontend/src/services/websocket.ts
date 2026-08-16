@@ -1,7 +1,7 @@
 type EventHandler = (event: string, data: any) => void
 
-const HEARTBEAT_INTERVAL_MS = 15000
-const HEARTBEAT_TIMEOUT_MS = 8000
+const HEARTBEAT_INTERVAL_MS = 30000
+const HEARTBEAT_TIMEOUT_MS = 10000
 
 export class WebSocketManager {
   private ws: WebSocket | null = null

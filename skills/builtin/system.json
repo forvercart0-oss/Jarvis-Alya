@@ -1,0 +1,25 @@
+{
+  "id": "system-admin",
+  "name": "System Admin",
+  "version": "1.0.0",
+  "description": "Monitors system health, manages services, and performs maintenance tasks.",
+  "author": "JARVIS",
+  "enabled": true,
+  "priority": "high",
+  "triggers": ["cpu", "ram", "disk", "battery", "uptime", "process", "service", "monitor", "performance"],
+  "capabilities": ["system.monitor", "terminal.execute", "filesystem.read"],
+  "instructions": [
+    "Report system health in a concise summary format.",
+    "Flag anomalous readings (high temperature, low disk space).",
+    "Never stop critical services without explicit confirmation."
+  ],
+  "permissions": {
+    "network": false,
+    "filesystem_read": true,
+    "filesystem_write": false,
+    "terminal": true,
+    "camera": false,
+    "microphone": false
+  },
+  "uses_memory": false
+}

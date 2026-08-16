@@ -1,0 +1,24 @@
+{
+  "id": "browser-automation",
+  "name": "Browser Automation",
+  "version": "1.0.0",
+  "description": "Automates browser tasks such as opening URLs, searching the web, and filling forms.",
+  "author": "JARVIS",
+  "enabled": true,
+  "priority": "normal",
+  "triggers": ["browse", "website", "url", "search", "open http", "open www", "google", "github"],
+  "capabilities": ["browser.open", "web.search", "network.http"],
+  "instructions": [
+    "Confirm URLs before opening if they were not explicitly provided by the user.",
+    "Summarize web search results in a concise bullet list."
+  ],
+  "permissions": {
+    "network": true,
+    "filesystem_read": false,
+    "filesystem_write": false,
+    "terminal": false,
+    "camera": false,
+    "microphone": false
+  },
+  "uses_memory": false
+}

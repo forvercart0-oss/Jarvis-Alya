@@ -5,6 +5,7 @@
   "identifier": "com.jarvis.desktop",
   "build": {
     "frontendDist": "../frontend/dist",
+    "devPath": "http://localhost:5174",
     "beforeBuildCommand": "npm run build"
   },
   "app": {

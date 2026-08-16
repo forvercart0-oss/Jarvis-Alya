@@ -8,6 +8,7 @@ from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 from config.settings import get_settings
 from memory.manager import MemoryManager
@@ -21,6 +22,7 @@ from backend.services.automation_service import AutomationService
 from backend.services.notification_service import NotificationService
 from backend.services.ws_manager import ws_manager
 from backend.services.persona_service import persona_service
+from safety import classify_request, get_confirmation_manager, SafetyCategory
 from voice.tts_manager import TTSManager
 from backend.api.chat import router as chat_router
 from backend.api.voice import router as voice_router
@@ -30,10 +32,13 @@ from backend.api.settings import router as settings_router
 from backend.api.tools import router as tools_router
 from backend.api.automation import router as automation_router
 from backend.api.persona import router as persona_router
+from backend.api.skills import router as skills_router
 from generation.image.manager import ImageGenerationManager
 from generation.video.manager import VideoGenerationManager
 from communications.calls.manager import CallManager
 from vision.gesture.detector import GestureDetector
+from skills.registry import SkillRegistry
+from skills.manager import SkillManager
 
 settings = get_settings()
 
@@ -56,7 +61,10 @@ memory_manager = MemoryManager(settings.db_path, vector_dir=vector_dir)
 settings.apply_db_overrides(memory_manager.store.get_all_settings())
 tool_registry = build_registry(settings.db_path)
 tts_manager = TTSManager(settings)
-ai_service = AIService(memory_manager, tts_manager, tool_registry)
+skill_registry = SkillRegistry()
+skill_registry.load()
+skill_manager = SkillManager(skill_registry)
+ai_service = AIService(memory_manager, tts_manager, tool_registry, skill_registry=skill_registry)
 voice_service = VoiceManager(memory_manager, ai_service)
 memory_service = MemoryService(memory_manager)
 tool_service = ToolService(tool_registry)
@@ -146,6 +154,7 @@ app.include_router(settings_router, prefix="/api")
 app.include_router(tools_router, prefix="/api")
 app.include_router(automation_router, prefix="/api")
 app.include_router(persona_router, prefix="/api")
+app.include_router(skills_router, prefix="/api")
 
 
 # ---------------------------------------------------------------- health
@@ -193,6 +202,70 @@ async def clear_history():
 @app.get("/api/notifications")
 async def get_notifications(limit: int = 20):
     return notification_service.recent(limit)
+
+
+# ---------------------------------------------------------------- safety
+class SafetyCheckRequest(BaseModel):
+    message: str
+
+
+class SafetyCheckResponse(BaseModel):
+    category: str
+    confidence: float
+    safe: bool
+    subcategory: Optional[str] = None
+    severity: str = "low"
+    is_exception: bool = False
+
+
+class ConfirmationResponse(BaseModel):
+    request_id: str
+    confirmed: bool
+    message: str
+
+
+@app.post("/api/safety/check", response_model=SafetyCheckResponse)
+async def safety_check(request: SafetyCheckRequest):
+    classification = classify_request(request.message)
+    return SafetyCheckResponse(
+        category=classification.category.value,
+        confidence=classification.confidence,
+        safe=classification.category == SafetyCategory.SAFE,
+        subcategory=classification.subcategory,
+        severity=classification.severity.value,
+        is_exception=classification.is_exception,
+    )
+
+
+@app.post("/api/safety/confirm", response_model=ConfirmationResponse)
+async def safety_confirm(request: ConfirmationResponse):
+    manager = get_confirmation_manager()
+    success = manager.confirm(request.request_id, request.confirmed)
+    message = "Confirmation recorded." if success else "Confirmation request not found."
+    return ConfirmationResponse(
+        request_id=request.request_id,
+        confirmed=request.confirmed,
+        message=message,
+    )
+
+
+@app.get("/api/safety/pending")
+async def safety_pending():
+    manager = get_confirmation_manager()
+    pending = manager.get_pending_requests()
+    return {
+        "requests": [
+            {
+                "id": r.id,
+                "tool": r.tool_name,
+                "arguments": r.arguments,
+                "summary": r.summary,
+                "risk_level": r.risk_level,
+                "timestamp": r.timestamp.isoformat(),
+            }
+            for r in pending
+        ]
+    }
 
 
 # ---------------------------------------------------------------- diagnostics
