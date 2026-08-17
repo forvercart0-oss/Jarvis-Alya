@@ -52,7 +52,7 @@ export function Sidebar({ activeTab, onTabChange, connection, persona, onSwitchP
   const logoId = persona?.logo_id || currentPersona
 
   return (
-    <div className="w-16 border-r flex flex-col items-center py-4 gap-1 bg-black/40 z-20 panel-3d" style={{ borderColor: `${accentColor}22` }}>
+    <div className="w-16 border-r flex flex-col items-center py-4 gap-1 bg-black/40 z-20 panel-3d sidebar-scroll overflow-y-auto" style={{ borderColor: `${accentColor}22` }}>
       <div className="w-9 h-9 mb-4 flex items-center justify-center relative">
         {logoId === 'alya' ? (
           <svg viewBox="0 0 64 64" className="w-7 h-7" style={{ filter: `drop-shadow(0 0 8px ${accentColor}88)` }}>

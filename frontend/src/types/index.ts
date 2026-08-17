@@ -61,6 +61,7 @@ export interface JarvisSettings {
   local_llm_url: string
   local_llm_model: string
   local_llm_api_type: string
+  local_llm_api_key: string
   local_llm_timeout: number
   auto_failover: boolean
   provider_priority: string

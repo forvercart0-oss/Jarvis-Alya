@@ -148,7 +148,7 @@ export function AutomationSettings({ settings, onUpdate }: AutomationSettingsPro
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 settings-scroll">
         {subTab === 'modes' && (
           <div className="space-y-3">
             <div className="glass-panel p-3">

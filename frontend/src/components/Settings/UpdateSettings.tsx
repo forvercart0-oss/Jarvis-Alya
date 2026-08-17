@@ -148,7 +148,7 @@ export function UpdateSettings() {
           <div className="p-4 rounded-lg border border-slate-700 bg-slate-800/50 space-y-2">
             <div className="text-xs text-slate-400 uppercase tracking-wider">Update Details</div>
             <div className="text-sm text-slate-300">
-              <span className="text-slate-500">Commit:</span> {updateInfo.commit_sha.slice(0, 7)}
+              <span className="text-slate-500">Commit:</span> <span className="font-mono text-xs">{updateInfo.commit_sha}</span>
             </div>
             <div className="text-sm text-slate-300">
               <span className="text-slate-500">Author:</span> {updateInfo.commit_author}

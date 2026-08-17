@@ -50,7 +50,7 @@ export function SettingsPanel({ settings, persona, onSwitchPersona, onUpdate, on
       </div>
 
       <div className="flex-1 overflow-hidden flex">
-        <div className="w-40 border-r border-cyan-500/10 py-2 px-1 space-y-0.5">
+        <div className="w-40 border-r border-cyan-500/10 py-2 px-1 space-y-0.5 sidebar-scroll overflow-y-auto">
           {[
             { id: 'general', label: 'General' },
             { id: 'persona', label: 'Persona' },
@@ -84,7 +84,7 @@ export function SettingsPanel({ settings, persona, onSwitchPersona, onUpdate, on
           ))}
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto p-4 settings-scroll">
           {activeTab === 'general' && <GeneralSettings settings={settings} onUpdate={onUpdate} />}
           {activeTab === 'persona' && (
             <PersonaSettings settings={settings} persona={persona} onSwitch={onSwitchPersona} onUpdate={onUpdate} />
