@@ -315,3 +315,45 @@ class BrowserManager:
             return {"success": True}
         except Exception as exc:
             return {"success": False, "error": str(exc)}
+
+    async def get_page_structure(self, session_id: str = "default") -> dict[str, Any]:
+        if not self._available:
+            return {"success": False, "error": "Browser not available"}
+        try:
+            page = await self._get_page(session_id)
+            if not page:
+                return {"success": False, "error": "No active page"}
+            structure = await page.evaluate("""
+                () => {
+                    const sections = [];
+                    document.querySelectorAll('header, nav, main, aside, footer, section, [role="dialog"], .modal').forEach(el => {
+                        sections.push({
+                            type: el.tagName.toLowerCase(),
+                            role: el.getAttribute('role') || '',
+                            text: (el.innerText || '').trim().slice(0, 200)
+                        });
+                    });
+                    return sections;
+                }
+            """)
+            return {"success": True, "structure": structure or []}
+        except Exception as exc:
+            return {"success": False, "error": str(exc)}
+
+    async def detect_page_errors(self, session_id: str = "default") -> dict[str, Any]:
+        if not self._available:
+            return {"success": False, "error": "Browser not available"}
+        try:
+            page = await self._get_page(session_id)
+            if not page:
+                return {"success": False, "error": "No active page"}
+            text = await page.evaluate("() => document.body.innerText") if hasattr(page, "evaluate") else ""
+            url = page.url if hasattr(page, "url") else ""
+            error_patterns = ["404", "403", "500", "error", "exception", "traceback", "failed", "not found"]
+            errors = []
+            for line in (text or "").splitlines():
+                if any(p in line.lower() for p in error_patterns):
+                    errors.append(line.strip())
+            return {"success": True, "errors": errors[:10], "url": url}
+        except Exception as exc:
+            return {"success": False, "error": str(exc)}

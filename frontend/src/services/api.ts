@@ -1,4 +1,4 @@
-import type { JarvisSettings, HealthStatus, MemoryItem, MemoryDashboard, SessionMemory, MemoryAuditEntry, Automation, ToolInfo, Message, SystemStats, ConversationSummary, NotificationItem, DiagnosticInfo, VoiceInfo, CodingProject, ProjectFileEntry, PersonaInfo, Skill, SkillActivity, GitStatus, ResearchJob, Workflow, WorkflowRun, WorkflowApproval, WorkflowStep, AdaptivePreference, Suggestion, EnvironmentProfile, PersonalizationContext, PersonalizationAnalytics } from '../types'
+import type { JarvisSettings, HealthStatus, MemoryItem, MemoryDashboard, SessionMemory, MemoryAuditEntry, Automation, ToolInfo, Message, SystemStats, ConversationSummary, NotificationItem, DiagnosticInfo, VoiceInfo, CodingProject, ProjectFileEntry, PersonaInfo, Skill, SkillActivity, GitStatus, ResearchJob, Workflow, WorkflowRun, WorkflowApproval, WorkflowStep, AdaptivePreference, Suggestion, EnvironmentProfile, PersonalizationContext, PersonalizationAnalytics, IdeaItem, ErrorMemoryItem, UpdaterConfig, UpdaterProgress } from '../types'
 
 const isTauri = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__
 const API_BASE = isTauri ? 'http://127.0.0.1:8000/api' : '/api'
@@ -22,6 +22,10 @@ async function request<T>(
 export const api = {
   async getHealth(): Promise<HealthStatus> {
     return request<HealthStatus>('/health')
+  },
+
+  async getHealthDetailed(): Promise<any> {
+    return request<any>('/health/detailed')
   },
 
   async sendChat(message: string): Promise<{ response: string }> {
@@ -240,6 +244,86 @@ export const api = {
     return request('/memory/conflicts/resolve', {
       method: 'POST',
       body: JSON.stringify({ memory_id: memoryId, keep }),
+    })
+  },
+
+  // ---------------------------------------------------------------- ideas (Phase 29)
+  async createIdea(title: string, description = '', tags?: string[], status = 'idea', project?: string, profile?: string): Promise<IdeaItem> {
+    return request<IdeaItem>('/memory/ideas', {
+      method: 'POST',
+      body: JSON.stringify({ title, description, tags, status, project, profile }),
+    })
+  },
+
+  async getIdeas(status?: string, project?: string, profile?: string, limit = 50): Promise<{ ideas: IdeaItem[] }> {
+    const params = new URLSearchParams()
+    if (status) params.set('status', status)
+    if (project) params.set('project', project)
+    if (profile) params.set('profile', profile)
+    params.set('limit', String(limit))
+    return request(`/memory/ideas?${params.toString()}`)
+  },
+
+  async getIdea(ideaId: string): Promise<IdeaItem> {
+    return request<IdeaItem>(`/memory/ideas/${encodeURIComponent(ideaId)}`)
+  },
+
+  async updateIdea(ideaId: string, updates: Record<string, any>): Promise<IdeaItem> {
+    return request<IdeaItem>(`/memory/ideas/${encodeURIComponent(ideaId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    })
+  },
+
+  async deleteIdea(ideaId: string): Promise<{ status: string }> {
+    return request(`/memory/ideas/${encodeURIComponent(ideaId)}`, { method: 'DELETE' })
+  },
+
+  // ---------------------------------------------------------------- error memory (Phase 29)
+  async recordError(errorSignature: string, resolution: string, category = 'other', project?: string, profile?: string, confidence = 1.0): Promise<ErrorMemoryItem> {
+    return request<ErrorMemoryItem>('/memory/errors', {
+      method: 'POST',
+      body: JSON.stringify({ error_signature: errorSignature, resolution, category, project, profile, confidence }),
+    })
+  },
+
+  async getErrors(project?: string, category?: string, profile?: string, limit = 50): Promise<{ errors: ErrorMemoryItem[] }> {
+    const params = new URLSearchParams()
+    if (project) params.set('project', project)
+    if (category) params.set('category', category)
+    if (profile) params.set('profile', profile)
+    params.set('limit', String(limit))
+    return request(`/memory/errors?${params.toString()}`)
+  },
+
+  async searchErrors(query: string, limit = 10): Promise<{ errors: ErrorMemoryItem[] }> {
+    return request(`/memory/errors/search?q=${encodeURIComponent(query)}&limit=${limit}`)
+  },
+
+  async deleteError(errorId: string): Promise<{ status: string }> {
+    return request(`/memory/errors/${encodeURIComponent(errorId)}`, { method: 'DELETE' })
+  },
+
+  // ---------------------------------------------------------------- pin / trust / privacy (Phase 29)
+  async pinMemory(memoryId: string): Promise<any> {
+    return request(`/memory/${encodeURIComponent(memoryId)}/pin`, { method: 'POST' })
+  },
+
+  async unpinMemory(memoryId: string): Promise<any> {
+    return request(`/memory/${encodeURIComponent(memoryId)}/unpin`, { method: 'POST' })
+  },
+
+  async setMemoryTrust(memoryId: string, trustLevel: string): Promise<any> {
+    return request(`/memory/${encodeURIComponent(memoryId)}/trust`, {
+      method: 'PATCH',
+      body: JSON.stringify({ trust_level: trustLevel }),
+    })
+  },
+
+  async setMemoryPrivacy(memoryId: string, privacyLevel: string): Promise<any> {
+    return request(`/memory/${encodeURIComponent(memoryId)}/privacy`, {
+      method: 'PATCH',
+      body: JSON.stringify({ privacy_level: privacyLevel }),
     })
   },
 
@@ -823,6 +907,149 @@ export const api = {
     })
   },
 
+  async visionUnderstandApplication(windowTitle?: string, ocrText?: string): Promise<any> {
+    return request('/vision/application/understand', {
+      method: 'POST',
+      body: JSON.stringify({ window_title: windowTitle || '', ocr_text: ocrText || '' }),
+    })
+  },
+
+  async visionDetectDialog(ocrText: string, windowTitle?: string): Promise<any> {
+    return request('/vision/dialog/detect', {
+      method: 'POST',
+      body: JSON.stringify({ ocr_text: ocrText, window_title: windowTitle || '' }),
+    })
+  },
+
+  async visionStartWorkflowRecording(name?: string): Promise<any> {
+    return request('/vision/workflow/start', {
+      method: 'POST',
+      body: JSON.stringify({ name: name || '' }),
+    })
+  },
+
+  async visionStopWorkflowRecording(): Promise<any> {
+    return request('/vision/workflow/stop', { method: 'POST' })
+  },
+
+  async visionReplayWorkflow(workflow: Record<string, any>, reDetect?: boolean): Promise<any> {
+    return request('/vision/workflow/replay', {
+      method: 'POST',
+      body: JSON.stringify({ workflow, re_detect: reDetect ?? true }),
+    })
+  },
+
+  async visionLoadSkills(): Promise<any> {
+    return request('/vision/skills')
+  },
+
+  async visionMatchSkill(text: string): Promise<any> {
+    return request('/vision/skills/match', {
+      method: 'POST',
+      body: JSON.stringify({ text }),
+    })
+  },
+
+  async visionGestureStart(): Promise<any> {
+    return request('/vision/gesture/start', { method: 'POST' })
+  },
+
+  async visionGestureStop(): Promise<any> {
+    return request('/vision/gesture/stop', { method: 'POST' })
+  },
+
+  async getScreenIntelligenceStatus(): Promise<{ enabled: boolean; mode: string }> {
+    return request('/vision24/status')
+  },
+
+  async setScreenIntelligenceMode(mode: string): Promise<{ success: boolean; mode: string; enabled: boolean }> {
+    return request('/vision24/mode', {
+      method: 'POST',
+      body: JSON.stringify({ mode }),
+    })
+  },
+
+  async screenIntelligenceCapture(payload: { mode?: string; window?: string; region?: string; monitor?: number }): Promise<any> {
+    return request('/vision24/capture', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
+
+  async screenIntelligenceCommand(command: string, context?: Record<string, any>): Promise<any> {
+    return request('/vision24/command', {
+      method: 'POST',
+      body: JSON.stringify({ command, context }),
+    })
+  },
+
+  async screenIntelligenceQuery(question: string, context?: Record<string, any>): Promise<any> {
+    return request('/vision24/query', {
+      method: 'POST',
+      body: JSON.stringify({ command: question, context }),
+    })
+  },
+
+  async screenIntelligencePlan(command: string): Promise<any> {
+    return request('/vision24/plan', {
+      method: 'POST',
+      body: JSON.stringify({ command }),
+    })
+  },
+
+  async screenIntelligenceDiff(payload: { current_ocr: string; current_window: string; current_elements?: any[]; current_image_hash: string }): Promise<any> {
+    return request('/vision24/diff', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
+
+  async waitForElement(target: string, timeout?: number, pollInterval?: number): Promise<any> {
+    const params = new URLSearchParams()
+    params.set('target', target)
+    if (timeout !== undefined) params.set('timeout', String(timeout))
+    if (pollInterval !== undefined) params.set('poll_interval', String(pollInterval))
+    return request(`/vision24/wait_for_element?${params.toString()}`)
+  },
+
+  async waitForPage(timeout?: number): Promise<any> {
+    const qs = timeout !== undefined ? `?timeout=${timeout}` : ''
+    return request(`/vision24/wait_for_page${qs}`)
+  },
+
+  async waitForDialog(timeout?: number): Promise<any> {
+    const qs = timeout !== undefined ? `?timeout=${timeout}` : ''
+    return request(`/vision24/wait_for_dialog${qs}`)
+  },
+
+  async getScreenUnderstanding(): Promise<any> {
+    return request('/vision24/understanding')
+  },
+
+  async getScreenActionLog(limit?: number): Promise<{ success: boolean; entries: any[] }> {
+    const qs = limit !== undefined ? `?limit=${limit}` : ''
+    return request(`/vision24/action_log${qs}`)
+  },
+
+  async clearScreenActionLog(): Promise<{ success: boolean }> {
+    return request('/vision24/action_log/clear', { method: 'POST' })
+  },
+
+  async getAccessibilityStatus(): Promise<any> {
+    return request('/vision24/accessibility/status')
+  },
+
+  async getAccessibilityTree(): Promise<any> {
+    return request('/vision24/accessibility/tree')
+  },
+
+  async redactScreenText(text: string): Promise<{ redacted: string }> {
+    return request('/vision24/redact', {
+      method: 'POST',
+      body: JSON.stringify({ text }),
+    })
+  },
+
   async startResearch(topic: string): Promise<{ job_id: string; topic: string; status: string }> {
     return request('/research/start', {
       method: 'POST',
@@ -935,6 +1162,118 @@ export const api = {
 
   async getBrowserStatus(): Promise<any> {
     return request('/browser/status')
+  },
+
+  async getBrowserSession25(): Promise<any> {
+    return request('/browser25/status')
+  },
+
+  async setBrowser25Enabled(enabled: boolean): Promise<any> {
+    return request(`/browser25/${enabled ? 'enable' : 'disable'}`, { method: 'POST' })
+  },
+
+  async browser25Task(goal: string, sessionId?: string): Promise<any> {
+    return request('/browser25/task', {
+      method: 'POST',
+      body: JSON.stringify({ goal, session_id: sessionId || 'default' }),
+    })
+  },
+
+  async browser25Inspect(sessionId?: string): Promise<any> {
+    const qs = sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : ''
+    return request(`/browser25/page/inspect${qs}`)
+  },
+
+  async browser25Dom(sessionId?: string): Promise<any> {
+    const qs = sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : ''
+    return request(`/browser25/page/dom${qs}`)
+  },
+
+  async browser25Resolve(goal: string, sessionId?: string): Promise<any> {
+    return request('/browser25/element/resolve', {
+      method: 'POST',
+      body: JSON.stringify({ goal, session_id: sessionId || 'default' }),
+    })
+  },
+
+  async browser25Read(mode?: string, sessionId?: string): Promise<any> {
+    const qs = new URLSearchParams()
+    if (mode) qs.set('mode', mode)
+    if (sessionId) qs.set('session_id', sessionId)
+    return request(`/browser25/page/read?${qs.toString()}`)
+  },
+
+  async browser25Summarize(sessionId?: string): Promise<any> {
+    const qs = sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : ''
+    return request(`/browser25/page/summarize${qs}`)
+  },
+
+  async browser25Tables(sessionId?: string): Promise<any> {
+    const qs = sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : ''
+    return request(`/browser25/page/tables${qs}`)
+  },
+
+  async browser25Upload(selector: string, filePath: string, sessionId?: string): Promise<any> {
+    return request('/browser25/upload', {
+      method: 'POST',
+      body: JSON.stringify({ selector, file_path: filePath, session_id: sessionId || 'default' }),
+    })
+  },
+
+  async browser25Downloads(limit?: number): Promise<any> {
+    const qs = limit ? `?limit=${limit}` : ''
+    return request(`/browser25/downloads${qs}`)
+  },
+
+  async browser25Diff(sessionId?: string): Promise<any> {
+    const qs = sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : ''
+    return request(`/browser25/page/diff${qs}`, { method: 'POST' })
+  },
+
+  async browser25Verify(action: string, sessionId?: string, extra?: Record<string, any>): Promise<any> {
+    return request('/browser25/verify', {
+      method: 'POST',
+      body: JSON.stringify({ action, session_id: sessionId || 'default', ...extra }),
+    })
+  },
+
+  async browser25Recover(failedAction: Record<string, any>, sessionId?: string): Promise<any> {
+    return request('/browser25/recover', {
+      method: 'POST',
+      body: JSON.stringify({ failed_action: failedAction, session_id: sessionId || 'default' }),
+    })
+  },
+
+  async browser25Memory(sessionId?: string): Promise<any> {
+    const qs = sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : ''
+    return request(`/browser25/memory${qs}`)
+  },
+
+  async browser25SetPreference(key: string, value: any, sessionId?: string): Promise<any> {
+    return request('/browser25/memory/preference', {
+      method: 'POST',
+      body: JSON.stringify({ key, value, session_id: sessionId || 'default' }),
+    })
+  },
+
+  async browser25DetectLogin(sessionId?: string): Promise<any> {
+    const qs = sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : ''
+    return request(`/browser25/detect/login${qs}`)
+  },
+
+  async browser25DetectErrors(sessionId?: string): Promise<any> {
+    const qs = sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : ''
+    return request(`/browser25/detect/errors${qs}`)
+  },
+
+  async browser25AntiLoopReset(sessionId?: string): Promise<any> {
+    const qs = sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : ''
+    return request(`/browser25/anti-loop/reset${qs}`, { method: 'POST' })
+  },
+
+  async browser25PageStructure(sessionId?: string): Promise<any> {
+    const qs = sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : ''
+    return request(`/browser25/page/structure${qs}`)
   },
 
   async getBrowserPageContext(sessionId: string): Promise<any> {
@@ -1274,5 +1613,332 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     })
+  },
+
+  async getExecutionMode(): Promise<{ mode: string; profile: string; scopes: Record<string, boolean> }> {
+    return request('/automation/mode')
+  },
+
+  async setExecutionMode(payload: { mode: string }): Promise<{ mode: string }> {
+    return request('/automation/mode', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
+
+  async getAutomationProfile(): Promise<any> {
+    return request('/automation/profile')
+  },
+
+  async setAutomationProfile(payload: { profile: string }): Promise<any> {
+    return request('/automation/profile', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
+
+  async getAutomationScopes(): Promise<{ scopes: Record<string, { enabled: boolean }> }> {
+    return request('/automation/scopes')
+  },
+
+  async setAutomationScope(payload: { scope: string; enabled: boolean }): Promise<{ scope: string; enabled: boolean }> {
+    return request('/automation/scopes', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
+
+  async emergencyStop(payload: { task_ids?: string[] }): Promise<any> {
+    return request('/automation/emergency-stop', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
+
+  async getAutomationDashboard(): Promise<any> {
+    return request('/automation/dashboard')
+  },
+
+  async evaluateTool(toolName: string, confirmed = false): Promise<any> {
+    return request(`/automation/evaluate?tool_name=${encodeURIComponent(toolName)}&confirmed=${confirmed}`)
+  },
+
+  async createGoal(payload: { request: string; context?: Record<string, any> }): Promise<any> {
+    return request('/goals', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
+
+  async getGoals(): Promise<{ goals: any[] }> {
+    return request('/goals')
+  },
+
+  async getGoal(goalId: string): Promise<any> {
+    return request(`/goals/${encodeURIComponent(goalId)}`)
+  },
+
+  async pauseGoal(goalId: string): Promise<{ success: boolean }> {
+    return request(`/goals/${encodeURIComponent(goalId)}/pause`, { method: 'POST' })
+  },
+
+  async resumeGoal(goalId: string): Promise<{ success: boolean }> {
+    return request(`/goals/${encodeURIComponent(goalId)}/resume`, { method: 'POST' })
+  },
+
+  async cancelGoal(goalId: string): Promise<{ success: boolean }> {
+    return request(`/goals/${encodeURIComponent(goalId)}/cancel`, { method: 'POST' })
+  },
+
+  async getAgents(): Promise<{ agents: any[] }> {
+    return request('/agents')
+  },
+
+  async getArtifacts(goalId?: string): Promise<{ artifacts: any[] }> {
+    const qs = goalId ? `?goal_id=${encodeURIComponent(goalId)}` : ''
+    return request(`/artifacts${qs}`)
+  },
+
+  async getSystemResources(): Promise<any> {
+    return request('/resources')
+  },
+
+  async getCommunicationStatus(): Promise<any> {
+    return request('/communication/status')
+  },
+
+  async setCommunicationEnabled(enabled: boolean): Promise<any> {
+    return request(`/communication/${enabled ? 'enable' : 'disable'}`, { method: 'POST' })
+  },
+
+  async communicationTask(goal: string): Promise<any> {
+    return request('/communication/task', {
+      method: 'POST',
+      body: JSON.stringify({ goal }),
+    })
+  },
+
+  async communicationIntent(goal: string): Promise<any> {
+    return request('/communication/intent', {
+      method: 'POST',
+      body: JSON.stringify({ goal }),
+    })
+  },
+
+  async getCommunicationInbox(limit?: number): Promise<any> {
+    const qs = limit ? `?limit=${limit}` : ''
+    return request(`/communication/inbox${qs}`)
+  },
+
+  async getCommunicationUnread(limit?: number): Promise<any> {
+    const qs = limit ? `?limit=${limit}` : ''
+    return request(`/communication/inbox/unread${qs}`)
+  },
+
+  async getCommunicationImportant(limit?: number): Promise<any> {
+    const qs = limit ? `?limit=${limit}` : ''
+    return request(`/communication/inbox/important${qs}`)
+  },
+
+  async sendCommunicationMessage(provider: string, conversationId: string, text: string, attachments?: any[]): Promise<any> {
+    return request('/communication/send', {
+      method: 'POST',
+      body: JSON.stringify({ provider, conversation_id: conversationId, text, attachments }),
+    })
+  },
+
+  async getCommunicationMessages(provider: string, conversationId: string, limit?: number): Promise<any> {
+    const qs = new URLSearchParams()
+    qs.set('provider', provider)
+    qs.set('conversation_id', conversationId)
+    if (limit) qs.set('limit', String(limit))
+    return request(`/communication/messages?${qs.toString()}`)
+  },
+
+  async searchCommunication(query: string, limit?: number): Promise<any> {
+    const qs = new URLSearchParams()
+    qs.set('query', query)
+    if (limit) qs.set('limit', String(limit))
+    return request(`/communication/search?${qs.toString()}`)
+  },
+
+  async createContact(name: string, aliases?: string[], tags?: string[]): Promise<any> {
+    return request('/communication/contacts', {
+      method: 'POST',
+      body: JSON.stringify({ name, aliases: aliases || [], tags: tags || [] }),
+    })
+  },
+
+  async getContacts(): Promise<any> {
+    return request('/communication/contacts')
+  },
+
+  async resolveContact(name: string): Promise<any> {
+    return request('/communication/contacts/resolve', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    })
+  },
+
+  async scheduleMessage(provider: string, recipient: string, message: string, scheduleTime: string): Promise<any> {
+    return request('/communication/schedule', {
+      method: 'POST',
+      body: JSON.stringify({ provider, recipient, message, schedule_time: scheduleTime }),
+    })
+  },
+
+  async getScheduledMessages(): Promise<any> {
+    return request('/communication/scheduled')
+  },
+
+  async cancelScheduledMessage(scheduleId: string): Promise<any> {
+    return request(`/communication/scheduled/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({ schedule_id: scheduleId }),
+    })
+  },
+
+  async getCommunicationNotifications(limit?: number): Promise<any> {
+    const qs = limit ? `?limit=${limit}` : ''
+    return request(`/communication/notifications${qs}`)
+  },
+
+  async updateCommunicationSettings(settings: Record<string, any>): Promise<any> {
+    return request('/communication/notifications/settings', {
+      method: 'POST',
+      body: JSON.stringify(settings),
+    })
+  },
+
+  async analyzeCodingProject(name: string): Promise<any> {
+    return request(`/coding/projects/${encodeURIComponent(name)}/analyze`, { method: 'POST' })
+  },
+
+  async getCodingProjectIndex(name: string): Promise<any> {
+    return request(`/coding/projects/${encodeURIComponent(name)}/index`)
+  },
+
+  async runCodingTask(name: string, goal: string): Promise<any> {
+    return request(`/coding/projects/${encodeURIComponent(name)}/task`, {
+      method: 'POST',
+      body: JSON.stringify({ goal, project: name }),
+    })
+  },
+
+  async runCodingCommand(name: string, command: string): Promise<any> {
+    return request(`/coding/projects/${encodeURIComponent(name)}/run`, {
+      method: 'POST',
+      body: JSON.stringify({ command }),
+    })
+  },
+
+  async runCodingTests(name: string): Promise<any> {
+    return request(`/coding/projects/${encodeURIComponent(name)}/test`, { method: 'POST' })
+  },
+
+  async debugCodingProject(name: string, output: string): Promise<any> {
+    return request(`/coding/projects/${encodeURIComponent(name)}/debug`, {
+      method: 'POST',
+      body: JSON.stringify({ output }),
+    })
+  },
+
+  async getCodingGitStatus(name: string): Promise<any> {
+    return request(`/coding/projects/${encodeURIComponent(name)}/git/status`)
+  },
+
+  async getCodingGitLog(name: string, limit?: number): Promise<any> {
+    const qs = limit ? `?limit=${limit}` : ''
+    return request(`/coding/projects/${encodeURIComponent(name)}/git/log${qs}`)
+  },
+
+  async commitCodingProject(name: string, message: string, files?: string[]): Promise<any> {
+    return request(`/coding/projects/${encodeURIComponent(name)}/git/commit`, {
+      method: 'POST',
+      body: JSON.stringify({ message, files }),
+    })
+  },
+
+  async scanCodingSecrets(name: string): Promise<any> {
+    return request(`/coding/projects/${encodeURIComponent(name)}/secrets/scan`, { method: 'POST' })
+  },
+
+  async getDevOpsStatus(): Promise<any> {
+    return request('/devops/status')
+  },
+
+  async deployDevOps(goal: string, project: string, environment?: string): Promise<any> {
+    return request('/devops/deploy', {
+      method: 'POST',
+      body: JSON.stringify({ goal, project, environment: environment || 'local' }),
+    })
+  },
+
+  async getDevOpsContainers(): Promise<any> {
+    return request('/devops/containers')
+  },
+
+  async startDevOpsContainer(service: string): Promise<any> {
+    return request('/devops/containers/start', { method: 'POST', body: JSON.stringify({ service }) })
+  },
+
+  async stopDevOpsContainer(service: string): Promise<any> {
+    return request('/devops/containers/stop', { method: 'POST', body: JSON.stringify({ service }) })
+  },
+
+  async getDevOpsContainerLogs(service: string, tail?: number): Promise<any> {
+    const qs = tail ? `?tail=${tail}` : ''
+    return request(`/devops/containers/logs?service=${encodeURIComponent(service)}${qs}`)
+  },
+
+  async getDevOpsServers(): Promise<any> {
+    return request('/devops/servers')
+  },
+
+  async registerDevOpsServer(server: { name: string; host: string; port?: number; username?: string; os?: string }): Promise<any> {
+    return request('/devops/servers', { method: 'POST', body: JSON.stringify(server) })
+  },
+
+  async getDevOpsAlerts(limit?: number): Promise<any> {
+    const qs = limit ? `?limit=${limit}` : ''
+    return request(`/devops/monitoring/alerts${qs}`)
+  },
+
+  async getDevOpsEnvironment(): Promise<any> {
+    return request('/devops/environment')
+  },
+
+  async detectDevOpsCICD(project?: string): Promise<any> {
+    const qs = project ? `?project=${encodeURIComponent(project)}` : ''
+    return request(`/devops/cicd/detect${qs}`)
+  },
+
+  // Updater
+  async getUpdaterStatus(): Promise<UpdaterProgress & { config: UpdaterConfig; current_commit: string }> {
+    return request('/updater/status')
+  },
+
+  async checkForUpdate(force = false): Promise<UpdaterProgress> {
+    return request('/updater/check', { method: 'POST', body: JSON.stringify({ force }) })
+  },
+
+  async downloadUpdate(): Promise<UpdaterProgress> {
+    return request('/updater/download', { method: 'POST' })
+  },
+
+  async installUpdate(commit_sha?: string): Promise<UpdaterProgress> {
+    return request('/updater/install', { method: 'POST', body: JSON.stringify({ commit_sha }) })
+  },
+
+  async cancelUpdate(): Promise<UpdaterProgress> {
+    return request('/updater/cancel', { method: 'POST' })
+  },
+
+  async getUpdaterConfig(): Promise<UpdaterConfig> {
+    return request('/updater/config')
+  },
+
+  async updateUpdaterConfig(config: Partial<UpdaterConfig>): Promise<UpdaterConfig> {
+    return request('/updater/config', { method: 'POST', body: JSON.stringify(config) })
   },
 }

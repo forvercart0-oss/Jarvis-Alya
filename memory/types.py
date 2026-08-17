@@ -21,6 +21,18 @@ class MemoryType(str, Enum):
     SESSION = "session"
     PROFILE = "profile"
     GENERAL = "general"
+    PREFERENCE = "preference"
+    CODING = "coding"
+    TECHNICAL = "technical"
+    UI = "ui"
+    VOICE = "voice"
+    ASSISTANT = "assistant"
+    KNOWLEDGE = "knowledge"
+    TASK_HISTORY = "task_history"
+    ERROR = "error"
+    IDEA = "idea"
+    DOCUMENT = "document"
+    RESEARCH = "research"
 
 
 class MemoryImportance(str, Enum):
@@ -45,6 +57,37 @@ class MemoryStatus(str, Enum):
     EXPIRED = "expired"
 
 
+class PrivacyLevel(str, Enum):
+    NORMAL = "normal"
+    PRIVATE = "private"
+    SENSITIVE = "sensitive"
+
+
+class TrustLevel(str, Enum):
+    TRUSTED = "trusted"
+    NORMAL = "normal"
+    UNTRUSTED = "untrusted"
+
+
+class IdeaStatus(str, Enum):
+    IDEA = "idea"
+    PLANNED = "planned"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    ARCHIVED = "archived"
+
+
+class ErrorCategory(str, Enum):
+    NETWORK = "network"
+    BUILD = "build"
+    DEPLOYMENT = "deployment"
+    DATABASE = "database"
+    PERMISSION = "permission"
+    CONFIGURATION = "configuration"
+    RUNTIME = "runtime"
+    OTHER = "other"
+
+
 MEMORY_TYPE_LABELS = {
     MemoryType.USER_PREFERENCE: "User Preference",
     MemoryType.USER_PROFILE: "User Profile",
@@ -61,6 +104,18 @@ MEMORY_TYPE_LABELS = {
     MemoryType.SESSION: "Session",
     MemoryType.PROFILE: "Profile",
     MemoryType.GENERAL: "General",
+    MemoryType.PREFERENCE: "Preference",
+    MemoryType.CODING: "Coding",
+    MemoryType.TECHNICAL: "Technical",
+    MemoryType.UI: "UI",
+    MemoryType.VOICE: "Voice",
+    MemoryType.ASSISTANT: "Assistant",
+    MemoryType.KNOWLEDGE: "Knowledge",
+    MemoryType.TASK_HISTORY: "Task History",
+    MemoryType.ERROR: "Error",
+    MemoryType.IDEA: "Idea",
+    MemoryType.DOCUMENT: "Document",
+    MemoryType.RESEARCH: "Research",
 }
 
 

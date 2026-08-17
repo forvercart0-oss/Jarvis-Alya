@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { MemoryItem, ConversationSummaryItem, ReminderItem, PrivacySettings } from '../../types'
+import type { MemoryItem, ConversationSummaryItem, ReminderItem, PrivacySettings, IdeaItem, ErrorMemoryItem } from '../../types'
 import { Plus, Search, Trash2, Clock, Shield, Bell, FileText, FolderOpen, ListTodo, Sparkles, RefreshCw } from 'lucide-react'
 import { MemoryItemComponent } from './MemoryItem'
 import { MemorySearch } from './MemorySearch'
@@ -25,9 +25,18 @@ interface MemoryPanelProps {
   projects: string[]
   profile: string
   onSearchMemory: (query: string, category?: string, project?: string) => Promise<MemoryItem[]>
+  ideas?: IdeaItem[]
+  onAddIdea?: (title: string, description: string, tags?: string[], status?: string, project?: string, profile?: string) => void
+  onUpdateIdea?: (id: string, updates: Record<string, any>) => void
+  onDeleteIdea?: (id: string) => void
+  errors?: ErrorMemoryItem[]
+  onRecordError?: (errorSignature: string, resolution: string, category?: string, project?: string, profile?: string, confidence?: number) => void
+  onDeleteError?: (id: string) => void
+  onPinMemory?: (id: string) => void
+  onUnpinMemory?: (id: string) => void
 }
 
-type Tab = 'recent' | 'preferences' | 'projects' | 'tasks' | 'summaries' | 'reminders' | 'search' | 'privacy' | 'manage'
+type Tab = 'recent' | 'preferences' | 'projects' | 'tasks' | 'summaries' | 'reminders' | 'search' | 'privacy' | 'manage' | 'ideas' | 'errors'
 
 export function MemoryPanel({
   memories,
@@ -45,6 +54,15 @@ export function MemoryPanel({
   projects,
   profile,
   onSearchMemory,
+  ideas,
+  onAddIdea: _onAddIdea,
+  onUpdateIdea: _onUpdateIdea,
+  onDeleteIdea,
+  errors,
+  onRecordError: _onRecordError,
+  onDeleteError,
+  onPinMemory: _onPinMemory,
+  onUnpinMemory: _onUnpinMemory,
 }: MemoryPanelProps) {
   const [activeTab, setActiveTab] = useState<Tab>('recent')
   const [showAddForm, setShowAddForm] = useState(false)
@@ -59,6 +77,8 @@ export function MemoryPanel({
     { id: 'preferences', label: 'Prefs', icon: <Sparkles className="w-3 h-3" /> },
     { id: 'projects', label: 'Projects', icon: <FolderOpen className="w-3 h-3" /> },
     { id: 'tasks', label: 'Tasks', icon: <ListTodo className="w-3 h-3" /> },
+    { id: 'ideas', label: 'Ideas', icon: <Sparkles className="w-3 h-3" /> },
+    { id: 'errors', label: 'Errors', icon: <Bell className="w-3 h-3" /> },
     { id: 'summaries', label: 'Summaries', icon: <FileText className="w-3 h-3" /> },
     { id: 'reminders', label: 'Reminders', icon: <Bell className="w-3 h-3" /> },
     { id: 'search', label: 'Search', icon: <Search className="w-3 h-3" /> },
@@ -206,11 +226,63 @@ export function MemoryPanel({
         />
       )}
 
+      {activeTab === 'ideas' && (
+        <div className="space-y-2">
+          {(ideas || []).map((idea) => (
+            <div key={idea.id} className="glass-panel p-3 flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <div className="text-xs font-medium text-slate-200 truncate">{idea.title}</div>
+                <div className="text-[10px] text-slate-500 mt-0.5 line-clamp-2">{idea.description}</div>
+                <div className="flex gap-1 mt-1.5">
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-300 capitalize">{idea.status}</span>
+                </div>
+              </div>
+              <div className="flex gap-1 shrink-0">
+                {onDeleteIdea && (
+                  <button onClick={() => onDeleteIdea(idea.id)} className="text-[10px] text-red-400 hover:text-red-300 px-1">
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+          {(ideas || []).length === 0 && (
+            <div className="text-center text-slate-500 py-10">No ideas yet.</div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'errors' && (
+        <div className="space-y-2">
+          {(errors || []).map((err) => (
+            <div key={err.id} className="glass-panel p-3 flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <div className="text-xs font-mono text-red-300 truncate">{err.error_signature}</div>
+                <div className="text-[10px] text-slate-400 mt-0.5 line-clamp-2">{err.resolution}</div>
+                <div className="flex gap-1 mt-1.5">
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-300 capitalize">{err.category}</span>
+                </div>
+              </div>
+              <div className="flex gap-1 shrink-0">
+                {onDeleteError && (
+                  <button onClick={() => onDeleteError(err.id)} className="text-[10px] text-red-400 hover:text-red-300 px-1">
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+          {(errors || []).length === 0 && (
+            <div className="text-center text-slate-500 py-10">No error memories yet.</div>
+          )}
+        </div>
+      )}
+
       {activeTab === 'manage' && (
         <MemoryManagement memories={memories} onRefresh={onRefresh} />
       )}
 
-      {activeTab !== 'search' && activeTab !== 'summaries' && activeTab !== 'reminders' && activeTab !== 'privacy' && activeTab !== 'manage' && (
+      {activeTab !== 'search' && activeTab !== 'summaries' && activeTab !== 'reminders' && activeTab !== 'privacy' && activeTab !== 'manage' && activeTab !== 'ideas' && activeTab !== 'errors' && (
         <>
           {filteredMemories.length === 0 ? (
             <div className="text-center text-slate-500 py-10">No memories in this section.</div>

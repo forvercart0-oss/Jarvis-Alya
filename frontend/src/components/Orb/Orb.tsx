@@ -18,6 +18,37 @@ const STATUS_LABELS: Record<string, string> = {
   processing: 'PROCESSING',
   speaking: 'SPEAKING',
   error: 'ERROR',
+  vision: 'VISION',
+  scanning: 'SCANNING',
+  analyzing: 'ANALYZING',
+  locating: 'LOCATING',
+  acting: 'ACTING',
+  screen_mode: 'SCREEN MODE',
+  browsing: 'BROWSING',
+  navigating: 'NAVIGATING',
+  reading: 'READING',
+  searching: 'SEARCHING',
+  clicking: 'CLICKING',
+  typing: 'TYPING',
+  verifying: 'VERIFYING',
+  downloading: 'DOWNLOADING',
+  reading_message: 'READING MESSAGE',
+  composing: 'COMPOSING',
+  sending: 'SENDING',
+  calling: 'CALLING',
+  answering: 'ANSWERING',
+  ending_call: 'ENDING CALL',
+  message_received: 'MESSAGE RECEIVED',
+  planning: 'PLANNING',
+  editing: 'EDITING',
+  running: 'RUNNING',
+  testing: 'TESTING',
+  debugging: 'DEBUGGING',
+  building: 'BUILDING',
+  committing: 'COMMITTING',
+  deploying: 'DEPLOYING',
+  monitoring: 'MONITORING',
+  recovering: 'RECOVERING',
 }
 
 const STATE_TO_ORB: Record<string, 'working' | 'searching' | 'solving' | 'listening' | 'connecting' | 'weaving' | 'composing' | 'breathing' | 'shaping'> = {
@@ -27,6 +58,37 @@ const STATE_TO_ORB: Record<string, 'working' | 'searching' | 'solving' | 'listen
   processing: 'solving',
   speaking: 'composing',
   error: 'searching',
+  vision: 'working',
+  scanning: 'searching',
+  analyzing: 'breathing',
+  locating: 'searching',
+  acting: 'solving',
+  screen_mode: 'working',
+  browsing: 'working',
+  navigating: 'connecting',
+  reading: 'breathing',
+  searching: 'searching',
+  clicking: 'solving',
+  typing: 'solving',
+  verifying: 'breathing',
+  downloading: 'composing',
+  reading_message: 'breathing',
+  composing: 'composing',
+  sending: 'connecting',
+  calling: 'connecting',
+  answering: 'connecting',
+  ending_call: 'working',
+  message_received: 'composing',
+  planning: 'breathing',
+  editing: 'solving',
+  running: 'working',
+  testing: 'breathing',
+  debugging: 'solving',
+  building: 'working',
+  committing: 'connecting',
+  deploying: 'working',
+  monitoring: 'breathing',
+  recovering: 'solving',
 }
 
 export function Orb({ state, accentColor = '#00f0ff', size = 64, onStatusChange, onClick }: OrbProps) {
@@ -53,13 +115,13 @@ export function Orb({ state, accentColor = '#00f0ff', size = 64, onStatusChange,
   }
 
   return (
-    <div className="relative flex flex-col items-center select-none">
-      <div className="relative cursor-pointer" onClick={handleClick}>
+    <div className="relative flex flex-col items-center select-none" style={{ perspective: '800px' }}>
+      <div className="relative cursor-pointer" onClick={handleClick} style={{ transformStyle: 'preserve-3d' }}>
         <div
           className="absolute inset-0 rounded-full opacity-40 blur-2xl transition-all duration-700"
           style={{
             background: `radial-gradient(circle, ${glowColor} 0%, transparent 70%)`,
-            transform: pulse ? 'scale(1.4)' : 'scale(1.1)',
+            transform: `translateZ(${(pulse ? 1 : 0) * 5}px)`,
           }}
         />
         <motion.div

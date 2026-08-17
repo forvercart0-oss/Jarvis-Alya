@@ -11,6 +11,8 @@ from pydantic import BaseModel
 
 from backend.api.activity import router as activity_router
 from backend.api.automation import router as automation_router
+from backend.api.automation_phase22 import router as automation_phase22_router
+from backend.api.phase23 import router as phase23_router
 from backend.api.chat import router as chat_router
 from backend.api.memory import router as memory_router
 from backend.api.permissions import router as permissions_router
@@ -22,12 +24,18 @@ from backend.api.system import router as system_router
 from backend.api.tasks import router as tasks_router
 from backend.api.tools import router as tools_router
 from backend.api.vision import router as vision_router
+from backend.api.vision_phase24 import router as vision_phase24_router
 from backend.api.voice import router as voice_router
 from backend.api.agent import router as agent_router
 from backend.api.git import router as git_router
 from backend.api.research import router as research_router
 from backend.api.browser import router as browser_router
+from backend.api.browser_phase25 import router as browser_phase25_router
+from backend.api.coding import router as coding_router
+from backend.api.communication import router as communication_router
 from backend.api.computer import router as computer_router
+from backend.api.devops import router as devops_router
+from backend.api.updater import router as updater_router
 from backend.api.workflows import router as workflows_router
 from backend.api.personalization import router as personalization_router
 from backend.services.ai_service import AIService
@@ -37,6 +45,7 @@ from backend.services.notification_service import NotificationService
 from backend.services.persona_service import persona_service
 from backend.services.system_service import SystemService
 from backend.services.tool_service import ToolService
+from backend.services.updater_service import updater_service
 from backend.services.voice_service import VoiceManager
 from backend.services.ws_manager import ws_manager
 from communications.calls.manager import CallManager
@@ -100,6 +109,11 @@ image_mgr = ImageGenerationManager(settings)
 video_mgr = VideoGenerationManager(settings)
 call_mgr = CallManager(settings)
 gesture_detector = GestureDetector(settings)
+from automation.policy_engine import get_automation_policy_engine
+automation_policy_engine = get_automation_policy_engine(
+    execution_mode=settings.execution_mode,
+    profile=settings.automation_profile,
+)
 
 research_manager = None
 
@@ -226,6 +240,7 @@ async def lifespan(app: FastAPI):
         except Exception as exc:
             logger.warning("Failed to load vision provider %s: %s", settings.vision_provider, exc)
     notification_service.push("JARVIS is online and ready.", "success")
+    await updater_service.start()
     logger.info("JARVIS 2.0 ready.")
     yield
     logger.info("JARVIS 2.0 shutting down...")
@@ -233,6 +248,7 @@ async def lifespan(app: FastAPI):
     await automation_service.stop()
     await voice_service.stop()
     await tts_manager.stop()
+    await updater_service.stop()
 
 
 app = FastAPI(title="JARVIS 2.0", version="2.1.0", lifespan=lifespan)
@@ -247,6 +263,8 @@ app.add_middleware(
 
 app.include_router(workflows_router, prefix="/api")
 app.include_router(personalization_router, prefix="/api")
+app.include_router(automation_phase22_router, prefix="/api")
+app.include_router(phase23_router, prefix="/api")
 
 app.include_router(chat_router, prefix="/api")
 app.include_router(voice_router, prefix="/api")
@@ -264,9 +282,15 @@ app.include_router(activity_router, prefix="/api")
 app.include_router(agent_router, prefix="/api")
 app.include_router(git_router, prefix="/api")
 app.include_router(vision_router, prefix="/api")
+app.include_router(vision_phase24_router, prefix="/api")
 app.include_router(research_router, prefix="/api")
 app.include_router(browser_router, prefix="/api")
+app.include_router(browser_phase25_router, prefix="/api")
+app.include_router(communication_router, prefix="/api")
+app.include_router(coding_router, prefix="/api")
 app.include_router(computer_router, prefix="/api")
+app.include_router(devops_router, prefix="/api")
+app.include_router(updater_router, prefix="/api")
 
 
 # ---------------------------------------------------------------- health
@@ -290,6 +314,49 @@ async def health():
         "gestures": {"status": "active" if gesture_detector.active else "inactive"},
         "calls": {"status": "available" if call_mgr.is_available() else "unavailable"},
         "vision": vision_manager.status(),
+    }
+
+
+@app.get("/api/health/detailed")
+async def health_detailed():
+    provider_status = await ai_service.health()
+    active = ai_service._select_provider()
+    db_status = "online"
+    try:
+        memory_manager.store.get_all_settings()
+    except Exception:
+        db_status = "degraded"
+
+    return {
+        "status": "ok",
+        "assistant": settings.assistant_name,
+        "version": app.version,
+        "uptime_seconds": await system_service.system_uptime_seconds(),
+        "providers": provider_status,
+        "active_provider": active.name if active else None,
+        "database": {"status": db_status},
+        "websocket": {"status": "online", "connections": ws_manager.count},
+        "tts": {
+            "available": tts_manager.is_available(),
+            "backend": tts_manager.backend,
+            "engine": tts_manager.engine,
+            "voices": len(tts_manager.voice_catalog()),
+        },
+        "voice": {
+            "initialized": voice_service.initialized,
+            "mic_available": voice_service.mic_available,
+            "tts_available": voice_service.tts_available,
+        },
+        "memory": {"conversations": len(memory_manager.get_conversations(limit=1000))},
+        "vision": vision_manager.status(),
+        "image": await image_mgr.health(),
+        "video": await video_mgr.health(),
+        "gestures": {"active": gesture_detector.active, "available": gesture_detector.is_available()},
+        "calls": {"available": call_mgr.is_available()},
+        "skills": {"loaded": len(skill_registry.list_all()) if skill_registry else 0},
+        "tools": {"registered": len(tool_registry.names()) if tool_registry else 0},
+        "python": __import__("sys").version.split()[0],
+        "platform": __import__("platform").system(),
     }
 
 

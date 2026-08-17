@@ -358,3 +358,124 @@ async def resolve_memory_conflict(request: dict):
     if not result:
         raise HTTPException(status_code=404, detail="Memory not found")
     return result
+
+
+# ---------------------------------------------------------------- ideas (Phase 29)
+@router.post("/memory/ideas")
+async def create_idea(request: dict):
+    from backend.main import memory_service
+    title = request.get("title", "")
+    description = request.get("description", "")
+    tags = request.get("tags")
+    status = request.get("status", "idea")
+    project = request.get("project", "")
+    profile = request.get("profile", "jarvis")
+    if not title:
+        raise HTTPException(status_code=400, detail="title is required")
+    result = memory_service.create_idea(title, description=description, tags=tags, status=status, project=project, profile=profile)
+    return result
+
+
+@router.get("/memory/ideas")
+async def list_ideas(status: str | None = None, project: str | None = None, profile: str | None = None, limit: int = 50):
+    from backend.main import memory_service
+    return {"ideas": memory_service.get_ideas(status=status, project=project, profile=profile, limit=limit)}
+
+
+@router.get("/memory/ideas/{idea_id}")
+async def get_idea(idea_id: str):
+    from backend.main import memory_service
+    idea = memory_service.get_idea_by_id(idea_id)
+    if not idea:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    return idea
+
+
+@router.patch("/memory/ideas/{idea_id}")
+async def update_idea(idea_id: str, updates: dict):
+    from backend.main import memory_service
+    idea = memory_service.update_idea(idea_id, updates)
+    if not idea:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    return idea
+
+
+@router.delete("/memory/ideas/{idea_id}")
+async def delete_idea(idea_id: str):
+    from backend.main import memory_service
+    if not memory_service.delete_idea(idea_id):
+        raise HTTPException(status_code=404, detail="Idea not found")
+    return {"status": "deleted"}
+
+
+# ---------------------------------------------------------------- error memory (Phase 29)
+@router.post("/memory/errors")
+async def record_error(request: dict):
+    from backend.main import memory_service
+    error_signature = request.get("error_signature", "")
+    resolution = request.get("resolution", "")
+    category = request.get("category", "other")
+    project = request.get("project", "")
+    profile = request.get("profile", "jarvis")
+    confidence = float(request.get("confidence", 1.0))
+    if not error_signature or not resolution:
+        raise HTTPException(status_code=400, detail="error_signature and resolution are required")
+    result = memory_service.record_error(error_signature, resolution, category=category, project=project, profile=profile, confidence=confidence)
+    return result
+
+
+@router.get("/memory/errors")
+async def list_errors(project: str | None = None, category: str | None = None, profile: str | None = None, limit: int = 50):
+    from backend.main import memory_service
+    return {"errors": memory_service.get_errors(project=project, category=category, profile=profile, limit=limit)}
+
+
+@router.get("/memory/errors/search")
+async def search_errors(q: str, limit: int = 10):
+    from backend.main import memory_service
+    return {"errors": memory_service.find_error_resolution(q, limit=limit)}
+
+
+@router.delete("/memory/errors/{error_id}")
+async def delete_error(error_id: str):
+    from backend.main import memory_service
+    if not memory_service.delete_error(error_id):
+        raise HTTPException(status_code=404, detail="Error not found")
+    return {"status": "deleted"}
+
+
+# ---------------------------------------------------------------- pin / trust / privacy (Phase 29)
+@router.post("/memory/{memory_id}/pin")
+async def pin_memory(memory_id: str):
+    from backend.main import memory_service
+    result = memory_service.pin_memory(memory_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Memory not found")
+    return result
+
+
+@router.post("/memory/{memory_id}/unpin")
+async def unpin_memory(memory_id: str):
+    from backend.main import memory_service
+    result = memory_service.unpin_memory(memory_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Memory not found")
+    return result
+
+
+@router.patch("/memory/{memory_id}/trust")
+async def set_memory_trust(memory_id: str, trust_level: str):
+    from backend.main import memory_service
+    result = memory_service.set_trust_level(memory_id, trust_level)
+    if not result:
+        raise HTTPException(status_code=404, detail="Memory not found")
+    return result
+
+
+@router.patch("/memory/{memory_id}/privacy")
+async def set_memory_privacy(memory_id: str, privacy_level: str):
+    from backend.main import memory_service
+    result = memory_service.set_privacy_level(memory_id, privacy_level)
+    if not result:
+        raise HTTPException(status_code=404, detail="Memory not found")
+    return result

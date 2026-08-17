@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 from communications.calls.provider import CallProvider
 
@@ -62,5 +61,5 @@ class CallManager:
             return {"success": False, "error": str(exc)}
 
     @property
-    def active_call(self) -> Optional[str]:
+    def active_call(self) -> str | None:
         return self._active_call

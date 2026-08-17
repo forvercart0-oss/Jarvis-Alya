@@ -18,6 +18,8 @@ class BrowserSession:
     active_tab_index: int = 0
     connected: bool = False
     error: str | None = None
+    current_structure: list[dict[str, Any]] = field(default_factory=list)
+    recent_actions: list[dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -28,6 +30,8 @@ class BrowserSession:
             "active_tab_index": self.active_tab_index,
             "connected": self.connected,
             "error": self.error,
+            "current_structure": self.current_structure,
+            "recent_actions": self.recent_actions[-10:],
         }
 
 

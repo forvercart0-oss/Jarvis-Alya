@@ -259,7 +259,49 @@ class SQLiteMemory:
                 conn.execute("ALTER TABLE memories ADD COLUMN memory_type TEXT DEFAULT 'fact'")
             if "decay_factor" not in columns:
                 conn.execute("ALTER TABLE memories ADD COLUMN decay_factor REAL DEFAULT 1.0")
+            if "privacy_level" not in columns:
+                conn.execute("ALTER TABLE memories ADD COLUMN privacy_level TEXT DEFAULT 'normal'")
+            if "is_pinned" not in columns:
+                conn.execute("ALTER TABLE memories ADD COLUMN is_pinned INTEGER DEFAULT 0")
+            if "trust_level" not in columns:
+                conn.execute("ALTER TABLE memories ADD COLUMN trust_level TEXT DEFAULT 'normal'")
+            if "quality_score" not in columns:
+                conn.execute("ALTER TABLE memories ADD COLUMN quality_score REAL DEFAULT 0.5")
+            if "previous_value" not in columns:
+                conn.execute("ALTER TABLE memories ADD COLUMN previous_value TEXT")
             conn.commit()
+
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS ideas (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                description TEXT NOT NULL DEFAULT '',
+                tags TEXT NOT NULL DEFAULT '[]',
+                status TEXT NOT NULL DEFAULT 'idea',
+                project TEXT DEFAULT '',
+                profile TEXT DEFAULT 'jarvis',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS error_memories (
+                id TEXT PRIMARY KEY,
+                error_signature TEXT NOT NULL,
+                resolution TEXT NOT NULL,
+                category TEXT DEFAULT 'other',
+                project TEXT DEFAULT '',
+                profile TEXT DEFAULT 'jarvis',
+                confidence REAL DEFAULT 1.0,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+        """)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_ideas_status ON ideas(status)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_ideas_project ON ideas(project)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_error_memories_signature ON error_memories(error_signature)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_error_memories_project ON error_memories(project)")
+        conn.commit()
 
         task_columns = {row[1] for row in conn.execute("PRAGMA table_info(tasks)").fetchall()}
         for col, col_type in [
@@ -404,7 +446,7 @@ class SQLiteMemory:
             conn.execute("DELETE FROM messages WHERE conversation_id = ?", (conv_id,))
             conn.commit()
 
-    def remember(self, content: str, category: str = "general", key_override: str = "", confidence: float = 1.0, source: str = "explicit_user", project: str = "", profile: str = "jarvis", expires_at: str | None = None, importance: float = 0.5, tags: list[str] | None = None, memory_type: str = "fact", related_ids: list[str] | None = None) -> dict:
+    def remember(self, content: str, category: str = "general", key_override: str = "", confidence: float = 1.0, source: str = "explicit_user", project: str = "", profile: str = "jarvis", expires_at: str | None = None, importance: float = 0.5, tags: list[str] | None = None, memory_type: str = "fact", related_ids: list[str] | None = None, privacy_level: str = "normal", is_pinned: bool = False, trust_level: str = "normal", quality_score: float = 0.5, previous_value: str | None = None) -> dict:
         mem_id = str(uuid.uuid4())
         timestamp = datetime.utcnow().isoformat()
         key = key_override if key_override else content[:64]
@@ -412,11 +454,11 @@ class SQLiteMemory:
         related_json = json.dumps(related_ids or [])
         with sqlite3.connect(self.db_path) as conn:
             conn.execute(
-                "INSERT INTO memories (id, key, value, category, timestamp, confidence, source, project, profile, expires_at, last_used_at, created_at, updated_at, importance, access_count, tags, related_ids, memory_type, decay_factor) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (mem_id, key, content, category, timestamp, confidence, source, project, profile, expires_at, timestamp, timestamp, timestamp, importance, 0, tags_json, related_json, memory_type, 1.0),
+                "INSERT INTO memories (id, key, value, category, timestamp, confidence, source, project, profile, expires_at, last_used_at, created_at, updated_at, importance, access_count, tags, related_ids, memory_type, decay_factor, privacy_level, is_pinned, trust_level, quality_score, previous_value) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (mem_id, key, content, category, timestamp, confidence, source, project, profile, expires_at, timestamp, timestamp, timestamp, importance, 0, tags_json, related_json, memory_type, 1.0, privacy_level, 1 if is_pinned else 0, trust_level, quality_score, previous_value),
             )
             conn.commit()
-        return {"id": mem_id, "key": key, "value": content, "category": category, "confidence": confidence, "source": source, "project": project, "profile": profile, "expires_at": expires_at, "timestamp": timestamp, "created_at": timestamp, "updated_at": timestamp, "importance": importance, "access_count": 0, "tags": tags or [], "related_ids": related_ids or [], "memory_type": memory_type, "decay_factor": 1.0}
+        return {"id": mem_id, "key": key, "value": content, "category": category, "confidence": confidence, "source": source, "project": project, "profile": profile, "expires_at": expires_at, "timestamp": timestamp, "created_at": timestamp, "updated_at": timestamp, "importance": importance, "access_count": 0, "tags": tags or [], "related_ids": related_ids or [], "memory_type": memory_type, "decay_factor": 1.0, "privacy_level": privacy_level, "is_pinned": is_pinned, "trust_level": trust_level, "quality_score": quality_score, "previous_value": previous_value}
 
     def forget(self, query: str) -> int:
         with sqlite3.connect(self.db_path) as conn:
@@ -442,7 +484,12 @@ class SQLiteMemory:
                 else:
                     return False
             else:
-                cursor = conn.execute("UPDATE memories SET value = ?, updated_at = ? WHERE id = ?", (value, timestamp, memory_id))
+                existing = self.get_memory_by_id(memory_id)
+                prev_value = existing.get("value") if existing else None
+                cursor = conn.execute(
+                    "UPDATE memories SET value = ?, updated_at = ?, previous_value = ? WHERE id = ?",
+                    (value, timestamp, prev_value, memory_id),
+                )
             conn.commit()
             return cursor.rowcount > 0
 
@@ -494,6 +541,8 @@ class SQLiteMemory:
                     data[key] = json.loads(value)
                 except Exception:
                     data[key] = []
+        if "is_pinned" in data and isinstance(data["is_pinned"], int):
+            data["is_pinned"] = bool(data["is_pinned"])
         return data
 
     def delete_memory_by_id(self, memory_id: str) -> bool:
@@ -527,7 +576,7 @@ class SQLiteMemory:
             conn.commit()
 
     def update_memory_fields(self, memory_id: str, updates: dict) -> dict | None:
-        allowed = {"value", "confidence", "source", "project", "profile", "importance", "tags", "related_ids", "memory_type", "decay_factor", "expires_at"}
+        allowed = {"value", "confidence", "source", "project", "profile", "importance", "tags", "related_ids", "memory_type", "decay_factor", "expires_at", "privacy_level", "is_pinned", "trust_level", "quality_score"}
         filtered = {k: v for k, v in updates.items() if k in allowed}
         if not filtered:
             return self.get_memory_by_id(memory_id)
@@ -1272,6 +1321,130 @@ class SQLiteMemory:
                         data["detail"] = {}
                 results.append(data)
             return results
+
+    # ---------------------------------------------------------------- ideas
+    def add_idea(self, title: str, description: str = "", tags: list[str] | None = None, status: str = "idea", project: str = "", profile: str = "jarvis") -> dict:
+        idea_id = str(uuid.uuid4())
+        timestamp = datetime.utcnow().isoformat()
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute(
+                "INSERT INTO ideas (id, title, description, tags, status, project, profile, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (idea_id, title, description, json.dumps(tags or []), status, project, profile, timestamp, timestamp),
+            )
+            conn.commit()
+        return {"id": idea_id, "title": title, "description": description, "tags": tags or [], "status": status, "project": project, "profile": profile, "created_at": timestamp, "updated_at": timestamp}
+
+    def get_ideas(self, status: str | None = None, project: str | None = None, profile: str | None = None, limit: int = 50) -> list[dict]:
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            sql = "SELECT * FROM ideas WHERE 1=1"
+            params = []
+            if status:
+                sql += " AND status = ?"
+                params.append(status)
+            if project:
+                sql += " AND project = ?"
+                params.append(project)
+            if profile:
+                sql += " AND profile = ?"
+                params.append(profile)
+            sql += " ORDER BY created_at DESC LIMIT ?"
+            params.append(limit)
+            rows = conn.execute(sql, params).fetchall()
+            results = []
+            for row in rows:
+                data = dict(row)
+                if isinstance(data.get("tags"), str):
+                    try:
+                        data["tags"] = json.loads(data["tags"])
+                    except Exception:
+                        data["tags"] = []
+                results.append(data)
+            return results
+
+    def update_idea(self, idea_id: str, updates: dict) -> dict | None:
+        timestamp = datetime.utcnow().isoformat()
+        allowed = {"title", "description", "tags", "status", "project", "profile"}
+        filtered = {k: v for k, v in updates.items() if k in allowed}
+        if not filtered:
+            return self.get_idea(idea_id)
+        if "tags" in filtered and isinstance(filtered["tags"], list):
+            filtered["tags"] = json.dumps(filtered["tags"])
+        filtered["updated_at"] = timestamp
+        set_clause = ", ".join(f"{k} = ?" for k in filtered)
+        values = list(filtered.values()) + [idea_id]
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.execute(f"UPDATE ideas SET {set_clause} WHERE id = ?", values)
+            conn.commit()
+            if cursor.rowcount == 0:
+                return None
+        return self.get_idea(idea_id)
+
+    def get_idea(self, idea_id: str) -> dict | None:
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute("SELECT * FROM ideas WHERE id = ?", (idea_id,)).fetchone()
+            if not row:
+                return None
+            data = dict(row)
+            if isinstance(data.get("tags"), str):
+                try:
+                    data["tags"] = json.loads(data["tags"])
+                except Exception:
+                    data["tags"] = []
+            return data
+
+    def delete_idea(self, idea_id: str) -> bool:
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.execute("DELETE FROM ideas WHERE id = ?", (idea_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+
+    # ---------------------------------------------------------------- error memories
+    def add_error_memory(self, error_signature: str, resolution: str, category: str = "other", project: str = "", profile: str = "jarvis", confidence: float = 1.0) -> dict:
+        error_id = str(uuid.uuid4())
+        timestamp = datetime.utcnow().isoformat()
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute(
+                "INSERT INTO error_memories (id, error_signature, resolution, category, project, profile, confidence, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (error_id, error_signature, resolution, category, project, profile, confidence, timestamp, timestamp),
+            )
+            conn.commit()
+        return {"id": error_id, "error_signature": error_signature, "resolution": resolution, "category": category, "project": project, "profile": profile, "confidence": confidence, "created_at": timestamp, "updated_at": timestamp}
+
+    def get_error_memories(self, project: str | None = None, category: str | None = None, profile: str | None = None, limit: int = 50) -> list[dict]:
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            sql = "SELECT * FROM error_memories WHERE 1=1"
+            params = []
+            if project:
+                sql += " AND project = ?"
+                params.append(project)
+            if category:
+                sql += " AND category = ?"
+                params.append(category)
+            if profile:
+                sql += " AND profile = ?"
+                params.append(profile)
+            sql += " ORDER BY created_at DESC LIMIT ?"
+            params.append(limit)
+            rows = conn.execute(sql, params).fetchall()
+            return [dict(row) for row in rows]
+
+    def search_error_memories(self, error_signature: str, limit: int = 10) -> list[dict]:
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                "SELECT * FROM error_memories WHERE error_signature LIKE ? ORDER BY created_at DESC LIMIT ?",
+                (f"%{error_signature}%", limit),
+            ).fetchall()
+            return [dict(row) for row in rows]
+
+    def delete_error_memory(self, error_id: str) -> bool:
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.execute("DELETE FROM error_memories WHERE id = ?", (error_id,))
+            conn.commit()
+            return cursor.rowcount > 0
 
 
 from memory.store import MemoryStore  # noqa: E402

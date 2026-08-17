@@ -224,3 +224,78 @@ class MemoryService:
             "tools": tools,
             "agents": agents,
         }
+
+    # ---------------------------------------------------------------- ideas (Phase 29)
+    def create_idea(self, title: str, description: str = "", tags: list[str] | None = None, status: str = "idea", project: str = "", profile: str = "jarvis") -> dict:
+        result = self.memory.create_idea(title, description=description, tags=tags, status=status, project=project, profile=profile)
+        self._broadcast("idea_created", result)
+        return result
+
+    def get_ideas(self, status: str | None = None, project: str | None = None, profile: str | None = None, limit: int = 50) -> list[dict]:
+        return self.memory.get_ideas(status=status, project=project, profile=profile, limit=limit)
+
+    def get_idea_by_id(self, idea_id: str) -> dict | None:
+        return self.memory.get_idea_by_id(idea_id)
+
+    def update_idea(self, idea_id: str, updates: dict) -> dict | None:
+        result = self.memory.update_idea(idea_id, updates)
+        if result:
+            self._broadcast("idea_updated", result)
+        return result
+
+    def delete_idea(self, idea_id: str) -> bool:
+        result = self.memory.delete_idea(idea_id)
+        if result:
+            self._broadcast("idea_deleted", {"idea_id": idea_id})
+        return result
+
+    # ---------------------------------------------------------------- error memory (Phase 29)
+    def record_error(self, error_signature: str, resolution: str, category: str = "other", project: str = "", profile: str = "jarvis", confidence: float = 1.0) -> dict:
+        result = self.memory.record_error(error_signature, resolution, category=category, project=project, profile=profile, confidence=confidence)
+        self._broadcast("error_recorded", result)
+        return result
+
+    def find_error_resolution(self, error_signature: str, limit: int = 5) -> list[dict]:
+        return self.memory.find_error_resolution(error_signature, limit=limit)
+
+    def get_errors(self, project: str | None = None, category: str | None = None, profile: str | None = None, limit: int = 50) -> list[dict]:
+        return self.memory.get_errors(project=project, category=category, profile=profile, limit=limit)
+
+    def delete_error(self, error_id: str) -> bool:
+        result = self.memory.delete_error(error_id)
+        if result:
+            self._broadcast("error_deleted", {"error_id": error_id})
+        return result
+
+    # ---------------------------------------------------------------- cache (Phase 29)
+    def cache_get(self, key: str) -> dict | None:
+        return self.memory.cache_get(key)
+
+    def cache_set(self, key: str, value: Any, ttl: float | None = None) -> None:
+        self.memory.cache_set(key, value, ttl=ttl)
+
+    def cache_invalidate(self, key: str | None = None) -> None:
+        self.memory.cache_invalidate(key)
+
+    # ---------------------------------------------------------------- migration (Phase 29)
+    def run_migration(self) -> dict:
+        return self.memory.run_migration()
+
+    # ---------------------------------------------------------------- pin / trust / privacy (Phase 29)
+    def pin_memory(self, memory_id: str) -> dict | None:
+        result = self.memory.pin_memory(memory_id)
+        if result:
+            self._broadcast("memory_pinned", result)
+        return result
+
+    def unpin_memory(self, memory_id: str) -> dict | None:
+        result = self.memory.unpin_memory(memory_id)
+        if result:
+            self._broadcast("memory_unpinned", result)
+        return result
+
+    def set_trust_level(self, memory_id: str, trust_level: str) -> dict | None:
+        return self.memory.set_trust_level(memory_id, trust_level)
+
+    def set_privacy_level(self, memory_id: str, privacy_level: str) -> dict | None:
+        return self.memory.set_privacy_level(memory_id, privacy_level)

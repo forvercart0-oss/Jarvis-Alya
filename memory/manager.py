@@ -8,13 +8,16 @@ from typing import Any
 from memory.adaptive import AdaptiveMemory
 from memory.audit import MemoryAuditLog
 from memory.backup import MemoryBackup
+from memory.cache import MemoryCache
 from memory.context_builder import ContextBuilder
 from memory.contradictions import ContradictionDetector
 from memory.decay import MemoryDecay
 from memory.duplicates import DuplicateDetector
 from memory.environment import EnvironmentProfiler, environment_profiler
+from memory.errors import ErrorMemory
 from memory.extractor import MemoryExtractor
 from memory.health import MemoryHealth
+from memory.ideas import IdeasSystem
 from memory.knowledge_graph import KnowledgeGraph
 from memory.long_term import LongTermMemory
 from memory.preferences import PreferencesMemory
@@ -25,7 +28,7 @@ from memory.reminders import ReminderManager
 from memory.short_term import ShortTermMemory
 from memory.summaries import ConversationSummaries
 from memory.tasks import TaskMemory
-from memory.types import MemoryImportance, MemorySource, normalize_memory_type
+from memory.types import ErrorCategory, IdeaStatus, MemoryImportance, MemorySource, PrivacyLevel, TrustLevel, normalize_memory_type
 from memory.workflows import WorkflowDetector, SuggestionEngine, workflow_detector, suggestion_engine
 
 logger = logging.getLogger("jarvis.memory.manager")
@@ -55,6 +58,15 @@ MEMORY_CATEGORIES: tuple[str, ...] = (
     "document",
     "episodic",
     "procedural",
+    "coding",
+    "technical",
+    "ui",
+    "voice",
+    "assistant",
+    "knowledge",
+    "task_history",
+    "error",
+    "idea",
 )
 
 
@@ -99,6 +111,10 @@ class MemoryManager:
         self.backup = MemoryBackup(self.store)
         self.audit = MemoryAuditLog(self.store.db_path)
         self.adaptive = AdaptiveMemory(self)
+        self.ideas = IdeasSystem(self)
+        self.errors = ErrorMemory(self)
+        self.cache = MemoryCache()
+        self.migrator = __import__("memory.migrator", fromlist=["MemoryMigrator"]).MemoryMigrator(self.store)
 
     @property
     def vector_enabled(self) -> bool:
@@ -180,7 +196,7 @@ class MemoryManager:
         self._current_conv = None
         return self.ensure_conversation(None)
 
-    def remember(self, key: str, value: str = "", category: str | None = None, confidence: float = 1.0, source: str = "explicit_user", project: str = "", profile: str = "jarvis", expires_at: str | None = None, importance: float = 0.5, tags: list[str] | None = None, memory_type: str = "fact", related_ids: list[str] | None = None, key_override: str = "") -> dict:
+    def remember(self, key: str, value: str = "", category: str | None = None, confidence: float = 1.0, source: str = "explicit_user", project: str = "", profile: str = "jarvis", expires_at: str | None = None, importance: float = 0.5, tags: list[str] | None = None, memory_type: str = "fact", related_ids: list[str] | None = None, key_override: str = "", privacy_level: str = "normal", is_pinned: bool = False, trust_level: str = "normal", quality_score: float = 0.5) -> dict:
         from memory.secret_filter import contains_secret
         content = value if value else key
         if contains_secret(key) or contains_secret(content):
@@ -198,6 +214,10 @@ class MemoryManager:
             tags=tags,
             memory_type=memory_type,
             related_ids=related_ids,
+            privacy_level=privacy_level,
+            is_pinned=is_pinned,
+            trust_level=trust_level,
+            quality_score=quality_score,
         )
         if self._vector is not None:
             self._vector.add(mem["id"], mem["value"], {"key": mem["key"], "category": mem["category"]})
@@ -444,3 +464,62 @@ class MemoryManager:
 
     def import_personalization(self, data: dict, profile: str = "jarvis") -> int:
         return self.adaptive.import_preferences(data, profile=profile)
+
+    # ---------------------------------------------------------------- ideas (Phase 29)
+    def create_idea(self, title: str, description: str = "", tags: list[str] | None = None, status: str = "idea", project: str = "", profile: str = "jarvis") -> dict:
+        return self.ideas.create_idea(title=title, description=description, tags=tags, status=status, project=project, profile=profile)
+
+    def get_ideas(self, status: str | None = None, project: str | None = None, profile: str | None = None, limit: int = 50) -> list[dict]:
+        return self.ideas.get_ideas(status=status, project=project, profile=profile, limit=limit)
+
+    def update_idea(self, idea_id: str, updates: dict) -> dict | None:
+        return self.ideas.update_idea(idea_id, updates)
+
+    def delete_idea(self, idea_id: str) -> bool:
+        return self.ideas.delete_idea(idea_id)
+
+    def get_idea_by_id(self, idea_id: str) -> dict | None:
+        return self.ideas.get_idea_by_id(idea_id)
+
+    # ---------------------------------------------------------------- error memory (Phase 29)
+    def record_error(self, error_signature: str, resolution: str, category: str = "other", project: str = "", profile: str = "jarvis", confidence: float = 1.0) -> dict:
+        return self.errors.record_error(error_signature=error_signature, resolution=resolution, category=category, project=project, profile=profile, confidence=confidence)
+
+    def find_error_resolution(self, error_signature: str, limit: int = 5) -> list[dict]:
+        return self.errors.find_resolution(error_signature, limit=limit)
+
+    def get_errors(self, project: str | None = None, category: str | None = None, profile: str | None = None, limit: int = 50) -> list[dict]:
+        return self.errors.get_errors(project=project, category=category, profile=profile, limit=limit)
+
+    def delete_error(self, error_id: str) -> bool:
+        return self.errors.delete_error(error_id)
+
+    # ---------------------------------------------------------------- cache (Phase 29)
+    def cache_get(self, key: str) -> dict | None:
+        return self.cache.get(key)
+
+    def cache_set(self, key: str, value: Any, ttl: float | None = None) -> None:
+        self.cache.set(key, value, ttl=ttl)
+
+    def cache_invalidate(self, key: str | None = None) -> None:
+        self.cache.invalidate(key)
+
+    # ---------------------------------------------------------------- migration (Phase 29)
+    def run_migration(self) -> dict:
+        return self.migrator.migrate()
+
+    # ---------------------------------------------------------------- pin / trust / privacy (Phase 29)
+    def pin_memory(self, memory_id: str) -> dict | None:
+        return self.update_memory_fields(memory_id, {"is_pinned": True})
+
+    def unpin_memory(self, memory_id: str) -> dict | None:
+        return self.update_memory_fields(memory_id, {"is_pinned": False})
+
+    def set_trust_level(self, memory_id: str, trust_level: str) -> dict | None:
+        return self.update_memory_fields(memory_id, {"trust_level": trust_level})
+
+    def set_privacy_level(self, memory_id: str, privacy_level: str) -> dict | None:
+        return self.update_memory_fields(memory_id, {"privacy_level": privacy_level})
+
+    def set_quality_score(self, memory_id: str, quality_score: float) -> dict | None:
+        return self.update_memory_fields(memory_id, {"quality_score": quality_score})

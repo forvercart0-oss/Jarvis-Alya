@@ -75,6 +75,10 @@ PUBLIC_SETTING_KEYS = {
     "memory_hybrid_search_enabled",
     "memory_semantic_search_enabled",
     "memory_keyword_fallback_enabled",
+    "memory_pinning_enabled",
+    "memory_ideas_enabled",
+    "memory_error_memory_enabled",
+    "memory_suggestions_enabled",
     "message_notifications_enabled",
     "browser_notifications_enabled",
     "voice_notifications_enabled",
@@ -216,6 +220,33 @@ PUBLIC_SETTING_KEYS = {
     "workflow_quiet_hours_start",
     "workflow_quiet_hours_end",
     "workflow_history_retention_days",
+    "execution_mode",
+    "automation_profile",
+    "automation_scope_files",
+    "automation_scope_terminal",
+    "automation_scope_browser",
+    "automation_scope_applications",
+    "automation_scope_system",
+    "automation_scope_coding",
+    "automation_scope_documents",
+    "automation_scope_network",
+    "automation_scope_communication",
+    "automation_scope_vision",
+    "automation_scope_automation",
+    "automation_ask_destructive",
+    "automation_auto_verify",
+    "automation_retry_backoff",
+    "automation_max_retries",
+    "automation_emergency_stop_enabled",
+    "automation_dashboard_enabled",
+    "automation_history_enabled",
+    "updater_enabled",
+    "updater_auto_check",
+    "updater_check_interval_hours",
+    "updater_auto_download",
+    "updater_auto_install",
+    "updater_install_on_metered",
+    "updater_require_confirmation",
 }
 
 # Secret keys stored in `.env` but never returned unmasked to the browser.
@@ -314,6 +345,11 @@ class Settings(BaseSettings):
     memory_hybrid_search_enabled: bool = True
     memory_semantic_search_enabled: bool = True
     memory_keyword_fallback_enabled: bool = True
+    memory_pinning_enabled: bool = True
+    memory_ideas_enabled: bool = True
+    memory_error_memory_enabled: bool = True
+    memory_suggestions_enabled: bool = True
+    memory_ask_before_remember: bool = False
 
     # Notifications
     message_notifications_enabled: bool = True
@@ -378,6 +414,32 @@ class Settings(BaseSettings):
     vision_ocr_preprocessing: bool = True
     vision_offline_fallback: bool = True
     vision_prompt_injection_protection: bool = True
+    vision_screen_intelligence_enabled: bool = False
+    vision_screen_intelligence_mode: str = "on_demand"
+    vision_screen_confidence_threshold: float = 0.70
+    vision_screen_max_retries: int = 3
+    vision_screen_verification: bool = True
+    vision_screen_redaction: bool = True
+    vision_accessibility_integration: bool = True
+    vision_visual_grounding: bool = True
+    vision_anti_click_loop: bool = True
+    vision_action_logging: bool = True
+    vision_wait_for_element: bool = True
+    vision_screen_diff: bool = True
+    vision_screen_history_enabled: bool = False
+    vision_local_ocr_preferred: bool = True
+    vision_image_compression: bool = True
+    vision_visual_control_enabled: bool = False
+    vision_destructive_action_protection: bool = True
+    vision_login_detection: bool = True
+    vision_captcha_detection: bool = True
+    vision_dialog_detection: bool = True
+    vision_application_understanding: bool = True
+    vision_workflow_recording_enabled: bool = False
+    vision_visual_debug: bool = False
+    vision_visual_skills_enabled: bool = True
+    vision_gesture_enabled: bool = False
+    vision_orbit_states_enabled: bool = True
 
     # Deep Research
     research_max_sources: int = 20
@@ -432,6 +494,28 @@ class Settings(BaseSettings):
     personalization_latency_tracking: bool = True
     personalization_provider_learning: bool = True
 
+    # Automation / Full Auto
+    execution_mode: str = "assisted"
+    automation_profile: str = "safe"
+    automation_scope_files: bool = False
+    automation_scope_terminal: bool = False
+    automation_scope_browser: bool = False
+    automation_scope_applications: bool = False
+    automation_scope_system: bool = False
+    automation_scope_coding: bool = False
+    automation_scope_documents: bool = False
+    automation_scope_network: bool = False
+    automation_scope_communication: bool = False
+    automation_scope_vision: bool = False
+    automation_scope_automation: bool = False
+    automation_ask_destructive: bool = True
+    automation_auto_verify: bool = True
+    automation_retry_backoff: bool = True
+    automation_max_retries: int = 3
+    automation_emergency_stop_enabled: bool = True
+    automation_dashboard_enabled: bool = True
+    automation_history_enabled: bool = True
+
     # Task Engine
     task_autonomy_level: str = "balanced"
     task_dry_run: bool = False
@@ -462,6 +546,52 @@ class Settings(BaseSettings):
     browser_max_actions: int = 10
     browser_max_page_reloads: int = 3
     browser_dom_first: bool = True
+    browser25_enabled: bool = False
+    browser25_visual_fallback: bool = True
+    browser25_download_dir: str = "~/Downloads/JARVIS-Browser"
+    browser25_ask_before_download: bool = True
+    browser25_cookie_handling: str = "user_preference"
+    browser25_debug_mode: bool = False
+    browser25_max_actions: int = 20
+    browser25_max_retries: int = 3
+    browser25_anti_loop: bool = True
+    browser25_page_diff: bool = True
+    browser25_form_intelligence: bool = True
+    browser25_upload_validation: bool = True
+    browser25_table_extraction: bool = True
+    browser25_console_capture: bool = False
+
+    # Communication
+    communication_enabled: bool = False
+    communication_notifications: bool = True
+    communication_message_preview: bool = True
+    communication_read_aloud: bool = False
+    communication_important_only: bool = False
+    communication_call_notifications: bool = True
+    communication_email_notifications: bool = True
+    communication_desktop_notifications: bool = True
+    communication_sound: bool = True
+    communication_smart_reply: bool = True
+    communication_auto_reply: bool = False
+    communication_scheduled_messages: bool = True
+
+    # Coding
+    coding_enabled: bool = True
+    coding_base_dir: str = "~/JARVIS/projects"
+    coding_max_command_timeout: int = 180
+    coding_auto_test: bool = True
+    coding_secret_scan: bool = True
+    coding_auto_commit: bool = False
+
+    # DevOps
+    devops_enabled: bool = True
+    devops_default_environment: str = "local"
+    devops_auto_recovery: bool = False
+    devops_monitoring: bool = True
+    devops_cpu_threshold: int = 85
+    devops_memory_threshold: int = 85
+    devops_disk_threshold: int = 90
+    devops_health_interval: int = 30
 
     # Computer
     computer_enabled: bool = True
@@ -490,6 +620,15 @@ class Settings(BaseSettings):
     workflow_quiet_hours_start: str = "23:00"
     workflow_quiet_hours_end: str = "08:00"
     workflow_history_retention_days: int = 30
+
+    # Updater
+    updater_enabled: bool = True
+    updater_auto_check: bool = True
+    updater_check_interval_hours: int = 6
+    updater_auto_download: bool = True
+    updater_auto_install: bool = False
+    updater_install_on_metered: bool = False
+    updater_require_confirmation: bool = True
 
     # ---- persistence -------------------------------------------------
     def apply_db_overrides(self, overrides: dict[str, str]) -> None:

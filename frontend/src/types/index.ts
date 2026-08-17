@@ -1,6 +1,6 @@
-export type OrbState = 'idle' | 'listening' | 'thinking' | 'processing' | 'speaking' | 'error'
+export type OrbState = 'idle' | 'listening' | 'thinking' | 'processing' | 'speaking' | 'error' | 'reading_message' | 'composing' | 'sending' | 'calling' | 'answering' | 'ending_call' | 'message_received' | 'analyzing' | 'planning' | 'editing' | 'running' | 'testing' | 'debugging' | 'building' | 'committing' | 'deploying' | 'monitoring' | 'verifying' | 'recovering'
 
-export type TabId = 'home' | 'chat' | 'voice' | 'system' | 'tools' | 'coding' | 'memory' | 'automations' | 'tasks' | 'workflows' | 'media' | 'settings' | 'diagnostics' | 'health' | 'about' | 'skills' | 'agent' | 'browser' | 'computer' | 'vision' | 'research' | 'personalization'
+export type TabId = 'home' | 'chat' | 'voice' | 'system' | 'tools' | 'coding' | 'memory' | 'automations' | 'tasks' | 'workflows' | 'media' | 'settings' | 'diagnostics' | 'health' | 'about' | 'skills' | 'agent' | 'browser' | 'computer' | 'vision' | 'research' | 'personalization' | 'goals' | 'agents' | 'communication' | 'devops'
 
 export type ConnectionState = 'connecting' | 'online' | 'offline'
 
@@ -122,6 +122,26 @@ export interface JarvisSettings {
   personalization_analytics_enabled?: boolean
   personalization_latency_tracking?: boolean
   personalization_provider_learning?: boolean
+  execution_mode?: string
+  automation_profile?: string
+  automation_scope_files?: boolean
+  automation_scope_terminal?: boolean
+  automation_scope_browser?: boolean
+  automation_scope_applications?: boolean
+  automation_scope_system?: boolean
+  automation_scope_coding?: boolean
+  automation_scope_documents?: boolean
+  automation_scope_network?: boolean
+  automation_scope_communication?: boolean
+  automation_scope_vision?: boolean
+  automation_scope_automation?: boolean
+  automation_ask_destructive?: boolean
+  automation_auto_verify?: boolean
+  automation_retry_backoff?: boolean
+  automation_max_retries?: number
+  automation_emergency_stop_enabled?: boolean
+  automation_dashboard_enabled?: boolean
+  automation_history_enabled?: boolean
 }
 
 export interface PersonaInfo {
@@ -199,9 +219,13 @@ export interface PrivacySettings {
   cloud_sharing?: string
 }
 
-export type MemoryType = 'user_preference' | 'user_profile' | 'project' | 'project_preference' | 'workflow' | 'skill' | 'task' | 'conversation' | 'fact' | 'decision' | 'goal' | 'important_context' | 'session' | 'profile' | 'general'
+export type MemoryType = 'user_preference' | 'user_profile' | 'project' | 'project_preference' | 'workflow' | 'skill' | 'task' | 'conversation' | 'fact' | 'decision' | 'goal' | 'important_context' | 'session' | 'profile' | 'general' | 'preference' | 'coding' | 'technical' | 'ui' | 'voice' | 'assistant' | 'knowledge' | 'task_history' | 'error' | 'idea' | 'document' | 'research'
 export type MemoryImportance = 'low' | 'medium' | 'high'
 export type MemoryStatus = 'active' | 'archived' | 'conflicted' | 'expired'
+export type PrivacyLevel = 'normal' | 'private' | 'sensitive'
+export type TrustLevel = 'trusted' | 'normal' | 'untrusted'
+export type IdeaStatus = 'idea' | 'planned' | 'in_progress' | 'completed' | 'archived'
+export type ErrorCategory = 'network' | 'build' | 'deployment' | 'database' | 'permission' | 'configuration' | 'runtime' | 'other'
 
 export interface MemoryItem {
   id: string
@@ -224,6 +248,10 @@ export interface MemoryItem {
   status?: MemoryStatus
   previous_value?: string
   updated_at?: string
+  privacy_level?: PrivacyLevel
+  is_pinned?: boolean
+  trust_level?: TrustLevel
+  quality_score?: number
 }
 
 export interface MemoryDashboard {
@@ -257,6 +285,30 @@ export interface MemoryAuditEntry {
   profile?: string
   detail: string
   timestamp: string
+}
+
+export interface IdeaItem {
+  id: string
+  title: string
+  description: string
+  tags: string[]
+  status: IdeaStatus
+  project?: string
+  profile?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface ErrorMemoryItem {
+  id: string
+  error_signature: string
+  resolution: string
+  category: ErrorCategory
+  project?: string
+  profile?: string
+  confidence?: number
+  created_at: string
+  updated_at: string
 }
 
 export interface NotificationItem {
@@ -843,4 +895,181 @@ export interface PersonalizationAnalytics {
   providers: Record<string, number>
   tools: Record<string, number>
   agents: Record<string, number>
+}
+
+export interface GoalTask {
+  task_id: string
+  title: string
+  description: string
+  agent: string
+  tools: string[]
+  dependencies: string[]
+  priority: string
+  estimated_duration_ms: number
+  success_criteria: string[]
+  fallback_agent: string
+  status: string
+  result?: any
+  error?: string
+  started_at: number
+  finished_at: number
+  retries: number
+  max_retries: number
+  verification: Record<string, any>
+}
+
+export interface Goal {
+  goal_id: string
+  user_request: string
+  objective: string
+  constraints: string[]
+  resources: string[]
+  tasks: GoalTask[]
+  success_criteria: string[]
+  final_output: string
+  status: string
+  current_task_index: number
+  created_at: number
+  completed_at: number
+  progress: number
+  metadata: Record<string, any>
+}
+
+export interface TaskGraph {
+  nodes: Record<string, any>
+  edges: Record<string, string[]>
+  parallel_groups: string[][]
+  critical_path: string[]
+}
+
+export interface AgentRegistration {
+  agent_id: string
+  name: string
+  description: string
+  capabilities: any[]
+  tools: string[]
+  models: string[]
+  cost_level: string
+  avg_latency_ms: number
+  availability: number
+  specialization: string
+  status: string
+  version: string
+  metadata: Record<string, any>
+  registered_at: string
+}
+
+export interface Artifact {
+  artifact_id: string
+  type: string
+  name: string
+  path: string
+  url: string
+  created_by: string
+  task_id: string
+  goal_id: string
+  status: string
+  metadata: Record<string, any>
+  created_at: number
+  updated_at: number
+}
+
+export interface SystemResources {
+  cpu_percent: number
+  ram_percent: number
+  ram_available_mb: number
+  gpu_available: boolean
+  active_processes: number
+  max_parallel_agents: number
+}
+
+export type DialogType = 'confirmation' | 'error' | 'warning' | 'login' | 'permission' | 'save' | 'open' | 'download' | 'none'
+
+export interface DialogDetectionResult {
+  dialog_type: DialogType
+  destructive: boolean
+  captcha: boolean
+  confidence: number
+  matched_text: string
+}
+
+export interface RecordedStep {
+  step_id: string
+  timestamp: number
+  screen_hash: string
+  screenshot_path: string
+  target: string
+  action_type: string
+  coordinates: Record<string, number>
+  text_entered: string
+  result: Record<string, any>
+  success: boolean
+  metadata: Record<string, any>
+}
+
+export interface RecordedWorkflow {
+  workflow_id: string
+  name: string
+  created_at: number
+  steps: RecordedStep[]
+  metadata: Record<string, any>
+}
+
+export interface VisualSkill {
+  name: string
+  trigger: string
+  steps: Record<string, any>[]
+  verification: Record<string, any>[]
+  metadata: Record<string, any>
+}
+
+export interface ApplicationDetection {
+  application: string
+  confidence: number
+  ui_elements: string[]
+}
+
+export interface ApplicationContext {
+  application: string
+  elements: string[]
+  state: string
+}
+
+export type VisionOrbState = 'idle' | 'seeing' | 'analyzing_screen' | 'finding_target' | 'clicking' | 'typing' | 'verifying'
+
+export type UpdaterState = 'idle' | 'checking' | 'up_to_date' | 'update_available' | 'downloading' | 'downloaded' | 'verifying' | 'ready_to_install' | 'installing' | 'restarting' | 'updated' | 'failed' | 'rolling_back' | 'offline' | 'disabled' | 'development'
+
+export interface UpdaterConfig {
+  enabled: boolean
+  auto_check: boolean
+  check_interval_hours: number
+  auto_download: boolean
+  auto_install: boolean
+  install_on_metered: boolean
+  require_confirmation: boolean
+  last_check: string
+  last_update: string
+  current_commit: string
+  installation_type: string
+}
+
+export interface UpdaterProgress {
+  state: UpdaterState
+  current: number
+  total: number
+  message: string
+  error: string
+  available_update: UpdateInfo | null
+  progress_percent: number
+}
+
+export interface UpdateInfo {
+  commit_sha: string
+  commit_message: string
+  commit_author: string
+  committed_at: string
+  url: string
+  branch: string
+  repository: string
+  metadata: Record<string, any>
 }

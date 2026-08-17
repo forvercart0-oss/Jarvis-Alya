@@ -25,17 +25,21 @@ import { FirstRunSetup } from './components/Common/FirstRunSetup'
 import TitleBar from './components/TitleBar'
 import { AgentPanel } from './components/Agent/AgentPanel'
 import { BrowserPanel } from './components/Browser/BrowserPanel'
+import { CommunicationPanel } from './components/Communication/CommunicationPanel'
 import { ComputerPanel } from './components/Computer/ComputerPanel'
+import { DevOpsPanel } from './components/DevOps/DevOpsPanel'
 import { VisionPanel } from './components/Vision/VisionPanel'
 import { TasksPanel } from './components/Tasks/TasksPanel'
 import { WorkflowsPanel } from './components/Workflows/WorkflowsPanel'
 import { ResearchPanel } from './components/Research/ResearchPanel'
 import { ResearchHistory } from './components/Research/ResearchHistory'
 import PersonalizationPanel from './components/Personalization/PersonalizationPanel'
+import { GoalsPanel } from './components/Goals/GoalsPanel'
 import { useJarvis } from './hooks/useJarvis'
 import { api } from './services/api'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
-import { Activity, Cpu, Radio } from 'lucide-react'
+import { ParallaxLayer } from './hooks/useParallax'
+import { Activity, Cpu, Radio, Zap } from 'lucide-react'
 
 type ViewMode = 'orb' | 'split'
 
@@ -83,6 +87,8 @@ export default function App() {
     fetchData,
     switchPersona,
     pendingToolConfirmation,
+    executionMode,
+    automationProfile,
     confirmTool,
     reconnect,
     tasks,
@@ -120,6 +126,18 @@ export default function App() {
     rollbackAgent,
     updateAgentPermissions,
     loadAgentPermissions,
+    agents,
+    pauseGoal,
+    resumeGoal,
+    cancelGoal,
+    ideas,
+    errorMemories,
+    createIdea,
+    deleteIdea,
+    recordError,
+    loadErrors,
+    pinMemory,
+    unpinMemory,
   } = useJarvis()
 
   useKeyboardShortcuts([
@@ -460,6 +478,22 @@ export default function App() {
         </div>
       )}
 
+      {/* Automation Status */}
+      {settings && (
+        <div className="glass-panel p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <Zap className="w-3.5 h-3.5 text-cyan-400/70" />
+            <span className="text-[10px] tracking-[0.2em] text-slate-500 uppercase">Automation</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`text-xs font-mono ${executionMode === 'full_auto' ? 'text-emerald-400' : executionMode === 'safe' ? 'text-yellow-400' : 'text-slate-400'}`}>
+              {executionMode === 'full_auto' ? '⚡ FULL AUTO' : executionMode === 'safe' ? '🛡 SAFE' : '🤝 ASSISTED'}
+            </span>
+            <span className="text-[10px] text-slate-600 capitalize">{automationProfile}</span>
+          </div>
+        </div>
+      )}
+
       {/* Activity Feed */}
       <div className="glass-panel p-3 flex-1 min-h-0 flex flex-col">
         <div className="flex items-center gap-2 mb-2">
@@ -474,7 +508,7 @@ export default function App() {
   )
 
   const leftPanel = viewMode === 'split' && activeTab === 'chat' ? (
-    <div className={`w-72 border-r flex flex-col items-center bg-black/20 overflow-hidden ${seriousMode ? 'border-red-500/20' : 'border-cyan-500/10'}`}>
+    <div className={`w-72 border-r flex flex-col items-center overflow-hidden panel-3d ${seriousMode ? 'border-red-500/20 bg-black/30' : 'border-cyan-500/10 bg-black/20'}`}>
       <div className="flex-1 flex flex-col items-center justify-center p-4 w-full">
         <Orb
           state={orbState}
@@ -495,7 +529,17 @@ export default function App() {
   ) : null
 
   if (loading && !booted) {
-    return <StartupSequence onComplete={() => { setLoading(false); setBooted(true) }} />
+    return (
+      <StartupSequence
+        accentColor={seriousMode ? '#ff1a1a' : accentColor}
+        assistantName={settings?.assistant_name || 'JARVIS'}
+        onComplete={() => {
+          setLoading(false)
+          setBooted(true)
+          api.speak('Welcome back, Sir.').catch(() => {})
+        }}
+      />
+    )
   }
 
   if (showFirstRun && settings) {
@@ -535,13 +579,15 @@ export default function App() {
   }, [_setResearchJob])
 
   return (
-    <div className={`h-screen w-screen flex flex-col bg-jarvis-dark relative overflow-hidden ${seriousMode ? 'serious-mode' : ''}`}>
+    <div className={`h-screen w-screen flex flex-col bg-jarvis-dark relative overflow-hidden parallax-container ${seriousMode ? 'serious-mode' : ''}`}>
       <TitleBar />
       {/* HUD overlay effects */}
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,240,255,0.03)_0%,transparent_70%)]" />
-        <div className="absolute inset-0 opacity-[0.02]" style={{ backgroundImage: 'linear-gradient(rgba(0,240,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(0,240,255,0.5) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
-      </div>
+      <ParallaxLayer depth={-2}>
+        <div className="fixed inset-0 pointer-events-none z-0">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,240,255,0.02)_0%,transparent_70%)]" />
+          <div className="absolute inset-0 opacity-[0.015]" style={{ backgroundImage: 'linear-gradient(rgba(0,240,255,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(0,240,255,0.3) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+        </div>
+      </ParallaxLayer>
 
       {notifications.length > 0 && (
         <div className="fixed top-4 right-4 z-50 space-y-2 max-w-sm">
@@ -552,7 +598,7 @@ export default function App() {
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className={`glass-panel p-3 text-xs ${n.type === 'error' ? 'border-red-400/30' : n.type === 'warning' ? 'border-yellow-400/30' : ''}`}
+                className={`glass-deep p-3 text-xs ${n.type === 'error' ? 'border-red-400/30' : n.type === 'warning' ? 'border-yellow-400/30' : ''}`}
               >
                 {n.message}
               </motion.div>
@@ -561,14 +607,15 @@ export default function App() {
         </div>
       )}
 
-      <div className="flex-1 flex overflow-hidden relative z-10">
-        <Sidebar activeTab={activeTab} onTabChange={setActiveTab} connection={connection} persona={persona} onSwitchPersona={(id) => switchPersona(id)} accentColor={accentColor} seriousMode={seriousMode} onToggleSeriousMode={() => seriousMode ? stopSeriousMode() : startSeriousMode()} />
+      <ParallaxLayer depth={2}>
+        <div className="flex-1 flex overflow-hidden relative z-10">
+          <Sidebar activeTab={activeTab} onTabChange={setActiveTab} connection={connection} persona={persona} onSwitchPersona={(id) => switchPersona(id)} accentColor={accentColor} seriousMode={seriousMode} onToggleSeriousMode={() => seriousMode ? stopSeriousMode() : startSeriousMode()} />
 
-        <div className="flex-1 flex min-w-0">
-          {isChatTab && viewMode === 'split' ? (
+          <div className="flex-1 flex min-w-0">
+            {isChatTab && viewMode === 'split' ? (
             <>
               {leftPanel}
-              <div className="flex-1 flex flex-col min-w-0 border-r border-cyan-500/10">
+              <div className="flex-1 flex flex-col min-w-0 border-r border-cyan-500/10 panel-3d">
                 <ChatPanel
                   messages={messages}
                   toolCalls={toolCalls}
@@ -657,6 +704,27 @@ export default function App() {
                             const results = await api.searchMemory(query, category, project)
                             return results
                           }}
+                          ideas={ideas}
+                          onAddIdea={async (title: string, description: string, tags?: string[], status?: string, project?: string, profile?: string) => {
+                            await createIdea(title, description, tags, status, project, profile)
+                          }}
+                          onDeleteIdea={async (id: string) => {
+                            await deleteIdea(id)
+                          }}
+                          errors={errorMemories}
+                          onRecordError={async (errorSignature: string, resolution: string, category?: string, project?: string, profile?: string, confidence?: number) => {
+                            await recordError(errorSignature, resolution, category, project, profile, confidence)
+                          }}
+                          onDeleteError={async (id: string) => {
+                            await api.deleteError(id)
+                            loadErrors()
+                          }}
+                          onPinMemory={async (id: string) => {
+                            await pinMemory(id)
+                          }}
+                          onUnpinMemory={async (id: string) => {
+                            await unpinMemory(id)
+                          }}
                         />
                       </div>
                       <div className="w-80 border-l border-cyan-500/10 hidden md:block">
@@ -699,6 +767,23 @@ export default function App() {
                     <SettingsPanel settings={settings} persona={persona} onSwitchPersona={(id) => switchPersona(id)} onUpdate={handleSettingsUpdate} onClose={() => setActiveTab('chat')} />
                   )}
                   {activeTab === 'personalization' && <PersonalizationPanel settings={settings} />}
+                  {activeTab === 'goals' && <GoalsPanel pauseGoal={pauseGoal} resumeGoal={resumeGoal} cancelGoal={cancelGoal} />}
+                  {activeTab === 'agents' && (
+                    <div className="h-full overflow-y-auto p-4 space-y-3">
+                      <h3 className="text-xs tracking-[0.3em] text-slate-400 uppercase">Agents</h3>
+                      {agents.length === 0 && <div className="text-xs text-slate-600">No agents registered.</div>}
+                      {agents.map((a: any) => (
+                        <div key={a.agent_id} className="glass-panel p-3">
+                          <div className="text-xs text-slate-200 font-medium">{a.name}</div>
+                          <div className="text-[10px] text-slate-500 mt-0.5">{a.description}</div>
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className="text-[10px] text-slate-500 capitalize">Specialization: {a.specialization}</span>
+                            <span className="text-[10px] text-slate-600">Latency: {a.avg_latency_ms}ms</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   {activeTab === 'voice' && (
                     <VoicePanel
                       orbState={orbState}
@@ -736,7 +821,9 @@ export default function App() {
                     />
                   )}
                   {activeTab === 'browser' && <BrowserPanel onNavigate={setActiveTab} />}
+                  {activeTab === 'communication' && <CommunicationPanel onNavigate={setActiveTab} />}
                   {activeTab === 'computer' && <ComputerPanel onNavigate={setActiveTab} />}
+                  {activeTab === 'devops' && <DevOpsPanel onNavigate={setActiveTab} />}
                   {activeTab === 'vision' && <VisionPanel />}
                   {activeTab === 'workflows' && <WorkflowsPanel onNavigate={setActiveTab} />}
                   {activeTab === 'research' && (
@@ -764,15 +851,16 @@ export default function App() {
                   )}
                 </div>
                 {activeTab !== 'chat' && (
-                  <div className="w-72 border-l border-cyan-500/10 hidden lg:block overflow-hidden">
+                  <div className="w-72 border-l border-cyan-500/10 hidden lg:block overflow-hidden panel-3d">
                     {rightPanel}
                   </div>
                 )}
-              </motion.div>
+            </motion.div>
             </AnimatePresence>
           )}
         </div>
-      </div>
+        </div>
+      </ParallaxLayer>
 
       <AnimatePresence>
         {copiedContent && (

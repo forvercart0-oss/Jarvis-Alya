@@ -42,6 +42,15 @@ export function useJarvis() {
   const [researchSourcesProcessed, setResearchSourcesProcessed] = useState(0)
   const [researchClaimsChecked, setResearchClaimsChecked] = useState(0)
   const [researchHistory, setResearchHistory] = useState<ResearchJob[]>([])
+  const [executionMode, _setExecutionMode] = useState<string>('assisted')
+  const [automationProfile, _setAutomationProfile] = useState<string>('safe')
+  const [automationScopes, _setAutomationScopes] = useState<Record<string, boolean>>({})
+  const [goals, setGoals] = useState<any[]>([])
+  const [artifacts, setArtifacts] = useState<any[]>([])
+  const [systemResources, setSystemResources] = useState<any>(null)
+  const [agents, setAgents] = useState<any[]>([])
+  const [ideas, setIdeas] = useState<any[]>([])
+  const [errorMemories, setErrorMemories] = useState<any[]>([])
 
   const wsRef = useRef<WebSocketManager | null>(null)
   const abortRef = useRef(false)
@@ -387,6 +396,34 @@ export function useJarvis() {
 
     ws.on('memory_health', (_event, _data: any) => {
       // handled by memory health components
+    })
+
+    ws.on('idea_created', (_event, data: any) => {
+      setIdeas((prev) => [data, ...prev])
+    })
+
+    ws.on('idea_updated', (_event, data: any) => {
+      setIdeas((prev) => prev.map((i: any) => i.id === data.id ? { ...i, ...data } : i))
+    })
+
+    ws.on('idea_deleted', (_event, data: any) => {
+      setIdeas((prev) => prev.filter((i: any) => i.id !== data.idea_id))
+    })
+
+    ws.on('error_recorded', (_event, data: any) => {
+      setErrorMemories((prev) => [data, ...prev])
+    })
+
+    ws.on('error_deleted', (_event, data: any) => {
+      setErrorMemories((prev) => prev.filter((e: any) => e.id !== data.error_id))
+    })
+
+    ws.on('memory_pinned', (_event, data: any) => {
+      _setMemories((prev) => prev.map((m: any) => m.id === data.id ? { ...m, is_pinned: true } : m))
+    })
+
+    ws.on('memory_unpinned', (_event, data: any) => {
+      _setMemories((prev) => prev.map((m: any) => m.id === data.id ? { ...m, is_pinned: false } : m))
     })
 
     ws.on('reminder_triggered', (_event, data: any) => {
@@ -1087,12 +1124,22 @@ export function useJarvis() {
       setPrivacyMode(p?.privacy_mode || 'normal')
 
       const currentProfile = per?.id || 'jarvis'
-      const [prefs, suggs] = await Promise.all([
+      const [prefs, suggs, goals, agentsList, resources, ideas, errors] = await Promise.all([
         api.getAdaptivePreferences(currentProfile).catch(() => []),
         api.getPersonalizationSuggestions(currentProfile).catch(() => ({ suggestions: [] })),
+        api.getGoals().catch(() => ({ goals: [] })),
+        api.getAgents().catch(() => ({ agents: [] })),
+        api.getSystemResources().catch(() => null),
+        api.getIdeas().catch(() => ({ ideas: [] })),
+        api.getErrors().catch(() => ({ errors: [] })),
       ])
       setAdaptivePreferences(prefs)
       setPersonalizationSuggestions(suggs.suggestions || [])
+      setGoals(goals.goals || [])
+      setAgents(agentsList.agents || [])
+      setSystemResources(resources)
+      setIdeas(ideas.ideas || [])
+      setErrorMemories(errors.errors || [])
     } catch {
       // ignore
     }
@@ -1237,6 +1284,66 @@ export function useJarvis() {
       // ignore
     }
   }, [])
+
+  const loadIdeas = useCallback(async () => {
+    try {
+      const res = await api.getIdeas()
+      if (res?.ideas) setIdeas(res.ideas)
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  const loadErrors = useCallback(async () => {
+    try {
+      const res = await api.getErrors()
+      if (res?.errors) setErrorMemories(res.errors)
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  const createIdea = useCallback(async (title: string, description = '', tags?: string[], status = 'idea', project?: string, profile?: string) => {
+    try {
+      await api.createIdea(title, description, tags, status, project, profile)
+      loadIdeas()
+    } catch { /* ignore */ }
+  }, [loadIdeas])
+
+  const updateIdea = useCallback(async (ideaId: string, updates: Record<string, any>) => {
+    try {
+      await api.updateIdea(ideaId, updates)
+      loadIdeas()
+    } catch { /* ignore */ }
+  }, [loadIdeas])
+
+  const deleteIdea = useCallback(async (ideaId: string) => {
+    try {
+      await api.deleteIdea(ideaId)
+      loadIdeas()
+    } catch { /* ignore */ }
+  }, [loadIdeas])
+
+  const recordError = useCallback(async (errorSignature: string, resolution: string, category = 'other', project?: string, profile?: string, confidence = 1.0) => {
+    try {
+      await api.recordError(errorSignature, resolution, category, project, profile, confidence)
+      loadErrors()
+    } catch { /* ignore */ }
+  }, [loadErrors])
+
+  const pinMemory = useCallback(async (memoryId: string) => {
+    try {
+      await api.pinMemory(memoryId)
+      refreshMemory()
+    } catch { /* ignore */ }
+  }, [refreshMemory])
+
+  const unpinMemory = useCallback(async (memoryId: string) => {
+    try {
+      await api.unpinMemory(memoryId)
+      refreshMemory()
+    } catch { /* ignore */ }
+  }, [refreshMemory])
 
   const startAgent = useCallback(async (message: string, project?: string, options?: { project_root?: string; persona?: string; autonomy_level?: string; dry_run?: boolean }) => {
     try {
@@ -1409,6 +1516,55 @@ export function useJarvis() {
     }
   }, [])
 
+  const createGoal = useCallback(async (request: string, context?: Record<string, any>) => {
+    try {
+      const res = await api.createGoal({ request, context })
+      fetchData()
+      return res
+    } catch {
+      return null
+    }
+  }, [fetchData])
+
+  const pauseGoal = useCallback(async (goalId: string) => {
+    try {
+      const res = await api.pauseGoal(goalId)
+      fetchData()
+      return res
+    } catch {
+      return null
+    }
+  }, [fetchData])
+
+  const resumeGoal = useCallback(async (goalId: string) => {
+    try {
+      const res = await api.resumeGoal(goalId)
+      fetchData()
+      return res
+    } catch {
+      return null
+    }
+  }, [fetchData])
+
+  const cancelGoal = useCallback(async (goalId: string) => {
+    try {
+      const res = await api.cancelGoal(goalId)
+      fetchData()
+      return res
+    } catch {
+      return null
+    }
+  }, [fetchData])
+
+  const loadArtifacts = useCallback(async (goalId?: string) => {
+    try {
+      const res = await api.getArtifacts(goalId)
+      setArtifacts(res.artifacts || [])
+    } catch {
+      // ignore
+    }
+  }, [])
+
   useEffect(() => {
     connect()
     return () => {
@@ -1522,5 +1678,27 @@ export function useJarvis() {
     computerStop,
     computerPause,
     computerResume,
+    executionMode,
+    automationProfile,
+    automationScopes,
+    goals,
+    artifacts,
+    systemResources,
+    agents,
+    ideas,
+    errorMemories,
+    loadIdeas,
+    loadErrors,
+    createIdea,
+    updateIdea,
+    deleteIdea,
+    recordError,
+    pinMemory,
+    unpinMemory,
+    createGoal,
+    pauseGoal,
+    resumeGoal,
+    cancelGoal,
+    loadArtifacts,
   }
 }

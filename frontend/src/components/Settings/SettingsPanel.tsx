@@ -16,6 +16,8 @@ import { CallSettings } from './CallSettings'
 import { VisionSettings } from './VisionSettings'
 import { WorkflowSettings } from './WorkflowSettings'
 import { PersonalizationSettings } from './PersonalizationSettings'
+import { AutomationSettings } from './AutomationSettings'
+import { UpdateSettings } from './UpdateSettings'
 
 interface SettingsPanelProps {
   settings: JarvisSettings | null
@@ -25,7 +27,7 @@ interface SettingsPanelProps {
   onClose: () => void
 }
 
-type SettingsTab = 'general' | 'persona' | 'ai' | 'local_ai' | 'voice' | 'memory' | 'appearance' | 'security' | 'advanced' | 'media' | 'gestures' | 'calls' | 'vision' | 'workflows' | 'personalization'
+type SettingsTab = 'general' | 'persona' | 'ai' | 'local_ai' | 'voice' | 'memory' | 'appearance' | 'security' | 'advanced' | 'media' | 'gestures' | 'calls' | 'vision' | 'workflows' | 'personalization' | 'automation' | 'updates'
 
 export function SettingsPanel({ settings, persona, onSwitchPersona, onUpdate, onClose }: SettingsPanelProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>('general')
@@ -65,6 +67,8 @@ export function SettingsPanel({ settings, persona, onSwitchPersona, onUpdate, on
              { id: 'vision', label: 'Vision' },
              { id: 'workflows', label: 'Workflows' },
              { id: 'personalization', label: 'Personalization' },
+              { id: 'automation', label: 'Automation' },
+              { id: 'updates', label: 'Updates' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -98,6 +102,8 @@ export function SettingsPanel({ settings, persona, onSwitchPersona, onUpdate, on
           {activeTab === 'vision' && <VisionSettings settings={settings} onUpdate={onUpdate} />}
           {activeTab === 'workflows' && <WorkflowSettings settings={settings} onUpdate={onUpdate} />}
           {activeTab === 'personalization' && <PersonalizationSettings settings={settings} onUpdate={onUpdate} />}
+          {activeTab === 'automation' && <AutomationSettings settings={settings} onUpdate={onUpdate} />}
+          {activeTab === 'updates' && <UpdateSettings />}
         </div>
       </div>
     </div>

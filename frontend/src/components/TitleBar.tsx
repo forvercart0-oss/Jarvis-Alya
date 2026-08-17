@@ -51,10 +51,10 @@ function TitleBar() {
   }
 
   return (
-    <div
-      data-tauri-drag-region
-      className="h-8 bg-black/40 border-b border-cyan-500/10 flex items-center justify-between px-3 select-none"
-    >
+      <div
+        data-tauri-drag-region
+        className="h-8 bg-black/40 border-b border-cyan-500/10 flex items-center justify-between px-3 select-none depth-shadow"
+      >
       <div className="flex items-center gap-2" data-tauri-drag-region>
         <div className="w-3 h-3 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(0,240,255,0.5)]" data-tauri-drag-region />
         <span className="text-[10px] tracking-[0.2em] text-slate-400 uppercase" data-tauri-drag-region>

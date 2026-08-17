@@ -69,7 +69,7 @@ export function ChatPanel({
 
   return (
     <div
-      className="flex flex-col h-full min-h-0"
+      className="flex flex-col h-full min-w-0 panel-3d"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}

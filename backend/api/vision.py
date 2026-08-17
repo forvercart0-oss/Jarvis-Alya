@@ -360,3 +360,94 @@ async def vision_sensitive_redact(request: dict):
     redacted = sensitive_detector.redact(text)
     return {"redacted": redacted}
 
+
+class ApplicationUnderstandRequest(BaseModel):
+    window_title: str = ""
+    ocr_text: str = ""
+
+
+@router.post("/application/understand")
+async def vision_application_understand(req: ApplicationUnderstandRequest) -> dict[str, Any]:
+    result = await vision_manager.understand_application(req.window_title, req.ocr_text)
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail=result.get("error", "Application understanding failed."))
+    return result
+
+
+class DialogDetectRequest(BaseModel):
+    ocr_text: str
+    window_title: str = ""
+
+
+@router.post("/dialog/detect")
+async def vision_dialog_detect(req: DialogDetectRequest) -> dict[str, Any]:
+    result = await vision_manager.detect_dialog(req.ocr_text, req.window_title)
+    return result
+
+
+class WorkflowRecordRequest(BaseModel):
+    name: str = ""
+
+
+@router.post("/workflow/start")
+async def vision_workflow_start(req: WorkflowRecordRequest) -> dict[str, Any]:
+    result = await vision_manager.start_workflow_recording(req.name)
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail=result.get("error", "Workflow start failed."))
+    return result
+
+
+@router.post("/workflow/stop")
+async def vision_workflow_stop() -> dict[str, Any]:
+    result = await vision_manager.stop_workflow_recording()
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail=result.get("error", "Workflow stop failed."))
+    return result
+
+
+class WorkflowReplayRequest(BaseModel):
+    workflow: dict[str, Any]
+    re_detect: bool = True
+
+
+@router.post("/workflow/replay")
+async def vision_workflow_replay(req: WorkflowReplayRequest) -> dict[str, Any]:
+    result = await vision_manager.replay_workflow(req.workflow, req.re_detect)
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail="Workflow replay failed.")
+    return result
+
+
+@router.get("/skills")
+async def vision_skills() -> dict[str, Any]:
+    result = await vision_manager.load_visual_skills()
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail=result.get("error", "Skills load failed."))
+    return result
+
+
+class SkillMatchRequest(BaseModel):
+    text: str
+
+
+@router.post("/skills/match")
+async def vision_skill_match(req: SkillMatchRequest) -> dict[str, Any]:
+    result = await vision_manager.match_visual_skill(req.text)
+    return result
+
+
+@router.post("/gesture/start")
+async def vision_gesture_start() -> dict[str, Any]:
+    result = await vision_manager.gesture_start()
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail=result.get("error", "Gesture start failed."))
+    return result
+
+
+@router.post("/gesture/stop")
+async def vision_gesture_stop() -> dict[str, Any]:
+    result = await vision_manager.gesture_stop()
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail=result.get("error", "Gesture stop failed."))
+    return result
+

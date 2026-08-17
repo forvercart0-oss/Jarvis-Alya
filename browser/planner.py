@@ -19,9 +19,18 @@ class BrowserTaskState(StrEnum):
     WAITING_PERMISSION = "waiting_permission"
     EXECUTING = "executing"
     VERIFYING = "verifying"
+    RECOVERING = "recovering"
     COMPLETED = "completed"
     FAILED = "failed"
     PAUSED = "paused"
+    AUTHENTICATION_REQUIRED = "authentication_required"
+    CAPTCHA_DETECTED = "captcha_detected"
+    DOWNLOADING = "downloading"
+    UPLOADING = "uploading"
+    READING = "reading"
+    SUMMARIZING = "summarizing"
+    EXTRACTING = "extracting"
+    DEBUGGING = "debugging"
 
 
 @dataclass

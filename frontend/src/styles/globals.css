@@ -110,4 +110,108 @@
     0%, 100% { box-shadow: 0 0 5px rgba(255, 26, 26, 0.4); }
     50% { box-shadow: 0 0 20px rgba(255, 26, 26, 0.8); }
   }
+
+  /* 3D depth and parallax */
+  .parallax-container {
+    perspective: 1000px;
+  }
+  .parallax-layer {
+    transform-style: preserve-3d;
+    will-change: transform;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .parallax-container { perspective: 1200px; }
+    .parallax-layer { will-change: auto; }
+  }
+
+  /* 3D floating panel */
+  .panel-3d {
+    transform-style: preserve-3d;
+    box-shadow:
+      0 4px 6px -1px rgba(0, 0, 0, 0.4),
+      0 8px 16px -4px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+  }
+  .panel-3d:hover {
+    box-shadow:
+      0 8px 16px -4px rgba(0, 0, 0, 0.5),
+      0 16px 32px -8px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .panel-3d, .panel-3d:hover {
+      transition: none;
+      transform: none;
+    }
+  }
+
+  /* Glass surfaces with depth */
+  .glass-deep {
+    background: rgba(5, 15, 30, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(0, 240, 255, 0.12);
+    box-shadow:
+      0 4px 6px -1px rgba(0, 0, 0, 0.5),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+  }
+  .serious-mode .glass-deep {
+    background: rgba(30, 5, 5, 0.7);
+    border-color: rgba(255, 26, 26, 0.2);
+  }
+
+  /* Animated border glow */
+  .hud-border-animated {
+    position: relative;
+  }
+  .hud-border-animated::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: inherit;
+    background: linear-gradient(
+      45deg,
+      transparent 0%,
+      rgba(0, 240, 255, 0.1) 50%,
+      transparent 100%
+    );
+    opacity: 0.5;
+    pointer-events: none;
+    animation: hudGlow 6s linear infinite;
+  }
+  @keyframes hudGlow {
+    0% { opacity: 0.2; transform: translate(-100%, 0); }
+    100% { opacity: 0; transform: translate(100%, 0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hud-border-animated::before {
+      animation: none;
+      opacity: 0.1;
+    }
+  }
+
+  /* Subtle depth shadow */
+  .depth-shadow {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  }
+  .depth-shadow-strong {
+    box-shadow: 0 16px 64px rgba(0, 0, 0, 0.4);
+  }
+
+  /* Hover elevation (subtle) */
+  .hover-elevate {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .hover-elevate:hover {
+    transform: translateY(-1px);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hover-elevate, .hover-elevate:hover {
+      transition: none;
+      transform: none;
+    }
+  }
 }

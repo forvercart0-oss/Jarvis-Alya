@@ -71,6 +71,7 @@ class AIService:
         self._active_skill_id: str | None = None
         self._last_tool_results: list[dict] = []
         self._personality_engine = None
+        self._execution_engine = None
 
     def _get_personality_engine(self):
         if self._personality_engine is None:
@@ -80,6 +81,22 @@ class AIService:
                 memory_manager=self.memory,
             )
         return self._personality_engine
+
+    def _get_execution_engine(self):
+        if self._execution_engine is None:
+            from automation.execution_engine import get_execution_engine
+            from automation.policy_engine import get_automation_policy_engine
+            policy = get_automation_policy_engine(
+                execution_mode=getattr(self.settings, 'execution_mode', 'assisted'),
+                profile=getattr(self.settings, 'automation_profile', 'safe'),
+            )
+            self._execution_engine = get_execution_engine(
+                tool_execute=lambda name, confirmed=False, **kwargs: self.tools.execute(name, confirmed=confirmed, **kwargs),
+                ai_service=self,
+                tts_callback=lambda text: self.tts.speak(text) if self.tts else None,
+                policy_engine=policy,
+            )
+        return self._execution_engine
 
     # ------------------------------------------------------------- providers
     def reconfigure_providers(self):
@@ -399,6 +416,23 @@ class AIService:
             detected = engine.detect_preference(user_message)
             if detected:
                 logger.debug("Detected explicit preference: %s", detected)
+        except Exception:
+            pass
+
+        # Fast autonomous path for simple pre-authorized commands.
+        try:
+            exec_engine = self._get_execution_engine()
+            execution_mode = getattr(self.settings, 'execution_mode', 'assisted')
+            if execution_mode in ('full_auto', 'safe'):
+                async for exec_result in exec_engine.execute_command(user_message):
+                    if exec_result.outcome.value == 'success' and exec_result.result:
+                        result_text = str(exec_result.result)
+                        self.conversation.add_message(conv_id, "assistant", result_text)
+                        yield {"event": "token", "data": {"chunk": result_text, "provider": "execution"}}
+                        yield {"event": "done", "data": {"response": result_text, "conversation_id": conv_id, "provider": "execution"}}
+                        return
+                    if exec_result.outcome.value == 'requires_input':
+                        break
         except Exception:
             pass
 

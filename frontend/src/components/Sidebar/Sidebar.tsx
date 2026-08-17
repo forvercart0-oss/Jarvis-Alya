@@ -1,4 +1,4 @@
-import { MessageSquare, Cpu, Wrench, Zap, Settings, AudioLines, FileCode2, Activity, Home, BookOpen, ImageIcon, HeartPulse, Puzzle, Bot, Globe, Monitor, Eye, ListTodo, FlaskConical, Brain } from 'lucide-react'
+import { MessageSquare, Cpu, Wrench, Zap, Settings, AudioLines, FileCode2, Activity, Home, BookOpen, ImageIcon, HeartPulse, Puzzle, Bot, Globe, Monitor, Eye, ListTodo, FlaskConical, Brain, Target, Users } from 'lucide-react'
 import type { TabId, PersonaInfo } from '../../types'
 
 interface SidebarItemProps {
@@ -52,7 +52,7 @@ export function Sidebar({ activeTab, onTabChange, connection, persona, onSwitchP
   const logoId = persona?.logo_id || currentPersona
 
   return (
-    <div className="w-16 border-r flex flex-col items-center py-4 gap-1 bg-black/40 z-20" style={{ borderColor: `${accentColor}22` }}>
+    <div className="w-16 border-r flex flex-col items-center py-4 gap-1 bg-black/40 z-20 panel-3d" style={{ borderColor: `${accentColor}22` }}>
       <div className="w-9 h-9 mb-4 flex items-center justify-center relative">
         {logoId === 'alya' ? (
           <svg viewBox="0 0 64 64" className="w-7 h-7" style={{ filter: `drop-shadow(0 0 8px ${accentColor}88)` }}>
@@ -105,6 +105,8 @@ export function Sidebar({ activeTab, onTabChange, connection, persona, onSwitchP
       <SidebarItem id="research" label="Research" icon={<FlaskConical className="w-5 h-5" />} active={activeTab === 'research'} accent={accentColor} serious={seriousMode} onClick={() => onTabChange('research')} />
       <SidebarItem id="settings" label="Settings" icon={<Settings className="w-5 h-5" />} active={activeTab === 'settings'} accent={accentColor} onClick={() => onTabChange('settings')} />
       <SidebarItem id="personalization" label="Learn" icon={<Brain className="w-5 h-5" />} active={activeTab === 'personalization'} accent={accentColor} onClick={() => onTabChange('personalization')} />
+      <SidebarItem id="goals" label="Goals" icon={<Target className="w-5 h-5" />} active={activeTab === 'goals'} accent={accentColor} onClick={() => onTabChange('goals')} />
+      <SidebarItem id="agents" label="Agents" icon={<Users className="w-5 h-5" />} active={activeTab === 'agents'} accent={accentColor} onClick={() => onTabChange('agents')} />
 
       <div className="mt-auto flex flex-col items-center gap-3">
         {onToggleSeriousMode && (

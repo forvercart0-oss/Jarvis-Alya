@@ -31,6 +31,15 @@ class VisionManager:
         self._cache_ttl: float = 30.0
         self._broadcast: Any = None
         self._camera = CameraManager()
+        self._screen_intelligence = None
+
+    def _get_screen_intelligence(self):
+        if self._screen_intelligence is None:
+            from vision.screen_intelligence import screen_intelligence
+            screen_intelligence.confidence_threshold = self.confidence_threshold
+            screen_intelligence.set_broadcast(self._broadcast)
+            self._screen_intelligence = screen_intelligence
+        return self._screen_intelligence
 
     @property
     def enabled(self) -> bool:
@@ -46,6 +55,8 @@ class VisionManager:
 
     def set_broadcast(self, broadcast: Any) -> None:
         self._broadcast = broadcast
+        if self._screen_intelligence:
+            self._screen_intelligence.set_broadcast(broadcast)
 
     async def _broadcast_event(self, event: str, data: dict[str, Any]) -> None:
         if self._broadcast:
@@ -259,6 +270,110 @@ class VisionManager:
 
     async def monitors(self) -> list[dict[str, Any]]:
         return await list_monitors()
+
+    async def screen_intelligence_capture(self, mode: str = "full", window: str | None = None, region: str | None = None, monitor: int | None = None) -> dict[str, Any]:
+        si = self._get_screen_intelligence()
+        return await si.capture_and_understand(mode, window, region, monitor)
+
+    async def screen_intelligence_command(self, command: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
+        si = self._get_screen_intelligence()
+        return await si.execute_command(command, context)
+
+    async def screen_intelligence_status(self) -> dict[str, Any]:
+        si = self._get_screen_intelligence()
+        return {"enabled": si.enabled, "mode": si.mode}
+
+    async def screen_intelligence_set_mode(self, mode: str) -> dict[str, Any]:
+        si = self._get_screen_intelligence()
+        si.mode = mode
+        si.enabled = mode != "off"
+        return {"success": True, "mode": mode, "enabled": si.enabled}
+
+    async def understand_application(self, window_title: str = "", ocr_text: str = "") -> dict[str, Any]:
+        if not self._enabled:
+            return {"success": False, "error": "Vision is disabled."}
+        try:
+            from vision.application_understanding import application_understanding
+            detection = application_understanding.detect_application(window_title, ocr_text)
+            context = application_understanding.get_application_context(detection.get("application", "unknown"), ocr_text)
+            return {"success": True, "detection": detection, "context": context}
+        except Exception as exc:
+            return {"success": False, "error": str(exc)}
+
+    async def detect_dialog(self, ocr_text: str, window_title: str = "") -> dict[str, Any]:
+        try:
+            from vision.dialog_detection import dialog_detector
+            result = dialog_detector.detect(ocr_text, window_title)
+            if result:
+                return {"success": True, "dialog": result.to_dict()}
+            return {"success": True, "dialog": None}
+        except Exception as exc:
+            return {"success": False, "error": str(exc)}
+
+    async def start_workflow_recording(self, name: str = "") -> dict[str, Any]:
+        try:
+            from vision.workflow_recorder import workflow_recorder
+            workflow = workflow_recorder.start(name)
+            return {"success": True, "workflow": workflow.to_dict()}
+        except Exception as exc:
+            return {"success": False, "error": str(exc)}
+
+    async def stop_workflow_recording(self) -> dict[str, Any]:
+        try:
+            from vision.workflow_recorder import workflow_recorder
+            workflow = workflow_recorder.stop()
+            if workflow:
+                return {"success": True, "workflow": workflow.to_dict()}
+            return {"success": False, "error": "No active recording"}
+        except Exception as exc:
+            return {"success": False, "error": str(exc)}
+
+    async def replay_workflow(self, workflow: dict[str, Any], re_detect: bool = True) -> dict[str, Any]:
+        if not self._enabled:
+            return {"success": False, "error": "Vision is disabled."}
+        try:
+            from vision.workflow_replay import workflow_replayer
+            return await workflow_replayer.replay(workflow, re_detect)
+        except Exception as exc:
+            return {"success": False, "error": str(exc)}
+
+    async def load_visual_skills(self) -> dict[str, Any]:
+        try:
+            from vision.visual_skills import visual_skill_manager
+            visual_skill_manager.load_skills()
+            return {"success": True, "skills": visual_skill_manager.list_skills()}
+        except Exception as exc:
+            return {"success": False, "error": str(exc)}
+
+    async def match_visual_skill(self, text: str) -> dict[str, Any]:
+        try:
+            from vision.visual_skills import visual_skill_manager
+            skill = visual_skill_manager.find_by_trigger(text)
+            if skill:
+                return {"success": True, "skill": skill.to_dict()}
+            return {"success": True, "skill": None}
+        except Exception as exc:
+            return {"success": False, "error": str(exc)}
+
+    async def gesture_start(self) -> dict[str, Any]:
+        try:
+            from vision.gesture.controller import GestureController
+            from config.settings import get_settings
+            settings = get_settings()
+            controller = GestureController(settings)
+            result = await controller.start()
+            return {"success": True, "gesture_active": result}
+        except Exception as exc:
+            return {"success": False, "error": str(exc)}
+
+    async def gesture_stop(self) -> dict[str, Any]:
+        try:
+            from vision.gesture.controller import GestureController
+            controller = GestureController(None)
+            result = await controller.stop()
+            return {"success": True, "gesture_active": result}
+        except Exception as exc:
+            return {"success": False, "error": str(exc)}
 
     def status(self) -> dict[str, Any]:
         return {
