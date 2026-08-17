@@ -312,6 +312,7 @@ class TestUpdaterManager:
 
     def test_get_status_returns_dict(self, manager):
         status = manager.get_status()
-        assert "progress" in status
+        assert "state" in status
         assert "config" in status
         assert "current_commit" in status
+        assert isinstance(status["config"], dict)

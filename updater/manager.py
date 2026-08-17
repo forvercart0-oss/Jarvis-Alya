@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+from contextlib import suppress
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -42,7 +43,7 @@ class UpdaterManager:
                 text=True,
             )
             if result.returncode == 0:
-                return result.stdout.strip()[:12]
+                return result.stdout.strip()
         except Exception:
             pass
         return os.environ.get("JARVIS_COMMIT", "unknown")
@@ -84,8 +85,10 @@ class UpdaterManager:
             latest = await self._github.get_latest_commit()
             if latest is None:
                 self.progress.state = UpdateState.OFFLINE
-                self.progress.message = "GitHub unavailable"
+                self.progress.message = "Unable to check for updates"
+                logger.error("Update check failed: GitHub API returned no data")
                 return self.progress
+            logger.info("GitHub latest commit: %s, local: %s", latest.commit_sha, self._current_commit)
             if latest.commit_sha == self._current_commit:
                 self.progress.state = UpdateState.UP_TO_DATE
                 self.progress.message = "You're up to date"
@@ -134,8 +137,7 @@ class UpdaterManager:
             self.progress.state = UpdateState.FAILED
 
     def get_status(self) -> dict[str, Any]:
-        return {
-            "progress": self.progress.to_dict(),
-            "config": self.config.to_dict(),
-            "current_commit": self._current_commit,
-        }
+        status = self.progress.to_dict()
+        status["config"] = self.config.to_dict()
+        status["current_commit"] = self._current_commit
+        return status
