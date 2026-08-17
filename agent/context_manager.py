@@ -22,6 +22,7 @@ class AgentContextManager:
             "dependencies": task.get("dependencies", []),
             "priority": task.get("priority", "normal"),
             "permissions": task.get("permissions", []),
+            "personalization": {},
         }
         if self._memory:
             try:
@@ -29,6 +30,16 @@ class AgentContextManager:
                 context["relevant_memory"] = relevant
             except Exception:
                 context["relevant_memory"] = []
+            try:
+                persona = task.get("persona", "jarvis")
+                project = task.get("project", "")
+                session_id = task.get("session_id", "")
+                personalization = self._memory.get_personalization_context(
+                    profile=persona, project=project, session_id=session_id
+                )
+                context["personalization"] = personalization
+            except Exception:
+                context["personalization"] = {}
         return context
 
     def minimize_context(self, context: dict[str, Any]) -> dict[str, Any]:

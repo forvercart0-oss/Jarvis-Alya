@@ -9,12 +9,69 @@ from __future__ import annotations
 import logging
 import random
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional
 
 from config.personas import get_persona, persona_payload, PERSONAS
 from language.detector import detect_language, language_name
 
 logger = logging.getLogger("jarvis.personality")
+
+
+class PreferenceLearner:
+    def __init__(self, memory_manager: Any | None = None):
+        self._memory = memory_manager
+
+    def learn_from_feedback(self, user_message: str, assistant_response: str, feedback: str) -> dict | None:
+        if not self._memory:
+            return None
+        feedback_lower = feedback.lower()
+        if any(p in feedback_lower for p in ["perfect", "exactly", "good", "do this every time", "always do this"]):
+            key = "response_style"
+            value = "concise" if len(assistant_response) < 200 else "detailed"
+            return self._memory.remember_adaptive_preference(
+                key=key,
+                value=value,
+                source="correction",
+                confidence="medium",
+                metadata={"trigger": feedback},
+            )
+        if any(p in feedback_lower for p in ["don't", "stop", "wrong", "no ", "use another"]):
+            key = "avoid_pattern"
+            value = feedback[:200]
+            return self._memory.remember_adaptive_preference(
+                key=key,
+                value=value,
+                source="correction",
+                confidence="medium",
+                metadata={"trigger": feedback, "type": "negative"},
+            )
+        return None
+
+    def detect_explicit_preference(self, user_message: str) -> dict | None:
+        if not self._memory:
+            return None
+        lower = user_message.lower()
+        patterns = [
+            ("always use dark mode", "theme", "dark"),
+            ("always use light mode", "theme", "light"),
+            ("use concise", "response_style", "concise"),
+            ("give me short", "response_style", "concise"),
+            ("don't give long", "response_style", "concise"),
+            ("always use postgresql", "database", "postgresql"),
+            ("use postgres", "database", "postgresql"),
+            ("prefer python", "language", "python"),
+            ("use fastapi", "framework", "fastapi"),
+        ]
+        for trigger, key, value in patterns:
+            if trigger in lower:
+                return self._memory.remember_adaptive_preference(
+                    key=key,
+                    value=value,
+                    source="explicit_user",
+                    confidence="high",
+                    metadata={"trigger": trigger},
+                )
+        return None
 
 
 @dataclass
@@ -82,12 +139,14 @@ class PersonalityEngine:
         persona_id: str = "jarvis",
         personality_level: str = "professional",
         language_mode: str = "auto",
+        memory_manager: Any | None = None,
     ):
         self._persona_id = persona_id
         self._personality_level = personality_level
         self._language_mode = language_mode
         self._current_persona = get_persona(persona_id)
         self._greeting_index: int = 0
+        self._preference_learner = PreferenceLearner(memory_manager)
 
     @property
     def persona_id(self) -> str:
@@ -240,6 +299,12 @@ class PersonalityEngine:
             "available_levels": list(PERSONALITY_LEVELS.keys()),
         }
 
+    def process_feedback(self, user_message: str, assistant_response: str, feedback: str) -> dict | None:
+        return self._preference_learner.learn_from_feedback(user_message, assistant_response, feedback)
+
+    def detect_preference(self, user_message: str) -> dict | None:
+        return self._preference_learner.detect_explicit_preference(user_message)
+
 
 _personality_engine: Optional[PersonalityEngine] = None
 
@@ -248,6 +313,7 @@ def get_personality_engine(
     persona_id: str = "jarvis",
     personality_level: str = "professional",
     language_mode: str = "auto",
+    memory_manager: Any | None = None,
 ) -> PersonalityEngine:
     """Get or create the global personality engine."""
     global _personality_engine
@@ -256,5 +322,6 @@ def get_personality_engine(
             persona_id=persona_id,
             personality_level=personality_level,
             language_mode=language_mode,
+            memory_manager=memory_manager,
         )
     return _personality_engine

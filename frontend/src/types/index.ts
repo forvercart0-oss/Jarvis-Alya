@@ -1,6 +1,6 @@
 export type OrbState = 'idle' | 'listening' | 'thinking' | 'processing' | 'speaking' | 'error'
 
-export type TabId = 'home' | 'chat' | 'voice' | 'system' | 'tools' | 'coding' | 'memory' | 'automations' | 'tasks' | 'workflows' | 'media' | 'settings' | 'diagnostics' | 'health' | 'about' | 'skills' | 'agent' | 'browser' | 'computer' | 'vision' | 'research'
+export type TabId = 'home' | 'chat' | 'voice' | 'system' | 'tools' | 'coding' | 'memory' | 'automations' | 'tasks' | 'workflows' | 'media' | 'settings' | 'diagnostics' | 'health' | 'about' | 'skills' | 'agent' | 'browser' | 'computer' | 'vision' | 'research' | 'personalization'
 
 export type ConnectionState = 'connecting' | 'online' | 'offline'
 
@@ -110,6 +110,18 @@ export interface JarvisSettings {
   workflow_quiet_hours_start?: string
   workflow_quiet_hours_end?: string
   workflow_history_retention_days?: number
+  personalization_enabled?: boolean
+  personalization_ask_before_remember?: boolean
+  personalization_confidence_threshold?: string
+  personalization_suggestions_enabled?: boolean
+  personalization_workflow_detection?: boolean
+  personalization_skill_suggestions?: boolean
+  personalization_export_enabled?: boolean
+  personalization_import_enabled?: boolean
+  personalization_cross_device_sync?: boolean
+  personalization_analytics_enabled?: boolean
+  personalization_latency_tracking?: boolean
+  personalization_provider_learning?: boolean
 }
 
 export interface PersonaInfo {
@@ -772,4 +784,63 @@ export interface WorkflowApproval {
   status: string
   created_at: string
   resolved_at?: string | null
+}
+
+export type ConfidenceLevel = 'low' | 'medium' | 'high'
+
+export interface AdaptivePreference {
+  preference_id: string
+  key: string
+  value: string
+  source: string
+  confidence: ConfidenceLevel
+  profile: string
+  project: string
+  session_id: string
+  usage_count: number
+  last_used: number
+  created_at: number
+  updated_at: number
+  metadata: Record<string, any>
+}
+
+export interface PersonalizationContext {
+  preferences: Record<string, string>
+  explicit_preferences: Record<string, string>
+  workflows: Array<Record<string, any>>
+  provider_preferences: Record<string, string>
+}
+
+export interface Suggestion {
+  suggestion_id: string
+  type: string
+  title: string
+  description: string
+  actions?: string[]
+  repetitions?: number
+}
+
+export interface EnvironmentProfile {
+  os: string
+  architecture: string
+  python_version: string
+  node_version: string
+  gpu_available: boolean
+  ram_gb: number
+  available_tools: string[]
+  configured_providers: string[]
+  display_server: string
+  desktop_environment: string
+  metadata: Record<string, any>
+}
+
+export interface PersonalizationAnalytics {
+  tasks_completed: number
+  tasks_failed: number
+  success_rate: number
+  sample_size: number
+  profile: string
+  providers: Record<string, number>
+  tools: Record<string, number>
+  agents: Record<string, number>
 }

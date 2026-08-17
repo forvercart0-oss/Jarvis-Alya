@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { OrbState, Message, ToolCall, SystemStats, JarvisSettings, MemoryItem, Automation, ToolInfo, HealthStatus, VoiceInfo, DiagnosticInfo, CodingProject, PersonaInfo, Skill, TaskItem, TaskPlan, SeriousModeState, ResearchJob, VisionStatus } from '../types'
+import type { OrbState, Message, ToolCall, SystemStats, JarvisSettings, MemoryItem, Automation, ToolInfo, HealthStatus, VoiceInfo, DiagnosticInfo, CodingProject, PersonaInfo, Skill, TaskItem, TaskPlan, SeriousModeState, ResearchJob, VisionStatus, AdaptivePreference, Suggestion } from '../types'
 import { api } from '../services/api'
 import { WebSocketManager } from '../services/websocket'
 
@@ -34,6 +34,8 @@ export function useJarvis() {
   const [summaries, setSummaries] = useState<any[]>([])
   const [privacyMode, setPrivacyMode] = useState<string>('normal')
   const [seriousMode, setSeriousMode] = useState<SeriousModeState>('inactive')
+  const [adaptivePreferences, setAdaptivePreferences] = useState<AdaptivePreference[]>([])
+  const [personalizationSuggestions, setPersonalizationSuggestions] = useState<Suggestion[]>([])
   const [researchJob, _setResearchJob] = useState<ResearchJob | null>(null)
   const [researchPhase, setResearchPhase] = useState<string>('')
   const [researchSourcesFound, setResearchSourcesFound] = useState(0)
@@ -1083,6 +1085,14 @@ export function useJarvis() {
       setReminders(r)
       setSummaries(sum)
       setPrivacyMode(p?.privacy_mode || 'normal')
+
+      const currentProfile = per?.id || 'jarvis'
+      const [prefs, suggs] = await Promise.all([
+        api.getAdaptivePreferences(currentProfile).catch(() => []),
+        api.getPersonalizationSuggestions(currentProfile).catch(() => ({ suggestions: [] })),
+      ])
+      setAdaptivePreferences(prefs)
+      setPersonalizationSuggestions(suggs.suggestions || [])
     } catch {
       // ignore
     }
@@ -1461,6 +1471,8 @@ export function useJarvis() {
     reminders,
     summaries,
     privacyMode,
+    adaptivePreferences,
+    personalizationSuggestions,
     createTask,
     startTask,
     pauseTask,

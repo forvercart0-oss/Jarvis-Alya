@@ -1,4 +1,4 @@
-import { MessageSquare, Cpu, Wrench, Zap, Settings, AudioLines, FileCode2, Activity, Home, BookOpen, ImageIcon, HeartPulse, Puzzle, Bot, Globe, Monitor, Eye, ListTodo, FlaskConical } from 'lucide-react'
+import { MessageSquare, Cpu, Wrench, Zap, Settings, AudioLines, FileCode2, Activity, Home, BookOpen, ImageIcon, HeartPulse, Puzzle, Bot, Globe, Monitor, Eye, ListTodo, FlaskConical, Brain } from 'lucide-react'
 import type { TabId, PersonaInfo } from '../../types'
 
 interface SidebarItemProps {
@@ -104,6 +104,7 @@ export function Sidebar({ activeTab, onTabChange, connection, persona, onSwitchP
       <SidebarItem id="workflows" label="Workflows" icon={<Zap className="w-5 h-5" />} active={activeTab === 'workflows'} accent={accentColor} onClick={() => onTabChange('workflows')} />
       <SidebarItem id="research" label="Research" icon={<FlaskConical className="w-5 h-5" />} active={activeTab === 'research'} accent={accentColor} serious={seriousMode} onClick={() => onTabChange('research')} />
       <SidebarItem id="settings" label="Settings" icon={<Settings className="w-5 h-5" />} active={activeTab === 'settings'} accent={accentColor} onClick={() => onTabChange('settings')} />
+      <SidebarItem id="personalization" label="Learn" icon={<Brain className="w-5 h-5" />} active={activeTab === 'personalization'} accent={accentColor} onClick={() => onTabChange('personalization')} />
 
       <div className="mt-auto flex flex-col items-center gap-3">
         {onToggleSeriousMode && (

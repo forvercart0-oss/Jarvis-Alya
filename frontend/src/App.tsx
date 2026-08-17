@@ -31,6 +31,7 @@ import { TasksPanel } from './components/Tasks/TasksPanel'
 import { WorkflowsPanel } from './components/Workflows/WorkflowsPanel'
 import { ResearchPanel } from './components/Research/ResearchPanel'
 import { ResearchHistory } from './components/Research/ResearchHistory'
+import PersonalizationPanel from './components/Personalization/PersonalizationPanel'
 import { useJarvis } from './hooks/useJarvis'
 import { api } from './services/api'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
@@ -697,6 +698,7 @@ export default function App() {
                   {activeTab === 'settings' && (
                     <SettingsPanel settings={settings} persona={persona} onSwitchPersona={(id) => switchPersona(id)} onUpdate={handleSettingsUpdate} onClose={() => setActiveTab('chat')} />
                   )}
+                  {activeTab === 'personalization' && <PersonalizationPanel settings={settings} />}
                   {activeTab === 'voice' && (
                     <VoicePanel
                       orbState={orbState}

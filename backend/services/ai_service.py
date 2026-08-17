@@ -70,6 +70,16 @@ class AIService:
         self._confirmation_result: bool | None = None
         self._active_skill_id: str | None = None
         self._last_tool_results: list[dict] = []
+        self._personality_engine = None
+
+    def _get_personality_engine(self):
+        if self._personality_engine is None:
+            from personality.manager import get_personality_engine
+            self._personality_engine = get_personality_engine(
+                persona_id=getattr(self.settings, 'persona', 'jarvis'),
+                memory_manager=self.memory,
+            )
+        return self._personality_engine
 
     # ------------------------------------------------------------- providers
     def reconfigure_providers(self):
@@ -383,6 +393,15 @@ class AIService:
             yield {"event": "done", "data": {"response": safety_block["data"]["chunk"], "conversation_id": conv_id, "provider": "safety"}}
             return
 
+        # Learn from explicit preferences and feedback in user message.
+        try:
+            engine = self._get_personality_engine()
+            detected = engine.detect_preference(user_message)
+            if detected:
+                logger.debug("Detected explicit preference: %s", detected)
+        except Exception:
+            pass
+
         provider = self._select_provider()
         self._current_provider = provider
 
@@ -440,6 +459,24 @@ class AIService:
                 )
         except Exception as exc:
             logger.warning("Memory context injection failed: %s", exc)
+
+        # Adaptive personalization context.
+        try:
+            persona = getattr(self.settings, 'persona', 'jarvis')
+            personalization = self.memory.get_personalization_context(profile=persona)
+            if personalization:
+                pref_lines = []
+                for key, value in personalization.get("preferences", {}).items():
+                    pref_lines.append(f"- {key}: {value}")
+                if pref_lines:
+                    system_prompt = (
+                        system_prompt
+                        + "\n\n[User Preferences]\n"
+                        + "\n".join(pref_lines)
+                        + "\n[/User Preferences]"
+                    )
+        except Exception as exc:
+            logger.warning("Personalization context injection failed: %s", exc)
 
         messages = self.conversation.build_messages_with_system(conv_id, user_message, system_prompt)
         full_response = ""

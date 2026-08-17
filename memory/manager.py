@@ -5,12 +5,14 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from memory.adaptive import AdaptiveMemory
 from memory.audit import MemoryAuditLog
 from memory.backup import MemoryBackup
 from memory.context_builder import ContextBuilder
 from memory.contradictions import ContradictionDetector
 from memory.decay import MemoryDecay
 from memory.duplicates import DuplicateDetector
+from memory.environment import EnvironmentProfiler, environment_profiler
 from memory.extractor import MemoryExtractor
 from memory.health import MemoryHealth
 from memory.knowledge_graph import KnowledgeGraph
@@ -24,6 +26,7 @@ from memory.short_term import ShortTermMemory
 from memory.summaries import ConversationSummaries
 from memory.tasks import TaskMemory
 from memory.types import MemoryImportance, MemorySource, normalize_memory_type
+from memory.workflows import WorkflowDetector, SuggestionEngine, workflow_detector, suggestion_engine
 
 logger = logging.getLogger("jarvis.memory.manager")
 
@@ -95,6 +98,7 @@ class MemoryManager:
         self.health = MemoryHealth(self.store)
         self.backup = MemoryBackup(self.store)
         self.audit = MemoryAuditLog(self.store.db_path)
+        self.adaptive = AdaptiveMemory(self)
 
     @property
     def vector_enabled(self) -> bool:
@@ -369,3 +373,74 @@ class MemoryManager:
     def _importance_to_float(self, importance: str) -> float:
         mapping = {MemoryImportance.LOW.value: 0.2, MemoryImportance.MEDIUM.value: 0.5, MemoryImportance.HIGH.value: 0.9}
         return mapping.get(importance, 0.5)
+
+    def remember_adaptive_preference(
+        self,
+        key: str,
+        value: str,
+        source: str = "explicit_user",
+        confidence: str = "high",
+        profile: str = "jarvis",
+        project: str = "",
+        session_id: str = "",
+        metadata: dict | None = None,
+    ) -> dict:
+        return self.adaptive.remember_preference(
+            key=key,
+            value=value,
+            source=source,
+            confidence=confidence,
+            profile=profile,
+            project=project,
+            session_id=session_id,
+            metadata=metadata,
+        ).to_dict()
+
+    def get_adaptive_preferences(self, profile: str = "jarvis", project: str = "", session_id: str = "") -> list[dict]:
+        return self.adaptive.get_all_preferences(profile=profile, project=project, session_id=session_id)
+
+    def forget_adaptive_preference(self, preference_id: str) -> bool:
+        return self.adaptive.forget_preference(preference_id)
+
+    def forget_adaptive_key(self, key: str, profile: str = "jarvis") -> int:
+        return self.adaptive.forget_key(key, profile=profile)
+
+    def get_personalization_context(self, profile: str = "jarvis", project: str = "", session_id: str = "") -> dict:
+        return self.adaptive.get_personalization_context(profile=profile, project=project, session_id=session_id)
+
+    def record_task_outcome(
+        self,
+        task_type: str,
+        agents_used: list[str],
+        tools_used: list[str],
+        duration_ms: int,
+        success: bool,
+        user_feedback: str = "",
+        retry_count: int = 0,
+        provider: str = "",
+    ) -> None:
+        self.adaptive.record_task_outcome(
+            task_type=task_type,
+            agents_used=agents_used,
+            tools_used=tools_used,
+            duration_ms=duration_ms,
+            success=success,
+            user_feedback=user_feedback,
+            retry_count=retry_count,
+            provider=provider,
+        )
+
+    def get_provider_preference(self, task_type: str) -> str | None:
+        return self.adaptive.get_provider_preference(task_type)
+
+    def get_latency_preference(self, task_type: str) -> dict | None:
+        return self.adaptive.get_latency_preference(task_type)
+
+    def get_suggestions(self, profile: str = "jarvis") -> list[dict]:
+        return suggestion_engine.generate_suggestions(profile=profile)
+
+    def export_personalization(self, profile: str = "jarvis") -> dict:
+        return self.adaptive.export_preferences(profile=profile)
+
+    def import_personalization(self, data: dict, profile: str = "jarvis") -> int:
+        return self.adaptive.import_preferences(data, profile=profile)

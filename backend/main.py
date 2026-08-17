@@ -28,6 +28,8 @@ from backend.api.git import router as git_router
 from backend.api.research import router as research_router
 from backend.api.browser import router as browser_router
 from backend.api.computer import router as computer_router
+from backend.api.workflows import router as workflows_router
+from backend.api.personalization import router as personalization_router
 from backend.services.ai_service import AIService
 from backend.services.automation_service import AutomationService
 from backend.services.memory_service import MemoryService
@@ -42,6 +44,7 @@ from config.settings import get_settings
 from generation.image.manager import ImageGenerationManager
 from generation.video.manager import VideoGenerationManager
 from memory.manager import MemoryManager
+from memory.workflows import workflow_detector
 from permissions.manager import PermissionManager
 from safety import SafetyCategory, classify_request, get_confirmation_manager
 from safety.activity import get_activity_logger
@@ -89,6 +92,7 @@ ai_service = AIService(
 )
 voice_service = VoiceManager(memory_manager, ai_service)
 memory_service = MemoryService(memory_manager, ws_broadcast=ws_manager.broadcast)
+workflow_detector.set_broadcast(ws_manager.broadcast)
 tool_service = ToolService(tool_registry)
 system_service = SystemService()
 notification_service = NotificationService()
@@ -241,9 +245,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from backend.api.workflows import router as workflows_router
-
 app.include_router(workflows_router, prefix="/api")
+app.include_router(personalization_router, prefix="/api")
 
 app.include_router(chat_router, prefix="/api")
 app.include_router(voice_router, prefix="/api")

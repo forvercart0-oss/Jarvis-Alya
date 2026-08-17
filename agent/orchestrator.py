@@ -98,6 +98,15 @@ def get_orchestrator(tool_execute: Any | None = None, memory: Any | None = None,
             metadata={"orchestrator_task_id": task.task_id},
         )
 
+        # Inject adaptive personalization context if memory is available.
+        if self._memory:
+            try:
+                personalization = self._memory.get_personalization_context(profile="jarvis")
+                if personalization:
+                    context.metadata["personalization"] = personalization
+            except Exception:
+                pass
+
         plan = self._create_plan(context)
         task.plan = plan
         task.state = OrchestratorState.DISPATCHING

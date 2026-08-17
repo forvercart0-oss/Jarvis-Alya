@@ -151,6 +151,18 @@ PUBLIC_SETTING_KEYS = {
     "agent_cost_limit",
     "agent_logging_enabled",
     "agent_custom_agents_enabled",
+    "personalization_enabled",
+    "personalization_ask_before_remember",
+    "personalization_confidence_threshold",
+    "personalization_suggestions_enabled",
+    "personalization_workflow_detection",
+    "personalization_skill_suggestions",
+    "personalization_export_enabled",
+    "personalization_import_enabled",
+    "personalization_cross_device_sync",
+    "personalization_analytics_enabled",
+    "personalization_latency_tracking",
+    "personalization_provider_learning",
     "task_autonomy_level",
     "task_dry_run",
     "task_max_concurrent",
@@ -405,6 +417,20 @@ class Settings(BaseSettings):
     agent_cost_limit: str = "off"
     agent_logging_enabled: bool = False
     agent_custom_agents_enabled: bool = True
+
+    # Adaptive Personalization
+    personalization_enabled: bool = True
+    personalization_ask_before_remember: bool = True
+    personalization_confidence_threshold: str = "medium"
+    personalization_suggestions_enabled: bool = True
+    personalization_workflow_detection: bool = True
+    personalization_skill_suggestions: bool = True
+    personalization_export_enabled: bool = True
+    personalization_import_enabled: bool = True
+    personalization_cross_device_sync: bool = False
+    personalization_analytics_enabled: bool = True
+    personalization_latency_tracking: bool = True
+    personalization_provider_learning: bool = True
 
     # Task Engine
     task_autonomy_level: str = "balanced"

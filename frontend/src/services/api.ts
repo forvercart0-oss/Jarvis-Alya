@@ -1,4 +1,4 @@
-import type { JarvisSettings, HealthStatus, MemoryItem, MemoryDashboard, SessionMemory, MemoryAuditEntry, Automation, ToolInfo, Message, SystemStats, ConversationSummary, NotificationItem, DiagnosticInfo, VoiceInfo, CodingProject, ProjectFileEntry, PersonaInfo, Skill, SkillActivity, GitStatus, ResearchJob, Workflow, WorkflowRun, WorkflowApproval, WorkflowStep } from '../types'
+import type { JarvisSettings, HealthStatus, MemoryItem, MemoryDashboard, SessionMemory, MemoryAuditEntry, Automation, ToolInfo, Message, SystemStats, ConversationSummary, NotificationItem, DiagnosticInfo, VoiceInfo, CodingProject, ProjectFileEntry, PersonaInfo, Skill, SkillActivity, GitStatus, ResearchJob, Workflow, WorkflowRun, WorkflowApproval, WorkflowStep, AdaptivePreference, Suggestion, EnvironmentProfile, PersonalizationContext, PersonalizationAnalytics } from '../types'
 
 const isTauri = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__
 const API_BASE = isTauri ? 'http://127.0.0.1:8000/api' : '/api'
@@ -1190,5 +1190,89 @@ export const api = {
 
   async denyApproval(id: string): Promise<WorkflowApproval> {
     return request<WorkflowApproval>(`/approvals/${encodeURIComponent(id)}/deny`, { method: 'POST' })
+  },
+
+  async getPersonalization(profile = 'jarvis'): Promise<{ context: PersonalizationContext; suggestions: Suggestion[]; profile: string }> {
+    return request(`/personalization?profile=${encodeURIComponent(profile)}`)
+  },
+
+  async getAdaptivePreferences(profile = 'jarvis', project?: string, sessionId?: string): Promise<AdaptivePreference[]> {
+    const params = new URLSearchParams({ profile })
+    if (project) params.set('project', project)
+    if (sessionId) params.set('session_id', sessionId)
+    return request<AdaptivePreference[]>(`/personalization/preferences?${params.toString()}`)
+  },
+
+  async setAdaptivePreference(payload: { key: string; value: string; source?: string; confidence?: string; profile?: string; project?: string; session_id?: string }): Promise<AdaptivePreference> {
+    return request<AdaptivePreference>('/personalization/preferences', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
+
+  async updateAdaptivePreference(id: string, payload: { key?: string; value?: string; source?: string; confidence?: string; profile?: string; project?: string; session_id?: string }): Promise<AdaptivePreference> {
+    return request<AdaptivePreference>(`/personalization/preferences/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    })
+  },
+
+  async deleteAdaptivePreference(id: string): Promise<{ status: string }> {
+    return request(`/personalization/preferences/${encodeURIComponent(id)}`, { method: 'DELETE' })
+  },
+
+  async forgetPreference(payload: { preference_id?: string; key?: string; profile?: string }): Promise<{ status: string; count?: number }> {
+    return request('/personalization/forget', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
+
+  async getPersonalizationSuggestions(profile = 'jarvis'): Promise<{ suggestions: Suggestion[] }> {
+    return request(`/personalization/suggestions?profile=${encodeURIComponent(profile)}`)
+  },
+
+  async getEnvironmentProfile(): Promise<EnvironmentProfile> {
+    return request<EnvironmentProfile>('/personalization/environment')
+  },
+
+  async getPersonalizationAnalytics(profile = 'jarvis'): Promise<PersonalizationAnalytics> {
+    return request<PersonalizationAnalytics>(`/personalization/analytics?profile=${encodeURIComponent(profile)}`)
+  },
+
+  async recordFeedback(payload: { user_message: string; assistant_response: string; feedback: string; profile?: string }): Promise<{ status: string; learned?: any }> {
+    return request('/personalization/feedback', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
+
+  async exportPersonalization(profile = 'jarvis'): Promise<any> {
+    return request(`/personalization/export?profile=${encodeURIComponent(profile)}`, { method: 'POST' })
+  },
+
+  async importPersonalization(payload: { data: any; profile?: string }): Promise<{ status: string; count: number }> {
+    return request('/personalization/import', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
+
+  async getPersonalizationWorkflows(): Promise<{ workflows: any[] }> {
+    return request('/personalization/workflows')
+  },
+
+  async recordWorkflowAction(payload: { action: string; tool: string; arguments: Record<string, any> }): Promise<{ status: string }> {
+    return request('/personalization/workflow/record', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
+
+  async recordTaskOutcome(payload: Record<string, any>): Promise<{ status: string }> {
+    return request('/personalization/task-outcome', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
   },
 }

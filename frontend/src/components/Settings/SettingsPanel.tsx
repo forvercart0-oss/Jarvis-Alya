@@ -15,6 +15,7 @@ import { GestureSettings } from './GestureSettings'
 import { CallSettings } from './CallSettings'
 import { VisionSettings } from './VisionSettings'
 import { WorkflowSettings } from './WorkflowSettings'
+import { PersonalizationSettings } from './PersonalizationSettings'
 
 interface SettingsPanelProps {
   settings: JarvisSettings | null
@@ -24,7 +25,7 @@ interface SettingsPanelProps {
   onClose: () => void
 }
 
-type SettingsTab = 'general' | 'persona' | 'ai' | 'local_ai' | 'voice' | 'memory' | 'appearance' | 'security' | 'advanced' | 'media' | 'gestures' | 'calls' | 'vision' | 'workflows'
+type SettingsTab = 'general' | 'persona' | 'ai' | 'local_ai' | 'voice' | 'memory' | 'appearance' | 'security' | 'advanced' | 'media' | 'gestures' | 'calls' | 'vision' | 'workflows' | 'personalization'
 
 export function SettingsPanel({ settings, persona, onSwitchPersona, onUpdate, onClose }: SettingsPanelProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>('general')
@@ -63,6 +64,7 @@ export function SettingsPanel({ settings, persona, onSwitchPersona, onUpdate, on
              { id: 'calls', label: 'Calls' },
              { id: 'vision', label: 'Vision' },
              { id: 'workflows', label: 'Workflows' },
+             { id: 'personalization', label: 'Personalization' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -95,6 +97,7 @@ export function SettingsPanel({ settings, persona, onSwitchPersona, onUpdate, on
           {activeTab === 'calls' && <CallSettings settings={settings} onUpdate={onUpdate} />}
           {activeTab === 'vision' && <VisionSettings settings={settings} onUpdate={onUpdate} />}
           {activeTab === 'workflows' && <WorkflowSettings settings={settings} onUpdate={onUpdate} />}
+          {activeTab === 'personalization' && <PersonalizationSettings settings={settings} onUpdate={onUpdate} />}
         </div>
       </div>
     </div>

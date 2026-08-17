@@ -109,3 +109,118 @@ class MemoryService:
 
     def cleanup_expired(self):
         return self.memory.store._now()
+
+    def remember_adaptive_preference(
+        self,
+        key: str,
+        value: str,
+        source: str = "explicit_user",
+        confidence: str = "high",
+        profile: str = "jarvis",
+        project: str = "",
+        session_id: str = "",
+        metadata: dict | None = None,
+    ) -> dict:
+        result = self.memory.remember_adaptive_preference(
+            key=key,
+            value=value,
+            source=source,
+            confidence=confidence,
+            profile=profile,
+            project=project,
+            session_id=session_id,
+            metadata=metadata,
+        )
+        self._broadcast("preference_learned", result)
+        return result
+
+    def get_adaptive_preferences(self, profile: str = "jarvis", project: str = "", session_id: str = "") -> list[dict]:
+        return self.memory.get_adaptive_preferences(profile=profile, project=project, session_id=session_id)
+
+    def forget_adaptive_preference(self, preference_id: str) -> bool:
+        ok = self.memory.forget_adaptive_preference(preference_id)
+        if ok:
+            self._broadcast("preference_deleted", {"preference_id": preference_id})
+        return ok
+
+    def forget_adaptive_key(self, key: str, profile: str = "jarvis") -> int:
+        count = self.memory.forget_adaptive_key(key, profile=profile)
+        if count:
+            self._broadcast("preference_deleted", {"key": key, "count": count})
+        return count
+
+    def get_personalization_context(self, profile: str = "jarvis", project: str = "", session_id: str = "") -> dict:
+        return self.memory.get_personalization_context(profile=profile, project=project, session_id=session_id)
+
+    def get_suggestions(self, profile: str = "jarvis") -> list[dict]:
+        return self.memory.get_suggestions(profile=profile)
+
+    def record_task_outcome(
+        self,
+        task_type: str,
+        agents_used: list[str],
+        tools_used: list[str],
+        duration_ms: int,
+        success: bool,
+        user_feedback: str = "",
+        retry_count: int = 0,
+        provider: str = "",
+    ) -> None:
+        self.memory.record_task_outcome(
+            task_type=task_type,
+            agents_used=agents_used,
+            tools_used=tools_used,
+            duration_ms=duration_ms,
+            success=success,
+            user_feedback=user_feedback,
+            retry_count=retry_count,
+            provider=provider,
+        )
+
+    def export_personalization(self, profile: str = "jarvis") -> dict:
+        return self.memory.export_personalization(profile=profile)
+
+    def import_personalization(self, data: dict, profile: str = "jarvis") -> int:
+        return self.memory.import_personalization(data, profile=profile)
+
+    def get_provider_preference(self, task_type: str) -> str | None:
+        return self.memory.get_provider_preference(task_type)
+
+    def get_latency_preference(self, task_type: str) -> dict | None:
+        return self.memory.get_latency_preference(task_type)
+
+    def get_environment_profile(self) -> dict:
+        from memory.environment import environment_profiler
+        import asyncio
+        try:
+            loop = asyncio.get_event_loop()
+            profile = loop.run_until_complete(environment_profiler.get_profile())
+            return profile.to_dict()
+        except Exception:
+            return environment_profiler.get_profile().to_dict()
+
+    def get_analytics(self, profile: str = "jarvis") -> dict:
+        outcomes = self.memory.adaptive._task_outcomes if hasattr(self.memory, 'adaptive') else []
+        total = len(outcomes)
+        successes = sum(1 for o in outcomes if o.get("success"))
+        providers: dict[str, int] = {}
+        tools: dict[str, int] = {}
+        agents: dict[str, int] = {}
+        for o in outcomes:
+            p = o.get("provider")
+            if p:
+                providers[p] = providers.get(p, 0) + 1
+            for t in o.get("tools_used", []):
+                tools[t] = tools.get(t, 0) + 1
+            for a in o.get("agents_used", []):
+                agents[a] = agents.get(a, 0) + 1
+        return {
+            "tasks_completed": total,
+            "tasks_failed": total - successes,
+            "success_rate": successes / total if total else 0,
+            "sample_size": total,
+            "profile": profile,
+            "providers": providers,
+            "tools": tools,
+            "agents": agents,
+        }
