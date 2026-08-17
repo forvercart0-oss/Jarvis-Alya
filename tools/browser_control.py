@@ -1,4 +1,4 @@
-"""Browser automation tools for JARVIS Phase 3.
+"""Browser automation tools for JARVIS Phase 9.
 
 These tools use the Playwright-based BrowserManager for controlled
 browser interaction. They integrate with the existing tool registry
@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any
 
 from browser.actions import BrowserActions
 from browser.manager import BrowserManager
@@ -141,6 +140,63 @@ class BrowserTypeTool:
         return ToolResult(success=False, error=result.get("error", "Type failed."), requires_confirmation=False)
 
 
+class BrowserPressTool:
+    name = "browser_press"
+    description = "Press a keyboard key in the browser."
+    parameters = {
+        "type": "object",
+        "properties": {
+            "key": {"type": "string", "description": "Key to press, e.g. Enter, Escape, Tab"},
+            "session_id": {"type": "string"},
+        },
+        "required": ["key"],
+    }
+
+    async def execute(self, key: str, session_id: str = "default", **kwargs) -> ToolResult:
+        result = await _get_browser().press(key, session_id)
+        if result.get("success"):
+            return ToolResult(success=True, result=result)
+        return ToolResult(success=False, error=result.get("error", "Press failed."))
+
+
+class BrowserScrollTool:
+    name = "browser_scroll"
+    description = "Scroll the browser page."
+    parameters = {
+        "type": "object",
+        "properties": {
+            "direction": {"type": "string", "description": "Scroll direction: up or down"},
+            "amount": {"type": "integer", "description": "Pixels to scroll"},
+            "session_id": {"type": "string"},
+        },
+    }
+
+    async def execute(self, direction: str = "down", amount: int = 500,
+                     session_id: str = "default", **kwargs) -> ToolResult:
+        result = await _get_browser().scroll(direction, amount, session_id)
+        if result.get("success"):
+            return ToolResult(success=True, result=result)
+        return ToolResult(success=False, error=result.get("error", "Scroll failed."))
+
+
+class BrowserWaitTool:
+    name = "browser_wait"
+    description = "Wait for a specified number of seconds in the browser."
+    parameters = {
+        "type": "object",
+        "properties": {
+            "seconds": {"type": "number", "description": "Seconds to wait"},
+            "session_id": {"type": "string"},
+        },
+    }
+
+    async def execute(self, seconds: float = 1.0, session_id: str = "default", **kwargs) -> ToolResult:
+        result = await _get_browser().wait(seconds, session_id)
+        if result.get("success"):
+            return ToolResult(success=True, result=result)
+        return ToolResult(success=False, error=result.get("error", "Wait failed."))
+
+
 class BrowserReadTool:
     name = "browser_read"
     description = "Read the visible text content of the current browser page."
@@ -156,19 +212,112 @@ class BrowserReadTool:
         return ToolResult(success=False, error=result.get("error", "Read failed."))
 
 
-class BrowserScreenshotTool:
-    name = "browser_screenshot"
-    description = "Take a screenshot of the current browser page."
+class BrowserExtractLinksTool:
+    name = "browser_extract_links"
+    description = "Extract visible links from the current browser page."
     parameters = {
         "type": "object",
         "properties": {"session_id": {"type": "string"}},
     }
 
     async def execute(self, session_id: str = "default", **kwargs) -> ToolResult:
-        result = await _get_browser().screenshot(session_id)
+        result = await _get_browser().extract_links(session_id)
+        if result.get("success"):
+            return ToolResult(success=True, result=result)
+        return ToolResult(success=False, error=result.get("error", "Extract links failed."))
+
+
+class BrowserScreenshotTool:
+    name = "browser_screenshot"
+    description = "Take a screenshot of the current browser page."
+    parameters = {
+        "type": "object",
+        "properties": {
+            "session_id": {"type": "string"},
+            "full_page": {"type": "boolean", "description": "Capture full page"},
+        },
+    }
+
+    async def execute(self, session_id: str = "default", full_page: bool = False, **kwargs) -> ToolResult:
+        result = await _get_browser().screenshot(session_id, full_page)
         if result.get("success"):
             return ToolResult(success=True, result=result)
         return ToolResult(success=False, error=result.get("error", "Screenshot failed."))
+
+
+class BrowserOpenTabTool:
+    name = "browser_open_tab"
+    description = "Open a new browser tab."
+    parameters = {
+        "type": "object",
+        "properties": {
+            "url": {"type": "string", "description": "URL to open in new tab"},
+            "session_id": {"type": "string"},
+        },
+    }
+
+    async def execute(self, url: str = "about:blank", session_id: str = "default", **kwargs) -> ToolResult:
+        result = await _get_browser().open_tab(url, session_id)
+        if result.get("success"):
+            return ToolResult(success=True, result=result)
+        return ToolResult(success=False, error=result.get("error", "Open tab failed."))
+
+
+class BrowserCloseTabTool:
+    name = "browser_close_tab"
+    description = "Close a browser tab."
+    parameters = {
+        "type": "object",
+        "properties": {
+            "tab_id": {"type": "string", "description": "Tab ID to close"},
+            "session_id": {"type": "string"},
+        },
+        "required": ["tab_id"],
+    }
+
+    async def execute(self, tab_id: str, session_id: str = "default", **kwargs) -> ToolResult:
+        result = await _get_browser().close_tab(tab_id, session_id)
+        if result.get("success"):
+            return ToolResult(success=True, result=result)
+        return ToolResult(success=False, error=result.get("error", "Close tab failed."))
+
+
+class BrowserSwitchTabTool:
+    name = "browser_switch_tab"
+    description = "Switch to a different browser tab."
+    parameters = {
+        "type": "object",
+        "properties": {
+            "tab_id": {"type": "string", "description": "Tab ID to switch to"},
+            "session_id": {"type": "string"},
+        },
+        "required": ["tab_id"],
+    }
+
+    async def execute(self, tab_id: str, session_id: str = "default", **kwargs) -> ToolResult:
+        result = await _get_browser().switch_tab(tab_id, session_id)
+        if result.get("success"):
+            return ToolResult(success=True, result=result)
+        return ToolResult(success=False, error=result.get("error", "Switch tab failed."))
+
+
+class BrowserDownloadTool:
+    name = "browser_download"
+    description = "Download a file from a URL using the browser."
+    parameters = {
+        "type": "object",
+        "properties": {
+            "url": {"type": "string", "description": "URL to download from"},
+            "session_id": {"type": "string"},
+        },
+        "required": ["url"],
+    }
+
+    async def execute(self, url: str, session_id: str = "default", **kwargs) -> ToolResult:
+        result = await _get_browser().download(url, session_id)
+        if result.get("success"):
+            return ToolResult(success=True, result=result)
+        return ToolResult(success=False, error=result.get("error", "Download failed."))
 
 
 class BrowserStatusTool:

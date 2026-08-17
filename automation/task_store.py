@@ -180,7 +180,66 @@ class TaskStore:
                 return []
         return raw
 
-    # ------------------------------------------------------------- parse
+    def add_artifact(self, task_id: str, artifact_type: str, path: str = "", url: str = "", metadata: dict | None = None) -> dict:
+        from automation.task_models import TaskArtifact
+        artifact = TaskArtifact(
+            artifact_id=str(uuid.uuid4())[:8],
+            task_id=task_id,
+            type=artifact_type,
+            path=path,
+            url=url,
+            metadata=metadata or {},
+        )
+        task = self.get_task(task_id)
+        if not task:
+            return artifact.to_dict()
+        artifacts = task.get("artifacts") or []
+        if isinstance(artifacts, str):
+            try:
+                artifacts = json.loads(artifacts)
+            except Exception:
+                artifacts = []
+        artifacts.append(artifact.to_dict())
+        self.update_task(task_id, artifacts=artifacts)
+        return artifact.to_dict()
+
+    def add_dependency(self, task_id: str, depends_on_task_id: str) -> dict:
+        from automation.task_models import TaskDependency
+        dep = TaskDependency(
+            dependency_id=str(uuid.uuid4())[:8],
+            task_id=task_id,
+            depends_on_task_id=depends_on_task_id,
+        )
+        task = self.get_task(task_id)
+        if not task:
+            return dep.to_dict()
+        deps = task.get("dependencies") or []
+        if isinstance(deps, str):
+            try:
+                deps = json.loads(deps)
+            except Exception:
+                deps = []
+        deps.append(dep.to_dict())
+        self.update_task(task_id, dependencies=deps)
+        return dep.to_dict()
+
+    def add_audit(self, task_id: str, event: str, detail: dict | None = None) -> dict:
+        from automation.task_models import TaskAudit
+        audit = TaskAudit(
+            audit_id=str(uuid.uuid4())[:8],
+            task_id=task_id,
+            event=event,
+            detail=detail or {},
+        )
+        return audit.to_dict()
+
+    def get_task_history(self, limit: int = 50) -> list[dict]:
+        return self.get_tasks()[:limit]
+
+    def get_tasks_by_project(self, project: str) -> list[dict]:
+        tasks = self.get_tasks()
+        return [t for t in tasks if t.get("project") == project][:50]
+
     def _parse(self, record: dict) -> dict:
         parsed = dict(record)
         for key in ("metadata", "checkpoints", "logs"):

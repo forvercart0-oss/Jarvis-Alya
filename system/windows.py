@@ -117,5 +117,46 @@ class WindowsPlatform(SystemPlatform):
     async def set_do_not_disturb(self, enabled: bool) -> dict:
         return {"ok": False, "error": "Do Not Disturb requires nircmd on Windows"}
 
+    async def list_windows(self) -> dict:
+        try:
+            import win32gui
+            windows = []
+            def callback(hwnd, _):
+                if win32gui.IsWindowVisible(hwnd):
+                    title = win32gui.GetWindowText(hwnd)
+                    if title:
+                        windows.append(title)
+            win32gui.EnumWindows(callback, None)
+            return {"success": True, "windows": windows}
+        except Exception as exc:
+            return {"success": False, "error": str(exc)}
+
+    async def get_active_window(self) -> dict:
+        try:
+            import win32gui
+            import win32process
+            hwnd = win32gui.GetForegroundWindow()
+            _, pid = win32process.GetWindowThreadProcessId(hwnd)
+            title = win32gui.GetWindowText(hwnd)
+            rect = win32gui.GetWindowRect(hwnd)
+            return {
+                "app": str(pid),
+                "title": title,
+                "x": rect[0], "y": rect[1],
+                "width": rect[2] - rect[0], "height": rect[3] - rect[1],
+            }
+        except Exception as exc:
+            return {"error": str(exc)}
+
+    async def get_screen_info(self) -> dict:
+        try:
+            import win32api
+            screens = win32api.EnumDisplayMonitors(None, None)
+            primary = win32api.GetMonitorInfo(screens[0]) if screens else {}
+            rect = primary.get("Monitor", (0, 0, 0, 0))
+            return {"width": rect[2] - rect[0], "height": rect[3] - rect[1], "backend": "win32"}
+        except Exception as exc:
+            return {"width": 0, "height": 0, "error": str(exc), "backend": "unknown"}
+
     def info(self) -> str:
         return f"{platform.system()} {platform.release()} ({platform.machine()})"

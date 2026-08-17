@@ -8,14 +8,16 @@ from enum import StrEnum
 class TaskState(StrEnum):
     PENDING = "pending"
     PLANNING = "planning"
-    WAITING_PERMISSION = "waiting_permission"
+    READY = "ready"
     RUNNING = "running"
+    WAITING = "waiting"
     PAUSED = "paused"
-    WAITING_USER = "waiting_user"
     VERIFYING = "verifying"
+    NEEDS_APPROVAL = "needs_approval"
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
+    BLOCKED = "blocked"
 
 
 class TaskComplexity(StrEnum):
@@ -35,11 +37,13 @@ class TaskPriority(StrEnum):
 ACTIVE_STATES = {
     TaskState.PENDING,
     TaskState.PLANNING,
-    TaskState.WAITING_PERMISSION,
+    TaskState.READY,
     TaskState.RUNNING,
+    TaskState.WAITING,
     TaskState.PAUSED,
-    TaskState.WAITING_USER,
     TaskState.VERIFYING,
+    TaskState.NEEDS_APPROVAL,
+    TaskState.BLOCKED,
 }
 
 # States that indicate a task has finished
@@ -53,5 +57,6 @@ TERMINAL_STATES = {
 RESUMABLE_STATES = {
     TaskState.RUNNING,
     TaskState.PAUSED,
-    TaskState.WAITING_USER,
+    TaskState.WAITING,
+    TaskState.NEEDS_APPROVAL,
 }

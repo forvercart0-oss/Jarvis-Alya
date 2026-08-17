@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { OrbState, Message, ToolCall, SystemStats, JarvisSettings, MemoryItem, Automation, ToolInfo, HealthStatus, VoiceInfo, DiagnosticInfo, CodingProject, PersonaInfo, Skill, TaskItem, TaskPlan, SeriousModeState, ResearchJob } from '../types'
+import type { OrbState, Message, ToolCall, SystemStats, JarvisSettings, MemoryItem, Automation, ToolInfo, HealthStatus, VoiceInfo, DiagnosticInfo, CodingProject, PersonaInfo, Skill, TaskItem, TaskPlan, SeriousModeState, ResearchJob, VisionStatus } from '../types'
 import { api } from '../services/api'
 import { WebSocketManager } from '../services/websocket'
 
@@ -26,7 +26,7 @@ export function useJarvis() {
   const [streaming, setStreaming] = useState(false)
   const [pendingToolConfirmation, setPendingToolConfirmation] = useState<{ tool: string; arguments: Record<string, any>; message: string; tool_call_id: string } | null>(null)
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null)
-  const [visionStatus, setVisionStatus] = useState<{ enabled: boolean; provider?: string | null } | null>(null)
+  const [visionStatus, setVisionStatus] = useState<VisionStatus | null>(null)
   const [tasks, setTasks] = useState<TaskItem[]>([])
   const [activeTask, setActiveTask] = useState<TaskItem | null>(null)
   const [taskPlan, setTaskPlan] = useState<TaskPlan | null>(null)
@@ -227,6 +227,18 @@ export function useJarvis() {
       window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: `Vision: ${data.error || 'Failed'}`, type: 'error', data } }))
     })
 
+    ws.on('vision_qa_completed', (_event, data: any) => {
+      window.dispatchEvent(new CustomEvent('jarvis-vision-qa', { detail: data }))
+    })
+
+    ws.on('vision_ui_detected', (_event, data: any) => {
+      window.dispatchEvent(new CustomEvent('jarvis-vision-ui', { detail: data }))
+    })
+
+    ws.on('vision_sensitive_detected', (_event, data: any) => {
+      window.dispatchEvent(new CustomEvent('jarvis-vision-sensitive', { detail: data }))
+    })
+
     ws.on('voice_state', (_event, data: any) => {
       if (data?.state === 'speaking') setOrbState('speaking')
       else if (data?.state === 'listening') setOrbState('listening')
@@ -240,6 +252,27 @@ export function useJarvis() {
 
     ws.on('vision_ready', () => {
       setVisionStatus((prev) => ({ ...prev, enabled: true }))
+    })
+
+    ws.on('vision_compare_completed', (_event, data: any) => {
+      window.dispatchEvent(new CustomEvent('jarvis-vision-compare', { detail: data }))
+    })
+
+    ws.on('camera_started', (_event, data: any) => {
+      setVisionStatus((prev) => ({ ...(prev || { enabled: false, provider: null }), camera_active: true }))
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: 'Camera activated', type: 'info', data } }))
+    })
+
+    ws.on('camera_stopped', (_event, _data: any) => {
+      setVisionStatus((prev) => ({ ...(prev || { enabled: false, provider: null }), camera_active: false }))
+    })
+
+    ws.on('screen_capture_started', (_event, data: any) => {
+      window.dispatchEvent(new CustomEvent('jarvis-vision-capture-start', { detail: data }))
+    })
+
+    ws.on('screen_capture_stopped', (_event, data: any) => {
+      window.dispatchEvent(new CustomEvent('jarvis-vision-capture-stop', { detail: data }))
     })
 
     ws.on('task_created', (_event, data: any) => {
@@ -297,6 +330,18 @@ export function useJarvis() {
       setTasks((prev) => prev.map((t) => t.id === data.task_id ? { ...t, status: 'running' } : t))
     })
 
+    ws.on('task_retrying', (_event, data: any) => {
+      setTasks((prev) => prev.map((t) => t.id === data.task_id ? { ...t, status: 'running', retries: (t.retries || 0) + 1 } : t))
+    })
+
+    ws.on('task_queue', (_event, _data: any) => {
+      // handled by task components
+    })
+
+    ws.on('task_autonomy_updated', (_event, _data: any) => {
+      // handled by task settings
+    })
+
     ws.on('task_permission_required', (_event, data: any) => {
       setPendingToolConfirmation({
         tool: data.tool || 'task_step',
@@ -324,6 +369,22 @@ export function useJarvis() {
 
     ws.on('memory_deleted', (_event, data: any) => {
       _setMemories((prev) => prev.filter((m) => m.id !== data.id))
+    })
+
+    ws.on('memory_merged', (_event, data: any) => {
+      _setMemories((prev) => prev.filter((m) => m.id !== data.removed_id))
+    })
+
+    ws.on('memory_conflict', (_event, data: any) => {
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: `Memory conflict: ${data.key || 'unknown'}`, type: 'warning', data } }))
+    })
+
+    ws.on('memory_search_completed', (_event, _data: any) => {
+      // handled by search components
+    })
+
+    ws.on('memory_health', (_event, _data: any) => {
+      // handled by memory health components
     })
 
     ws.on('reminder_triggered', (_event, data: any) => {
@@ -439,6 +500,280 @@ export function useJarvis() {
       _setResearchJob((prev: any) => prev ? { ...prev, document_path: data.document_path || '' } : prev)
       window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: `Research document created: ${data.document_path}`, type: 'success' } }))
     })
+
+    ws.on('agent_started', (_event, _data: any) => {
+      setOrbState('thinking')
+    })
+
+    ws.on('agent_plan', (_event, _data: any) => {
+      setOrbState('thinking')
+    })
+
+    ws.on('agent_step_started', (_event, _data: any) => {
+      setOrbState('processing')
+    })
+
+    ws.on('agent_step_completed', (_event, _data: any) => {
+      setOrbState('thinking')
+    })
+
+    ws.on('agent_completed', (_event, _data: any) => {
+      setOrbState('idle')
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: 'Agent task completed', type: 'success' } }))
+    })
+
+    ws.on('agent_failed', (_event, _data: any) => {
+      setOrbState('error')
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: 'Agent failed: Unknown error', type: 'error' } }))
+    })
+
+    ws.on('agent_cancelled', (_event, _data: any) => {
+      setOrbState('idle')
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: 'Agent task cancelled', type: 'warning' } }))
+    })
+
+    ws.on('agent_error', (_event, _data: any) => {
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: 'Agent error: Unknown', type: 'error' } }))
+    })
+
+    ws.on('agent_fix_started', (_event, _data: any) => {
+      setOrbState('processing')
+    })
+
+    ws.on('agent_loop_started', (_event, _data: any) => {
+      setOrbState('thinking')
+    })
+
+    ws.on('agent_state_changed', (_event, data: any) => {
+      const state = data?.state
+      if (state === 'observing' || state === 'verifying' || state === 'recovering') {
+        setOrbState('processing')
+      } else if (state === 'waiting_for_permission' || state === 'waiting_for_user') {
+        setOrbState('listening')
+      } else if (state === 'paused') {
+        setOrbState('idle')
+      } else if (state === 'executing') {
+        setOrbState('thinking')
+      } else if (state === 'completed') {
+        setOrbState('idle')
+      } else if (state === 'failed' || state === 'cancelled') {
+        setOrbState('error')
+      }
+    })
+
+    ws.on('agent_observing', (_event, _data: any) => {
+      setOrbState('processing')
+    })
+
+    ws.on('agent_verifying', (_event, _data: any) => {
+      setOrbState('processing')
+    })
+
+    ws.on('agent_recovering', (_event, _data: any) => {
+      setOrbState('processing')
+    })
+
+    ws.on('agent_paused', (_event, _data: any) => {
+      setOrbState('idle')
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: 'Agent task paused', type: 'warning' } }))
+    })
+
+    ws.on('agent_resumed', (_event, _data: any) => {
+      setOrbState('thinking')
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: 'Agent task resumed', type: 'info' } }))
+    })
+
+    ws.on('agent_confirmation_required', (_event, data: any) => {
+      setOrbState('listening')
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: 'Agent requires permission', type: 'warning', data } }))
+    })
+
+    ws.on('orchestrator_started', (_event, _data: any) => {
+      setOrbState('thinking')
+    })
+
+    ws.on('orchestrator_plan_created', (_event, _data: any) => {
+      setOrbState('thinking')
+    })
+
+    ws.on('orchestrator_completed', (_event, _data: any) => {
+      setOrbState('idle')
+    })
+
+    ws.on('orchestrator_cancelled', (_event, _data: any) => {
+      setOrbState('idle')
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: 'Orchestration cancelled', type: 'warning' } }))
+    })
+
+    ws.on('browser_started', (_event, _data: any) => {
+      setOrbState('processing')
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: 'Browser started', type: 'info' } }))
+    })
+
+    ws.on('browser_closed', (_event, _data: any) => {
+      setOrbState('idle')
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: 'Browser closed', type: 'warning' } }))
+    })
+
+    ws.on('browser_navigating', (_event, _data: any) => {
+      setOrbState('processing')
+    })
+
+    ws.on('browser_navigated', (_event, _data: any) => {
+      setOrbState('idle')
+    })
+
+    ws.on('browser_page_loaded', (_event, _data: any) => {
+      setOrbState('idle')
+    })
+
+    ws.on('browser_action_started', (_event, _data: any) => {
+      setOrbState('processing')
+    })
+
+    ws.on('browser_action_finished', (_event, _data: any) => {
+      setOrbState('idle')
+    })
+
+    ws.on('browser_error', (_event, _data: any) => {
+      setOrbState('error')
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: `Browser error: ${_data?.error || 'Unknown'}`, type: 'error' } }))
+    })
+
+    ws.on('browser_waiting_confirmation', (_event, _data: any) => {
+      setOrbState('thinking')
+    })
+
+    ws.on('browser_takeover', (_event, _data: any) => {
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: 'Browser takeover mode enabled', type: 'info' } }))
+    })
+
+    ws.on('browser_captcha_detected', (_event, _data: any) => {
+      setOrbState('thinking')
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: 'CAPTCHA detected. Please complete it manually.', type: 'warning' } }))
+    })
+
+    ws.on('browser_login_detected', (_event, _data: any) => {
+      setOrbState('thinking')
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: 'Login page detected. Please log in manually.', type: 'warning' } }))
+    })
+
+    ws.on('browser_purchase_detected', (_event, _data: any) => {
+      setOrbState('thinking')
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: 'Purchase page detected. Please confirm manually.', type: 'warning' } }))
+    })
+
+    ws.on('computer_started', (_event, _data: any) => {
+      setOrbState('processing')
+    })
+
+    ws.on('computer_stopped', (_event, _data: any) => {
+      setOrbState('idle')
+    })
+
+    ws.on('computer_action_started', (_event, _data: any) => {
+      setOrbState('processing')
+    })
+
+    ws.on('computer_action_finished', (_event, _data: any) => {
+      setOrbState('idle')
+    })
+
+    ws.on('computer_error', (_event, _data: any) => {
+      setOrbState('error')
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: `Computer error: ${_data?.error || 'Unknown'}`, type: 'error' } }))
+    })
+
+    ws.on('computer_waiting_confirmation', (_event, _data: any) => {
+      setOrbState('thinking')
+    })
+
+    ws.on('computer_observing', (_event, _data: any) => {
+      setOrbState('thinking')
+    })
+
+    ws.on('computer_planning', (_event, _data: any) => {
+      setOrbState('thinking')
+    })
+
+    ws.on('computer_verifying', (_event, _data: any) => {
+      setOrbState('thinking')
+    })
+
+    ws.on('computer_paused', (_event, _data: any) => {
+      setOrbState('idle')
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: 'Computer automation paused', type: 'warning' } }))
+    })
+
+    ws.on('computer_takeover', (_event, _data: any) => {
+      setOrbState('idle')
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: 'Computer takeover mode enabled', type: 'info' } }))
+    })
+
+    ws.on('computer_completed', (_event, _data: any) => {
+      setOrbState('idle')
+    })
+
+    ws.on('computer_cancelled', (_event, _data: any) => {
+      setOrbState('idle')
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: 'Computer automation cancelled', type: 'warning' } }))
+    })
+
+    ws.on('workflow_created', (_event, _data: any) => {
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: `Workflow created: ${_data?.name || 'Untitled'}`, type: 'success' } }))
+    })
+
+    ws.on('workflow_started', (_event, _data: any) => {
+      setOrbState('processing')
+    })
+
+    ws.on('workflow_step_started', (_event, _data: any) => {
+      setOrbState('processing')
+    })
+
+    ws.on('workflow_step_completed', (_event, _data: any) => {
+      setOrbState('thinking')
+    })
+
+    ws.on('workflow_step_failed', (_event, _data: any) => {
+      setOrbState('error')
+    })
+
+    ws.on('workflow_paused', (_event, _data: any) => {
+      setOrbState('idle')
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: 'Workflow paused', type: 'warning' } }))
+    })
+
+    ws.on('workflow_resumed', (_event, _data: any) => {
+      setOrbState('processing')
+    })
+
+    ws.on('workflow_waiting', (_event, _data: any) => {
+      setOrbState('thinking')
+    })
+
+    ws.on('workflow_completed', (_event, _data: any) => {
+      setOrbState('idle')
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: 'Workflow completed', type: 'success' } }))
+    })
+
+    ws.on('workflow_failed', (_event, _data: any) => {
+      setOrbState('idle')
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: `Workflow failed: ${_data?.errors?.length || 0} errors`, type: 'error' } }))
+    })
+
+    ws.on('workflow_cancelled', (_event, _data: any) => {
+      setOrbState('idle')
+    })
+
+    ws.on('approval_requested', (_event, _data: any) => {
+      setOrbState('thinking')
+      window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: `Approval required: ${_data?.action || 'workflow action'}`, type: 'warning' } }))
+    })
+
+    ws.on('approval_resolved', (_event, _data: any) => {
+      setOrbState('idle')
+    })
   }, [])
 
 
@@ -528,6 +863,68 @@ export function useJarvis() {
         if (researchJob?.id) {
           cancelResearch(researchJob.id)
         }
+        return
+      }
+
+      const browserKeywords = ['open browser', 'open google', 'search for', 'go to', 'navigate to', 'open github', 'open youtube']
+      if (browserKeywords.some(k => lower.includes(k))) {
+        const urlMatch = text.match(/(?:open|go to|navigate to|search for)\s+(.+)/i)
+        const target = urlMatch ? urlMatch[1].trim() : text
+        if (target) {
+          createBrowserSession('chromium', false).then(() => {
+            browserNavigate('default', target).then((res) => {
+              if (res?.success) {
+                window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: `Opened ${target}`, type: 'success' } }))
+              }
+            })
+          })
+          return
+        }
+      }
+      if (lower === 'stop browser' || lower === 'close browser' || lower === 'cancel browser') {
+        browserStop('default')
+        return
+      }
+
+      const computerKeywords = ['open firefox', 'open chrome', 'open code', 'open terminal', 'click at', 'type ']
+      if (computerKeywords.some(k => lower.includes(k))) {
+        if (lower.includes('click at')) {
+          const coordMatch = text.match(/click at\s+(\d+)\s*[,x]\s*(\d+)/i)
+          if (coordMatch) {
+            const x = parseInt(coordMatch[1], 10)
+            const y = parseInt(coordMatch[2], 10)
+            computerAction('default', 'click_at', { x, y, button: 1 }).then((res) => {
+              if (res?.success) {
+                window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: `Clicked at ${x}, ${y}`, type: 'success' } }))
+              }
+            })
+            return
+          }
+        }
+        if (lower.startsWith('type ')) {
+          const typeText = text.slice(5).trim()
+          if (typeText) {
+            computerAction('default', 'type_text', { text: typeText }).then((res) => {
+              if (res?.success) {
+                window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: `Typed: ${typeText}`, type: 'success' } }))
+              }
+            })
+            return
+          }
+        }
+        const appMatch = text.match(/(?:open)\s+(.+)/i)
+        if (appMatch) {
+          const app = appMatch[1].trim()
+          computerAction('default', 'open_application', { app }).then((res) => {
+            if (res?.success) {
+              window.dispatchEvent(new CustomEvent('jarvis-notification', { detail: { message: `Opening ${app}`, type: 'success' } }))
+            }
+          })
+          return
+        }
+      }
+      if (lower === 'stop computer' || lower === 'stop controlling' || lower === 'cancel computer') {
+        computerStop()
         return
       }
 
@@ -831,6 +1228,177 @@ export function useJarvis() {
     }
   }, [])
 
+  const startAgent = useCallback(async (message: string, project?: string, options?: { project_root?: string; persona?: string; autonomy_level?: string; dry_run?: boolean }) => {
+    try {
+      const res = await api.agentStartWithOptions(message, { project, ...options })
+      return res
+    } catch {
+      return null
+    }
+  }, [])
+
+  const approveAgent = useCallback(async (sessionId: string) => {
+    try {
+      const res = await api.agentApprove(sessionId)
+      return res
+    } catch {
+      return null
+    }
+  }, [])
+
+  const cancelAgent = useCallback(async (sessionId: string) => {
+    try {
+      const res = await api.agentCancel(sessionId)
+      return res
+    } catch {
+      return null
+    }
+  }, [])
+
+  const pauseAgent = useCallback(async (sessionId: string) => {
+    try {
+      const res = await api.agentPause(sessionId)
+      return res
+    } catch {
+      return null
+    }
+  }, [])
+
+  const resumeAgent = useCallback(async (sessionId: string) => {
+    try {
+      const res = await api.agentResume(sessionId)
+      return res
+    } catch {
+      return null
+    }
+  }, [])
+
+  const killAgent = useCallback(async (sessionId: string) => {
+    try {
+      const res = await api.agentKill(sessionId)
+      return res
+    } catch {
+      return null
+    }
+  }, [])
+
+  const rollbackAgent = useCallback(async (sessionId: string) => {
+    try {
+      const res = await api.rollbackAgent(sessionId)
+      return res
+    } catch {
+      return null
+    }
+  }, [])
+
+  const updateAgentPermissions = useCallback(async (updates: Record<string, any>) => {
+    try {
+      const res = await api.updateAgentPermissions(updates)
+      return res
+    } catch {
+      return null
+    }
+  }, [])
+
+  const loadAgentPermissions = useCallback(async () => {
+    try {
+      const res = await api.getAgentPermissions()
+      return res?.permissions || null
+    } catch {
+      return null
+    }
+  }, [])
+
+  const createBrowserSession = useCallback(async (browser: string, headless: boolean) => {
+    try {
+      const res = await api.createBrowserSession(browser, headless)
+      return res
+    } catch {
+      return null
+    }
+  }, [])
+
+  const browserNavigate = useCallback(async (sessionId: string, url: string) => {
+    try {
+      const res = await api.browserNavigate(sessionId, url)
+      return res
+    } catch {
+      return null
+    }
+  }, [])
+
+  const browserAction = useCallback(async (sessionId: string, action: string, params: Record<string, any> = {}) => {
+    try {
+      const res = await api.browserAction(sessionId, action, params)
+      return res
+    } catch {
+      return null
+    }
+  }, [])
+
+  const browserStop = useCallback(async (sessionId: string) => {
+    try {
+      const res = await api.browserStop(sessionId)
+      return res
+    } catch {
+      return null
+    }
+  }, [])
+
+  const browserPause = useCallback(async (sessionId: string) => {
+    try {
+      const res = await api.browserPause(sessionId)
+      return res
+    } catch {
+      return null
+    }
+  }, [])
+
+  const browserResume = useCallback(async (sessionId: string) => {
+    try {
+      const res = await api.browserResume(sessionId)
+      return res
+    } catch {
+      return null
+    }
+  }, [])
+
+  const computerAction = useCallback(async (sessionId: string, action: string, args: Record<string, any> = {}) => {
+    try {
+      const res = await api.computerAction(action, args, sessionId)
+      return res
+    } catch {
+      return null
+    }
+  }, [])
+
+  const computerStop = useCallback(async () => {
+    try {
+      const res = await api.computerStop()
+      return res
+    } catch {
+      return null
+    }
+  }, [])
+
+  const computerPause = useCallback(async () => {
+    try {
+      const res = await api.computerPause()
+      return res
+    } catch {
+      return null
+    }
+  }, [])
+
+  const computerResume = useCallback(async () => {
+    try {
+      const res = await api.computerResume()
+      return res
+    } catch {
+      return null
+    }
+  }, [])
+
   useEffect(() => {
     connect()
     return () => {
@@ -923,5 +1491,24 @@ export function useJarvis() {
     cancelResearch,
     loadResearchHistory,
     setResearchJob: _setResearchJob,
+    startAgent,
+    approveAgent,
+    cancelAgent,
+    pauseAgent,
+    resumeAgent,
+    killAgent,
+    rollbackAgent,
+    updateAgentPermissions,
+    loadAgentPermissions,
+    createBrowserSession,
+    browserNavigate,
+    browserAction,
+    browserStop,
+    browserPause,
+    browserResume,
+    computerAction,
+    computerStop,
+    computerPause,
+    computerResume,
   }
 }

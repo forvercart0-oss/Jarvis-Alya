@@ -83,6 +83,34 @@ class SettingsUpdate(BaseModel):
     research_max_sources: Optional[int] = None
     research_depth: Optional[str] = None
     research_document_format: Optional[str] = None
+    agent_enabled: Optional[bool] = None
+    agent_auto_execute: Optional[bool] = None
+    agent_auto_fix: Optional[bool] = None
+    agent_max_retries: Optional[int] = None
+    agent_confirmation_level: Optional[str] = None
+    agent_terminal: Optional[str] = None
+    agent_filesystem_delete: Optional[str] = None
+    agent_network: Optional[str] = None
+    agent_git: Optional[str] = None
+    browser_enabled: Optional[bool] = None
+    browser_engine: Optional[str] = None
+    browser_mode: Optional[str] = None
+    browser_profile: Optional[str] = None
+    browser_download_dir: Optional[str] = None
+    browser_search_engine: Optional[str] = None
+    browser_permission: Optional[str] = None
+    browser_timeout: Optional[int] = None
+    browser_max_retries: Optional[int] = None
+    computer_enabled: Optional[bool] = None
+    computer_mode: Optional[str] = None
+    computer_screen_access: Optional[str] = None
+    computer_mouse_control: Optional[str] = None
+    computer_keyboard_control: Optional[str] = None
+    computer_application_launch: Optional[str] = None
+    computer_window_control: Optional[str] = None
+    computer_screen_preview: Optional[str] = None
+    computer_mouse_failsafe: Optional[bool] = None
+    computer_max_retries: Optional[int] = None
 
 
 def _mask_api_key(key: str) -> str:
@@ -173,6 +201,35 @@ async def get_settings_api():
         "research_max_sources": getattr(s, "research_max_sources", 20),
         "research_depth": getattr(s, "research_depth", "deep"),
         "research_document_format": getattr(s, "research_document_format", "markdown"),
+        "agent_enabled": getattr(s, "agent_enabled", True),
+        "agent_auto_execute": getattr(s, "agent_auto_execute", False),
+        "agent_auto_fix": getattr(s, "agent_auto_fix", True),
+        "agent_max_retries": getattr(s, "agent_max_retries", 3),
+        "agent_confirmation_level": getattr(s, "agent_confirmation_level", "risky_only"),
+        "agent_terminal": getattr(s, "agent_terminal", "ask"),
+        "agent_filesystem_delete": getattr(s, "agent_filesystem_delete", "ask"),
+        "agent_network": getattr(s, "agent_network", "ask"),
+        "agent_git": getattr(s, "agent_git", "ask"),
+        "browser_enabled": getattr(s, "browser_enabled", True),
+        "browser_engine": getattr(s, "browser_engine", "chromium"),
+        "browser_mode": getattr(s, "browser_mode", "visible"),
+        "browser_profile": getattr(s, "browser_profile", "isolated"),
+        "browser_download_dir": getattr(s, "browser_download_dir", "~/Downloads/JARVIS-Browser"),
+        "browser_search_engine": getattr(s, "browser_search_engine", "https://www.google.com"),
+        "browser_permission": getattr(s, "browser_permission", "ask"),
+        "browser_timeout": getattr(s, "browser_timeout", 30),
+        "browser_max_retries": getattr(s, "browser_max_retries", 3),
+        "browser_trusted_domains": getattr(s, "browser_trusted_domains", ["github.com", "docs.python.org", "developer.mozilla.org"]),
+        "computer_enabled": getattr(s, "computer_enabled", True),
+        "computer_mode": getattr(s, "computer_mode", "off"),
+        "computer_screen_access": getattr(s, "computer_screen_access", "ask"),
+        "computer_mouse_control": getattr(s, "computer_mouse_control", "ask"),
+        "computer_keyboard_control": getattr(s, "computer_keyboard_control", "ask"),
+        "computer_application_launch": getattr(s, "computer_application_launch", "ask"),
+        "computer_window_control": getattr(s, "computer_window_control", "ask"),
+        "computer_screen_preview": getattr(s, "computer_screen_preview", "off"),
+        "computer_mouse_failsafe": getattr(s, "computer_mouse_failsafe", True),
+        "computer_max_retries": getattr(s, "computer_max_retries", 3),
         "db_settings": db_settings,
     }
 

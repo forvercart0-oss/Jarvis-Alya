@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { OrbState, Message, ToolCall } from '../../types'
 import { Trash2, Shield } from 'lucide-react'
 import { MessageList } from './MessageList'
@@ -34,8 +35,50 @@ export function ChatPanel({
   onConfirmTool,
   onQuickAction,
 }: ChatPanelProps) {
+  const [dragOver, setDragOver] = useState(false)
+  const [attachedFile, setAttachedFile] = useState<File | null>(null)
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOver(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOver(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOver(false)
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const file = e.dataTransfer.files[0]
+      if (file.type.startsWith('image/')) {
+        setAttachedFile(file)
+      }
+    }
+  }
+
+  const handleImageSelect = (file: File) => {
+    setAttachedFile(file)
+  }
+
+  const handleImageRemove = () => {
+    setAttachedFile(null)
+  }
+
   return (
-    <div className="flex flex-col h-full min-h-0">
+    <div
+      className="flex flex-col h-full min-h-0"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {dragOver && (
+        <div className="absolute inset-0 bg-cyan-500/10 border-2 border-cyan-400/40 rounded-lg flex items-center justify-center z-50 pointer-events-none">
+          <span className="text-cyan-300 text-sm tracking-wider">DROP IMAGE</span>
+        </div>
+      )}
       <div className="flex items-center justify-between px-4 py-2 border-b border-cyan-500/10">
         <span className="text-[11px] tracking-[0.3em] text-cyan-400/70 uppercase">
           Communication Channel
@@ -68,6 +111,9 @@ export function ChatPanel({
         orbState={orbState}
         streaming={streaming}
         micAvailable={micAvailable}
+        onImageSelect={handleImageSelect}
+        onImageRemove={handleImageRemove}
+        attachedImage={attachedFile ? { name: attachedFile.name, size: attachedFile.size, url: URL.createObjectURL(attachedFile) } : null}
       />
 
       {pendingToolConfirmation && (

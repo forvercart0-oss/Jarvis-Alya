@@ -1,4 +1,4 @@
-import type { JarvisSettings, HealthStatus, MemoryItem, Automation, ToolInfo, Message, SystemStats, ConversationSummary, NotificationItem, DiagnosticInfo, VoiceInfo, CodingProject, ProjectFileEntry, PersonaInfo, Skill, SkillActivity, GitStatus, ResearchJob } from '../types'
+import type { JarvisSettings, HealthStatus, MemoryItem, MemoryDashboard, SessionMemory, MemoryAuditEntry, Automation, ToolInfo, Message, SystemStats, ConversationSummary, NotificationItem, DiagnosticInfo, VoiceInfo, CodingProject, ProjectFileEntry, PersonaInfo, Skill, SkillActivity, GitStatus, ResearchJob, Workflow, WorkflowRun, WorkflowApproval, WorkflowStep } from '../types'
 
 const isTauri = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__
 const API_BASE = isTauri ? 'http://127.0.0.1:8000/api' : '/api'
@@ -143,6 +143,106 @@ export const api = {
     })
   },
 
+  async getMemoryHealth(): Promise<any> {
+    return request('/memory/health')
+  },
+
+  async searchMemoriesRanked(query: string, category?: string, project?: string, profile?: string, limit = 20): Promise<MemoryItem[]> {
+    const params = new URLSearchParams({ query })
+    if (category) params.set('category', category)
+    if (project) params.set('project', project)
+    if (profile) params.set('profile', profile)
+    params.set('limit', String(limit))
+    return request<MemoryItem[]>(`/memory/ranked?${params.toString()}`)
+  },
+
+  async getMemoryContext(query: string, project?: string, profile = 'jarvis', maxMemories = 8, maxTokens = 2000): Promise<any> {
+    const params = new URLSearchParams({ query, profile })
+    if (project) params.set('project', project)
+    params.set('max_memories', String(maxMemories))
+    params.set('max_tokens', String(maxTokens))
+    return request(`/memory/context?${params.toString()}`)
+  },
+
+  async getMemoryDuplicates(threshold = 0.85): Promise<{ duplicates: any[] }> {
+    return request(`/memory/duplicates?threshold=${threshold}`)
+  },
+
+  async getMemoryContradictions(): Promise<{ contradictions: any[] }> {
+    return request('/memory/contradictions')
+  },
+
+  async applyMemoryDecay(decayRate = 0.01): Promise<{ updated: number }> {
+    return request('/memory/decay', {
+      method: 'POST',
+      body: JSON.stringify({ decay_rate: decayRate }),
+    })
+  },
+
+  async getRelatedMemories(memoryId: string, limit = 10): Promise<{ related: any[] }> {
+    return request(`/memory/${encodeURIComponent(memoryId)}/related?limit=${limit}`)
+  },
+
+  async exportMemories(category?: string, project?: string, profile?: string): Promise<any> {
+    const params = new URLSearchParams()
+    if (category) params.set('category', category)
+    if (project) params.set('project', project)
+    if (profile) params.set('profile', profile)
+    const qs = params.toString() ? `?${params.toString()}` : ''
+    return request(`/memory/export${qs}`)
+  },
+
+  async importMemories(data: any, mode = 'merge'): Promise<any> {
+    return request('/memory/import', {
+      method: 'POST',
+      body: JSON.stringify({ data, mode }),
+    })
+  },
+
+  async updateMemoryFields(id: string, updates: Record<string, any>): Promise<any> {
+    return request(`/memory/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    })
+  },
+
+  async getMemoryDashboard(): Promise<MemoryDashboard> {
+    return request<MemoryDashboard>('/memory/dashboard')
+  },
+
+  async confirmMemory(content: string, category?: string, importance?: string, memoryType?: string): Promise<any> {
+    return request('/memory/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ content, category, importance, memory_type: memoryType }),
+    })
+  },
+
+  async rememberSessionMemory(sessionId: string, content: string, category = 'general', memoryType = 'fact', importance = 0.5, expiresAt?: string): Promise<any> {
+    return request('/memory/session', {
+      method: 'POST',
+      body: JSON.stringify({ session_id: sessionId, content, category, memory_type: memoryType, importance, expires_at: expiresAt }),
+    })
+  },
+
+  async getSessionMemories(sessionId: string, limit = 50): Promise<{ memories: SessionMemory[] }> {
+    return request(`/memory/session/${encodeURIComponent(sessionId)}?limit=${limit}`)
+  },
+
+  async clearSessionMemories(sessionId: string): Promise<{ status: string; count: number }> {
+    return request(`/memory/session/${encodeURIComponent(sessionId)}`, { method: 'DELETE' })
+  },
+
+  async getMemoryAudit(limit = 100): Promise<{ audit: MemoryAuditEntry[] }> {
+    return request(`/memory/audit?limit=${limit}`)
+  },
+
+  async resolveMemoryConflict(memoryId: string, keep = true): Promise<any> {
+    return request('/memory/conflicts/resolve', {
+      method: 'POST',
+      body: JSON.stringify({ memory_id: memoryId, keep }),
+    })
+  },
+
   async getReminders(enabled?: boolean): Promise<any[]> {
     const q = enabled !== undefined ? `?enabled=${enabled}` : ''
     return request<any[]>(`/reminders${q}`)
@@ -249,6 +349,36 @@ export const api = {
 
   async deleteTask(id: string): Promise<void> {
     return request(`/tasks/${encodeURIComponent(id)}`, { method: 'DELETE' })
+  },
+
+  async createTaskAdvanced(payload: { description: string; task_type?: string; auto_execute?: boolean; context?: Record<string, any>; dry_run?: boolean }): Promise<any> {
+    return request<any>('/tasks/advanced', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
+
+  async getTaskQueue(): Promise<{ queue: any[] }> {
+    return request('/tasks/queue')
+  },
+
+  async getTaskProcesses(): Promise<{ processes: any[] }> {
+    return request('/tasks/processes')
+  },
+
+  async setTaskAutonomy(level: string): Promise<{ level: string }> {
+    return request('/tasks/autonomy', {
+      method: 'POST',
+      body: JSON.stringify({ level }),
+    })
+  },
+
+  async getTasksByProject(project: string): Promise<any[]> {
+    return request<any[]>(`/tasks/project/${encodeURIComponent(project)}`)
+  },
+
+  async retryTask(id: string): Promise<any> {
+    return request<any>(`/tasks/${encodeURIComponent(id)}/retry`, { method: 'POST' })
   },
 
   async speak(text: string): Promise<{ success: boolean }> {
@@ -461,6 +591,13 @@ export const api = {
     })
   },
 
+  async agentStartWithOptions(message: string, options?: { project?: string; project_root?: string; persona?: string; autonomy_level?: string; dry_run?: boolean }): Promise<any> {
+    return request('/agent/start', {
+      method: 'POST',
+      body: JSON.stringify({ message, ...options }),
+    })
+  },
+
   async agentApprove(sessionId: string): Promise<any> {
     return request('/agent/approve', {
       method: 'POST',
@@ -473,6 +610,58 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ session_id: sessionId }),
     })
+  },
+
+  async agentPause(sessionId: string): Promise<any> {
+    return request('/agent/pause', {
+      method: 'POST',
+      body: JSON.stringify({ session_id: sessionId }),
+    })
+  },
+
+  async agentResume(sessionId: string): Promise<any> {
+    return request('/agent/resume', {
+      method: 'POST',
+      body: JSON.stringify({ session_id: sessionId }),
+    })
+  },
+
+  async agentKill(sessionId: string): Promise<any> {
+    return request('/agent/kill', {
+      method: 'POST',
+      body: JSON.stringify({ session_id: sessionId }),
+    })
+  },
+
+  async getAgentStatus(sessionId: string): Promise<any> {
+    return request(`/agent/status/${encodeURIComponent(sessionId)}`)
+  },
+
+  async getAgentSessions(): Promise<{ sessions: any[] }> {
+    return request('/agent/sessions')
+  },
+
+  async agentOrchestrate(message: string, persona = 'jarvis', autonomyLevel = 'assisted'): Promise<any> {
+    return request('/agent/orchestrate', {
+      method: 'POST',
+      body: JSON.stringify({ message, persona, autonomy_level: autonomyLevel }),
+    })
+  },
+
+  async getAgentRegistry(): Promise<{ agents: any[] }> {
+    return request('/agent/registry')
+  },
+
+  async getOrchestratorTasks(): Promise<{ tasks: any[] }> {
+    return request('/agent/orchestrator/tasks')
+  },
+
+  async getOrchestratorTask(taskId: string): Promise<any> {
+    return request(`/agent/orchestrator/tasks/${encodeURIComponent(taskId)}`)
+  },
+
+  async cancelOrchestratorTask(taskId: string): Promise<any> {
+    return request(`/agent/orchestrator/tasks/${encodeURIComponent(taskId)}/cancel`, { method: 'POST' })
   },
 
   async getGitStatus(path: string): Promise<GitStatus> {
@@ -572,6 +761,68 @@ export const api = {
     })
   },
 
+  async visionCompare(imageA: string, imageB: string): Promise<any> {
+    return request('/vision/compare', {
+      method: 'POST',
+      body: JSON.stringify({ image_a: imageA, image_b: imageB }),
+    })
+  },
+
+  async visionCameraStart(): Promise<any> {
+    return request('/vision/camera/start', { method: 'POST' })
+  },
+
+  async visionCameraStop(): Promise<any> {
+    return request('/vision/camera/stop', { method: 'POST' })
+  },
+
+  async visionCameraCapture(): Promise<any> {
+    return request('/vision/camera/capture', { method: 'POST' })
+  },
+
+  async visionRegionAnalyze(imagePath: string, region: string, prompt?: string): Promise<any> {
+    return request('/vision/region/analyze', {
+      method: 'POST',
+      body: JSON.stringify({ image_path: imagePath, region, prompt }),
+    })
+  },
+
+  async visionRemember(imagePath: string, description: string, tags?: string[], project?: string): Promise<any> {
+    return request('/vision/remember', {
+      method: 'POST',
+      body: JSON.stringify({ image_path: imagePath, description, tags: tags || [], project: project || '' }),
+    })
+  },
+
+  async visionQA(imagePath: string, question: string): Promise<any> {
+    return request('/vision/qa', {
+      method: 'POST',
+      body: JSON.stringify({ image_path: imagePath, question }),
+    })
+  },
+
+  async visionWindows(): Promise<{ windows: string[] }> {
+    return request('/vision/windows')
+  },
+
+  async visionCameras(): Promise<{ cameras: any[] }> {
+    return request('/vision/cameras')
+  },
+
+  async visionSensitiveCheck(text: string, windowTitle?: string): Promise<{ sensitive: boolean; reason: string }> {
+    return request('/vision/sensitive/check', {
+      method: 'POST',
+      body: JSON.stringify({ text, window_title: windowTitle }),
+    })
+  },
+
+  async visionSensitiveRedact(text: string): Promise<{ redacted: string }> {
+    return request('/vision/sensitive/redact', {
+      method: 'POST',
+      body: JSON.stringify({ text }),
+    })
+  },
+
   async startResearch(topic: string): Promise<{ job_id: string; topic: string; status: string }> {
     return request('/research/start', {
       method: 'POST',
@@ -600,5 +851,344 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(patch),
     })
+  },
+
+  async startAgent(message: string, project?: string): Promise<any> {
+    return request('/agent/start', {
+      method: 'POST',
+      body: JSON.stringify({ message, project }),
+    })
+  },
+
+  async approveAgent(sessionId: string): Promise<any> {
+    return request('/agent/approve', {
+      method: 'POST',
+      body: JSON.stringify({ session_id: sessionId }),
+    })
+  },
+
+  async cancelAgent(sessionId: string): Promise<any> {
+    return request('/agent/cancel', {
+      method: 'POST',
+      body: JSON.stringify({ session_id: sessionId }),
+    })
+  },
+
+  async rollbackAgent(sessionId: string): Promise<any> {
+    return request('/agent/rollback', {
+      method: 'POST',
+      body: JSON.stringify({ session_id: sessionId }),
+    })
+  },
+
+  async getAgentPermissions(): Promise<any> {
+    return request('/agent/permissions')
+  },
+
+  async updateAgentPermissions(updates: Record<string, any>): Promise<any> {
+    return request('/agent/permissions', {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    })
+  },
+
+  async createBrowserSession(browser: string, headless: boolean): Promise<any> {
+    return request('/browser/session', {
+      method: 'POST',
+      body: JSON.stringify({ browser, headless }),
+    })
+  },
+
+  async getBrowserSessions(): Promise<any> {
+    return request('/browser/sessions')
+  },
+
+  async getBrowserSession(sessionId: string): Promise<any> {
+    return request(`/browser/session/${encodeURIComponent(sessionId)}`)
+  },
+
+  async browserNavigate(sessionId: string, url: string): Promise<any> {
+    return request(`/browser/session/${encodeURIComponent(sessionId)}/navigate`, {
+      method: 'POST',
+      body: JSON.stringify({ url, session_id: sessionId }),
+    })
+  },
+
+  async browserAction(sessionId: string, action: string, params: Record<string, any> = {}): Promise<any> {
+    return request(`/browser/session/${encodeURIComponent(sessionId)}/action`, {
+      method: 'POST',
+      body: JSON.stringify({ action, session_id: sessionId, ...params }),
+    })
+  },
+
+  async browserPause(sessionId: string): Promise<any> {
+    return request(`/browser/session/${encodeURIComponent(sessionId)}/pause`, { method: 'POST' })
+  },
+
+  async browserResume(sessionId: string): Promise<any> {
+    return request(`/browser/session/${encodeURIComponent(sessionId)}/resume`, { method: 'POST' })
+  },
+
+  async browserStop(sessionId: string): Promise<any> {
+    return request(`/browser/session/${encodeURIComponent(sessionId)}/stop`, { method: 'POST' })
+  },
+
+  async getBrowserStatus(): Promise<any> {
+    return request('/browser/status')
+  },
+
+  async getBrowserPageContext(sessionId: string): Promise<any> {
+    return request(`/browser/session/${encodeURIComponent(sessionId)}/page/context`)
+  },
+
+  async browserFindElement(sessionId: string, target: string): Promise<any> {
+    return request('/browser/element/find', {
+      method: 'POST',
+      body: JSON.stringify({ target, session_id: sessionId }),
+    })
+  },
+
+  async browserTakeControl(sessionId: string): Promise<any> {
+    return request('/browser/take-control', {
+      method: 'POST',
+      body: JSON.stringify({ session_id: sessionId }),
+    })
+  },
+
+  async browserReleaseControl(sessionId: string): Promise<any> {
+    return request('/browser/release-control', {
+      method: 'POST',
+      body: JSON.stringify({ session_id: sessionId }),
+    })
+  },
+
+  async browserTakeoverStatus(sessionId: string): Promise<any> {
+    return request(`/browser/takeover/status?session_id=${encodeURIComponent(sessionId)}`)
+  },
+
+  async browserCheckCaptcha(sessionId: string): Promise<any> {
+    return request('/browser/check/captcha', {
+      method: 'POST',
+      body: JSON.stringify({ session_id: sessionId }),
+    })
+  },
+
+  async browserCheckLogin(sessionId: string): Promise<any> {
+    return request('/browser/check/login', {
+      method: 'POST',
+      body: JSON.stringify({ session_id: sessionId }),
+    })
+  },
+
+  async browserCheckPurchase(sessionId: string): Promise<any> {
+    return request('/browser/check/purchase', {
+      method: 'POST',
+      body: JSON.stringify({ session_id: sessionId }),
+    })
+  },
+
+  async getComputerStatus(): Promise<any> {
+    return request('/computer/status')
+  },
+
+  async getComputerWindows(): Promise<any> {
+    return request('/computer/windows')
+  },
+
+  async getComputerMonitors(): Promise<any> {
+    return request('/computer/monitors')
+  },
+
+  async computerScreenshot(mode?: string, region?: string, monitor?: number): Promise<any> {
+    return request('/computer/screenshot', {
+      method: 'POST',
+      body: JSON.stringify({ mode: mode || 'full', region, monitor }),
+    })
+  },
+
+  async computerAction(action: string, args: Record<string, any> = {}, sessionId = 'default'): Promise<any> {
+    return request(`/computer/action`, {
+      method: 'POST',
+      body: JSON.stringify({ action, arguments: args, session_id: sessionId }),
+    })
+  },
+
+  async computerPause(): Promise<any> {
+    return request('/computer/pause', { method: 'POST' })
+  },
+
+  async computerResume(): Promise<any> {
+    return request('/computer/resume', { method: 'POST' })
+  },
+
+  async computerStop(): Promise<any> {
+    return request('/computer/stop', { method: 'POST' })
+  },
+
+  async getComputerProcesses(): Promise<any> {
+    return request('/computer/processes')
+  },
+
+  async computerRunCommand(command: string, timeout = 30): Promise<any> {
+    return request('/computer/action/command', {
+      method: 'POST',
+      body: JSON.stringify({ command, timeout }),
+    })
+  },
+
+  async computerFilesList(path?: string): Promise<any> {
+    return request('/computer/files/list', {
+      method: 'POST',
+      body: JSON.stringify({ path: path || '' }),
+    })
+  },
+
+  async computerFilesSearch(query: string, path?: string): Promise<any> {
+    return request('/computer/files/search', {
+      method: 'POST',
+      body: JSON.stringify({ query, path: path || '' }),
+    })
+  },
+
+  async computerFilesCreate(path: string): Promise<any> {
+    return request('/computer/files/create', {
+      method: 'POST',
+      body: JSON.stringify({ path }),
+    })
+  },
+
+  async computerFilesRename(oldPath: string, newName: string): Promise<any> {
+    return request('/computer/files/rename', {
+      method: 'POST',
+      body: JSON.stringify({ old_path: oldPath, new_name: newName }),
+    })
+  },
+
+  async computerFilesMove(src: string, dst: string): Promise<any> {
+    return request('/computer/files/move', {
+      method: 'POST',
+      body: JSON.stringify({ src, dst }),
+    })
+  },
+
+  async computerFilesCopy(src: string, dst: string): Promise<any> {
+    return request('/computer/files/copy', {
+      method: 'POST',
+      body: JSON.stringify({ src, dst }),
+    })
+  },
+
+  async computerFilesDelete(path: string): Promise<any> {
+    return request('/computer/files/delete', {
+      method: 'POST',
+      body: JSON.stringify({ path }),
+    })
+  },
+
+  async computerFilesOpen(path: string): Promise<any> {
+    return request('/computer/files/open', {
+      method: 'POST',
+      body: JSON.stringify({ path }),
+    })
+  },
+
+  async computerClipboardRead(): Promise<any> {
+    return request('/computer/clipboard/read', { method: 'POST' })
+  },
+
+  async computerClipboardWrite(text: string): Promise<any> {
+    return request('/computer/clipboard/write', {
+      method: 'POST',
+      body: JSON.stringify({ text }),
+    })
+  },
+
+  async computerTerminalOpen(command?: string): Promise<any> {
+    return request('/computer/terminal/open', {
+      method: 'POST',
+      body: JSON.stringify({ command: command || '' }),
+    })
+  },
+
+  async computerTakeControl(sessionId = 'default'): Promise<any> {
+    return request('/computer/take-control', {
+      method: 'POST',
+      body: JSON.stringify({ session_id: sessionId }),
+    })
+  },
+
+  async computerReleaseControl(sessionId = 'default'): Promise<any> {
+    return request('/computer/release-control', {
+      method: 'POST',
+      body: JSON.stringify({ session_id: sessionId }),
+    })
+  },
+
+  async computerTakeoverStatus(sessionId = 'default'): Promise<any> {
+    return request(`/computer/takeover/status?session_id=${encodeURIComponent(sessionId)}`)
+  },
+
+  async computerPermissions(): Promise<any> {
+    return request('/computer/permissions')
+  },
+
+  async getWorkflows(status?: string, limit = 50): Promise<{ workflows: Workflow[] }> {
+    const q = status ? `?status=${encodeURIComponent(status)}&limit=${limit}` : `?limit=${limit}`
+    return request(`/workflows${q}`)
+  },
+
+  async createWorkflow(payload: { name: string; description?: string; trigger?: Record<string, any>; steps?: WorkflowStep[]; variables?: Record<string, any>; permissions?: Record<string, any>; enabled?: boolean; project?: string | null; tags?: string[] }): Promise<Workflow> {
+    return request<Workflow>('/workflows', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
+
+  async getWorkflow(id: string): Promise<Workflow> {
+    return request<Workflow>(`/workflows/${encodeURIComponent(id)}`)
+  },
+
+  async updateWorkflow(id: string, patch: Partial<Workflow>): Promise<Workflow> {
+    return request<Workflow>(`/workflows/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(patch),
+    })
+  },
+
+  async deleteWorkflow(id: string): Promise<{ status: string }> {
+    return request(`/workflows/${encodeURIComponent(id)}`, { method: 'DELETE' })
+  },
+
+  async runWorkflow(id: string): Promise<{ status: string; workflow_id: string; run_id: string }> {
+    return request(`/workflows/${encodeURIComponent(id)}/run`, { method: 'POST' })
+  },
+
+  async pauseWorkflow(id: string): Promise<Workflow> {
+    return request<Workflow>(`/workflows/${encodeURIComponent(id)}/pause`, { method: 'POST' })
+  },
+
+  async resumeWorkflow(id: string): Promise<Workflow> {
+    return request<Workflow>(`/workflows/${encodeURIComponent(id)}/resume`, { method: 'POST' })
+  },
+
+  async cancelWorkflow(id: string): Promise<Workflow> {
+    return request<Workflow>(`/workflows/${encodeURIComponent(id)}/cancel`, { method: 'POST' })
+  },
+
+  async getWorkflowRuns(id: string, limit = 50): Promise<{ runs: WorkflowRun[] }> {
+    return request(`/workflows/${encodeURIComponent(id)}/runs?limit=${limit}`)
+  },
+
+  async getApprovals(status?: string): Promise<{ approvals: WorkflowApproval[] }> {
+    const q = status ? `?status=${encodeURIComponent(status)}` : ''
+    return request(`/approvals${q}`)
+  },
+
+  async approveApproval(id: string): Promise<WorkflowApproval> {
+    return request<WorkflowApproval>(`/approvals/${encodeURIComponent(id)}/approve`, { method: 'POST' })
+  },
+
+  async denyApproval(id: string): Promise<WorkflowApproval> {
+    return request<WorkflowApproval>(`/approvals/${encodeURIComponent(id)}/deny`, { method: 'POST' })
   },
 }

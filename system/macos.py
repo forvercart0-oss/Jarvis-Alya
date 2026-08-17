@@ -106,5 +106,35 @@ class MacOSPlatform(SystemPlatform):
     async def set_do_not_disturb(self, enabled: bool) -> dict:
         return {"ok": False, "error": "Do Not Disturb control is not exposed on macOS"}
 
+    async def list_windows(self) -> dict:
+        script = 'tell application "System Events" to get name of every window of every process'
+        result = _osascript(script)
+        if result.returncode == 0:
+            return {"success": True, "windows": result.stdout.strip().splitlines()}
+        return {"success": False, "error": result.stderr.strip() or "Cannot list windows"}
+
+    async def get_active_window(self) -> dict:
+        app_script = 'tell application "System Events" to get name of first application process whose frontmost is true'
+        title_script = 'tell application "System Events" to get title of front window of first application process whose frontmost is true'
+        app_res = _osascript(app_script)
+        title_res = _osascript(title_script)
+        return {
+            "app": app_res.stdout.strip() if app_res.returncode == 0 else "",
+            "title": title_res.stdout.strip() if title_res.returncode == 0 else "",
+            "x": 0, "y": 0, "width": 0, "height": 0,
+        }
+
+    async def get_screen_info(self) -> dict:
+        script = 'tell application "Finder" to get bounds of window of desktop'
+        result = _osascript(script)
+        if result.returncode == 0:
+            try:
+                parts = result.stdout.strip().split(", ")
+                if len(parts) >= 4:
+                    return {"width": int(parts[2]), "height": int(parts[3]), "backend": "osascript"}
+            except Exception:
+                pass
+        return {"width": 0, "height": 0, "backend": "unknown"}
+
     def info(self) -> str:
         return f"{platform.system()} {platform.release()} ({platform.machine()})"

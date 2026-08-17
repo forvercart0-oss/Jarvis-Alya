@@ -153,6 +153,62 @@ class LinuxPlatform(SystemPlatform):
         except Exception as exc:
             return {"ok": False, "error": f"qdbus not available: {exc}"}
 
+    async def list_windows(self) -> dict:
+        if _has_cmd("xdotool") and not _detect_wayland():
+            result = run(["xdotool", "search", "--onlyvisible", "--class", ""])
+            if result.returncode == 0:
+                return {"success": True, "windows": result.stdout.strip().splitlines()}
+        if _has_cmd("wmctrl"):
+            result = run(["wmctrl", "-l"])
+            if result.returncode == 0:
+                return {"success": True, "windows": result.stdout.strip().splitlines()}
+        return {"success": False, "error": "Cannot list windows."}
+
+    async def get_active_window(self) -> dict:
+        if _detect_wayland():
+            if _has_cmd("hyprctl"):
+                result = run(["hyprctl", "activewindow"], timeout=5)
+                if result.returncode == 0:
+                    lines = result.stdout.strip().splitlines()
+                    info = {}
+                    for line in lines:
+                        if ":" in line:
+                            k, v = line.split(":", 1)
+                            info[k.strip()] = v.strip()
+                    return {
+                        "app": info.get("class", ""),
+                        "title": info.get("title", ""),
+                        "x": int(info.get("at", "0,0").split(",")[0] or 0),
+                        "y": int(info.get("at", "0,0").split(",")[1] or 0),
+                        "width": int(info.get("size", "0,0").split(",")[0] or 0),
+                        "height": int(info.get("size", "0,0").split(",")[1] or 0),
+                    }
+        if _has_cmd("xdotool"):
+            result = run(["xdotool", "getactivewindow"], timeout=5)
+            if result.returncode == 0:
+                wid = result.stdout.strip()
+                title = run(["xdotool", "getwindowname", wid], timeout=5)
+                cls = run(["xdotool", "getwindowclassname", wid], timeout=5)
+                return {
+                    "app": cls.stdout.strip() if cls.returncode == 0 else "",
+                    "title": title.stdout.strip() if title.returncode == 0 else "",
+                    "x": 0, "y": 0, "width": 0, "height": 0,
+                }
+        return {"error": "No active window info tool available."}
+
+    async def get_screen_info(self) -> dict:
+        if _detect_wayland():
+            if _has_cmd("grim"):
+                return {"width": 0, "height": 0, "backend": "grim"}
+        result = run(["xdpyinfo"], timeout=5)
+        if result.returncode == 0:
+            for line in result.stdout.splitlines():
+                if "dimensions:" in line:
+                    parts = line.split("dimensions:")[1].strip().split()
+                    if len(parts) >= 2:
+                        return {"width": int(parts[0]), "height": int(parts[1]), "backend": "xdpyinfo"}
+        return {"width": 0, "height": 0, "backend": "unknown"}
+
     # ------------------------------------------------------------- identity
     def info(self) -> str:
         return f"{platform.system()} {platform.release()} ({platform.machine()})"

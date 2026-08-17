@@ -28,6 +28,7 @@ import { BrowserPanel } from './components/Browser/BrowserPanel'
 import { ComputerPanel } from './components/Computer/ComputerPanel'
 import { VisionPanel } from './components/Vision/VisionPanel'
 import { TasksPanel } from './components/Tasks/TasksPanel'
+import { WorkflowsPanel } from './components/Workflows/WorkflowsPanel'
 import { ResearchPanel } from './components/Research/ResearchPanel'
 import { ResearchHistory } from './components/Research/ResearchHistory'
 import { useJarvis } from './hooks/useJarvis'
@@ -105,9 +106,19 @@ export default function App() {
     researchHistory,
     startSeriousMode,
     stopSeriousMode,
+    startResearch: _startResearch,
     cancelResearch,
     loadResearchHistory,
-    setResearchJob,
+    setResearchJob: _setResearchJob,
+    startAgent,
+    approveAgent,
+    cancelAgent,
+    pauseAgent,
+    resumeAgent,
+    killAgent,
+    rollbackAgent,
+    updateAgentPermissions,
+    loadAgentPermissions,
   } = useJarvis()
 
   useKeyboardShortcuts([
@@ -518,9 +529,9 @@ export default function App() {
   }, [researchJob])
 
   const handleResearchHistorySelect = useCallback((job: any) => {
-    setResearchJob(job)
+    _setResearchJob(job)
     setShowResearchPanel(true)
-  }, [])
+  }, [_setResearchJob])
 
   return (
     <div className={`h-screen w-screen flex flex-col bg-jarvis-dark relative overflow-hidden ${seriousMode ? 'serious-mode' : ''}`}>
@@ -707,10 +718,25 @@ export default function App() {
                   )}
                   {activeTab === 'about' && <AboutPanel />}
                   {activeTab === 'skills' && <SkillsPanel />}
-                  {activeTab === 'agent' && <AgentPanel />}
+                  {activeTab === 'agent' && (
+                    <AgentPanel
+                      projects={projects.map((p) => ({ name: p.name, stack: p.stack ?? undefined }))}
+                      onStartAgent={startAgent}
+                      onApproveAgent={approveAgent}
+                      onCancelAgent={cancelAgent}
+                      onPauseAgent={pauseAgent}
+                      onResumeAgent={resumeAgent}
+                      onKillAgent={killAgent}
+                      onRollbackAgent={rollbackAgent}
+                      onUpdateAgentPermissions={updateAgentPermissions}
+                      onLoadAgentPermissions={loadAgentPermissions}
+                      settings={settings}
+                    />
+                  )}
                   {activeTab === 'browser' && <BrowserPanel onNavigate={setActiveTab} />}
                   {activeTab === 'computer' && <ComputerPanel onNavigate={setActiveTab} />}
                   {activeTab === 'vision' && <VisionPanel />}
+                  {activeTab === 'workflows' && <WorkflowsPanel onNavigate={setActiveTab} />}
                   {activeTab === 'research' && (
                     <div className="h-full flex">
                       <div className="flex-1 min-w-0">

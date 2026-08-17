@@ -2,84 +2,108 @@ import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import {
   CheckCircle2, XCircle, Loader2,
-  GitBranch, Send, Bot
+  GitBranch, Send, Bot, Play, Square,
+  RotateCcw, Settings, Terminal, Pause
 } from 'lucide-react'
 import { Button } from '../Common/Button'
-import { api } from '../../services/api'
-import type { AgentSession, AgentTask, GitStatus } from '../../types'
+import type { AgentSession, AgentTask, GitStatus, JarvisSettings } from '../../types'
 
 const STATE_COLORS: Record<string, string> = {
   idle: 'text-slate-400',
   planning: 'text-yellow-400',
-  waiting_approval: 'text-orange-400',
+  waiting_for_permission: 'text-orange-400',
+  waiting_for_user: 'text-orange-400',
   executing: 'text-cyan-400',
-  waiting_confirmation: 'text-purple-400',
-  testing: 'text-blue-400',
+  observing: 'text-blue-400',
+  verifying: 'text-purple-400',
+  recovering: 'text-yellow-400',
+  paused: 'text-slate-400',
   completed: 'text-emerald-400',
   failed: 'text-red-400',
   cancelled: 'text-slate-500',
 }
 
-export function AgentPanel() {
+interface AgentPanelProps {
+  projects: { name: string; stack?: string }[]
+  onStartAgent: (message: string, project?: string, options?: { project_root?: string; persona?: string; autonomy_level?: string; dry_run?: boolean }) => Promise<any>
+  onApproveAgent: (sessionId: string) => Promise<any>
+  onCancelAgent: (sessionId: string) => Promise<any>
+  onPauseAgent: (sessionId: string) => Promise<any>
+  onResumeAgent: (sessionId: string) => Promise<any>
+  onKillAgent: (sessionId: string) => Promise<any>
+  onRollbackAgent: (sessionId: string) => Promise<any>
+  onUpdateAgentPermissions: (updates: Record<string, any>) => Promise<any>
+  onLoadAgentPermissions: () => Promise<any>
+  settings: JarvisSettings | null
+}
+
+export function AgentPanel({
+  projects,
+  onStartAgent,
+  onApproveAgent,
+  onCancelAgent,
+  onPauseAgent,
+  onResumeAgent,
+  onKillAgent,
+  onRollbackAgent,
+  onUpdateAgentPermissions,
+  onLoadAgentPermissions,
+  settings: _settings,
+}: AgentPanelProps) {
   const [mode, setMode] = useState<'chat' | 'agent'>('chat')
   const [input, setInput] = useState('')
   const [session, setSession] = useState<AgentSession | null>(null)
   const [busy, setBusy] = useState(false)
-  const [projects, setProjects] = useState<{ name: string; stack?: string }[]>([])
   const [selectedProject, setSelectedProject] = useState<string>('')
   const [gitStatus, setGitStatus] = useState<GitStatus | null>(null)
-  const [output, setOutput] = useState<string>('')
+  const [output, setOutput] = useState<string[]>([])
+  const [permissions, setPermissions] = useState<any>(null)
+  const [showPermissions, setShowPermissions] = useState(false)
 
   useEffect(() => {
-    api.listProjects().then((res: any) => setProjects(res.projects || [])).catch(() => {})
-  }, [])
-
-  const loadGitStatus = useCallback(async (project: string) => {
-    if (!project) return
-    try {
-      const res = await fetch(`/api/git/status?path=${encodeURIComponent(project)}`)
-      if (res.ok) {
-        const data = await res.json()
-        setGitStatus(data)
-      }
-    } catch {
-      // ignore
-    }
-  }, [])
+    onLoadAgentPermissions().then((p) => { if (p) setPermissions(p) }).catch(() => {})
+  }, [onLoadAgentPermissions])
 
   useEffect(() => {
     if (selectedProject) {
-      loadGitStatus(selectedProject)
+      fetch(`/api/git/status?path=${encodeURIComponent(selectedProject)}`)
+        .then((res) => res.ok ? res.json() : null)
+        .then((data) => { if (data) setGitStatus(data) })
+        .catch(() => {})
     }
-  }, [selectedProject, loadGitStatus])
+  }, [selectedProject])
+
+  const addOutput = useCallback((line: string) => {
+    setOutput((prev) => [...prev.slice(-200), line])
+  }, [])
 
   const handleSend = async () => {
     if (!input.trim() || busy) return
     setBusy(true)
-    setOutput('')
+    setOutput([])
     try {
-      const res = await fetch('/api/agent/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: input.trim(), project: selectedProject || undefined, persona: 'jarvis' }),
-      })
-      const data = await res.json()
-      if (data.events && data.events.length > 0) {
-        const last = data.events[data.events.length - 1]
-        if (last.event === 'agent_plan') {
+      const res = await onStartAgent(input.trim(), selectedProject || undefined)
+      if (res?.events && res.events.length > 0) {
+        const planEvent = res.events.find((e: any) => e.event === 'agent_plan')
+        const startedEvent = res.events.find((e: any) => e.event === 'agent_started')
+        if (planEvent || startedEvent) {
+          const sessionId = startedEvent?.data?.session_id || res.events[0]?.data?.session_id
           setSession({
-            session_id: data.events[0].data.session_id,
-            state: 'waiting_approval',
-            plan: last.data.plan,
+            session_id: sessionId,
+            state: 'waiting_for_permission',
+            plan: planEvent?.data?.plan || null,
             current_task_index: 0,
             history: [],
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           })
         }
+        for (const ev of res.events) {
+          addOutput(`[${ev.event}] ${JSON.stringify(ev.data).slice(0, 200)}`)
+        }
       }
     } catch (err) {
-      setOutput(err instanceof Error ? err.message : 'Agent failed to start')
+      addOutput(err instanceof Error ? err.message : 'Agent failed to start')
     } finally {
       setBusy(false)
       setInput('')
@@ -90,15 +114,14 @@ export function AgentPanel() {
     if (!session) return
     setBusy(true)
     try {
-      const res = await fetch('/api/agent/approve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: session.session_id }),
-      })
-      const data = await res.json()
-      setOutput(JSON.stringify(data, null, 2))
+      const res = await onApproveAgent(session.session_id)
+      if (res?.events) {
+        for (const ev of res.events) {
+          addOutput(`[${ev.event}] ${JSON.stringify(ev.data).slice(0, 200)}`)
+        }
+      }
     } catch (err) {
-      setOutput(err instanceof Error ? err.message : 'Approval failed')
+      addOutput(err instanceof Error ? err.message : 'Approval failed')
     } finally {
       setBusy(false)
     }
@@ -108,12 +131,9 @@ export function AgentPanel() {
     if (!session) return
     setBusy(true)
     try {
-      await fetch('/api/agent/cancel', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: session.session_id }),
-      })
+      await onCancelAgent(session.session_id)
       setSession((prev) => prev ? { ...prev, state: 'cancelled' } : null)
+      addOutput('[agent_cancelled] User cancelled the operation')
     } catch {
       // ignore
     } finally {
@@ -121,10 +141,71 @@ export function AgentPanel() {
     }
   }
 
+  const handlePause = async () => {
+    if (!session) return
+    setBusy(true)
+    try {
+      await onPauseAgent(session.session_id)
+      setSession((prev) => prev ? { ...prev, state: 'paused' } : null)
+      addOutput('[agent_paused] Task paused')
+    } catch {
+      // ignore
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleResume = async () => {
+    if (!session) return
+    setBusy(true)
+    try {
+      await onResumeAgent(session.session_id)
+      setSession((prev) => prev ? { ...prev, state: 'executing' } : null)
+      addOutput('[agent_resumed] Task resumed')
+    } catch {
+      // ignore
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleKill = async () => {
+    if (!session) return
+    setBusy(true)
+    try {
+      await onKillAgent(session.session_id)
+      setSession((prev) => prev ? { ...prev, state: 'cancelled', kill_switch: true } : null)
+      addOutput('[agent_kill] Kill switch activated')
+    } catch {
+      // ignore
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleRollback = async () => {
+    if (!session) return
+    setBusy(true)
+    try {
+      const res = await onRollbackAgent(session.session_id)
+      addOutput(`[rollback] ${JSON.stringify(res)}`)
+    } catch {
+      // ignore
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handlePermissionChange = async (key: string, value: any) => {
+    const updates = { [key]: value }
+    await onUpdateAgentPermissions(updates)
+    setPermissions((prev: any) => ({ ...prev, ...updates }))
+  }
+
   const renderTask = (task: AgentTask, _index: number) => {
     const statusIcon = task.status === 'completed' ? (
       <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-    ) : task.status === 'running' ? (
+    ) : task.status === 'running' || task.status === 'verifying' || task.status === 'fixing' ? (
       <Loader2 className="w-4 h-4 text-cyan-400 animate-spin" />
     ) : task.status === 'failed' ? (
       <XCircle className="w-4 h-4 text-red-400" />
@@ -143,6 +224,7 @@ export function AgentPanel() {
           <p className="text-xs text-slate-300">{task.title}</p>
           <p className="text-[10px] text-slate-500">{task.type} · risk: {task.risk}</p>
           {task.error && <p className="text-[10px] text-red-400 mt-1">{task.error}</p>}
+          {task.output && <p className="text-[10px] text-slate-400 mt-1 font-mono">{task.output.slice(0, 200)}</p>}
         </div>
       </motion.div>
     )
@@ -223,16 +305,43 @@ export function AgentPanel() {
                 <div className="space-y-2">
                   {session.plan.tasks.map((task, idx) => renderTask(task, idx))}
                 </div>
-                {session.state === 'waiting_approval' && (
-                  <div className="flex gap-2 pt-2">
-                    <Button size="sm" className="flex-1" onClick={handleApprove} disabled={busy}>
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Approve Plan
+                 <div className="flex gap-2 pt-2">
+                  {session.state === 'waiting_for_permission' && (
+                    <>
+                      <Button size="sm" className="flex-1" onClick={handleApprove} disabled={busy}>
+                        <Play className="w-3.5 h-3.5" /> Start
+                      </Button>
+                      <Button size="sm" variant="secondary" className="flex-1" onClick={handleCancel} disabled={busy}>
+                        <Square className="w-3.5 h-3.5" /> Cancel
+                      </Button>
+                    </>
+                  )}
+                  {(session.state === 'executing' || session.state === 'observing' || session.state === 'verifying' || session.state === 'recovering') && (
+                    <>
+                      <Button size="sm" variant="secondary" onClick={handlePause} disabled={busy}>
+                        <Pause className="w-3.5 h-3.5" /> Pause
+                      </Button>
+                      <Button size="sm" variant="secondary" onClick={handleKill} disabled={busy}>
+                        <Square className="w-3.5 h-3.5" /> Kill
+                      </Button>
+                    </>
+                  )}
+                  {session.state === 'paused' && (
+                    <>
+                      <Button size="sm" className="flex-1" onClick={handleResume} disabled={busy}>
+                        <Play className="w-3.5 h-3.5" /> Resume
+                      </Button>
+                      <Button size="sm" variant="secondary" onClick={handleKill} disabled={busy}>
+                        <Square className="w-3.5 h-3.5" /> Kill
+                      </Button>
+                    </>
+                  )}
+                  {(session.state === 'completed' || session.state === 'failed' || session.state === 'cancelled') && (
+                    <Button size="sm" variant="secondary" onClick={handleRollback} disabled={busy}>
+                      <RotateCcw className="w-3.5 h-3.5" /> Rollback
                     </Button>
-                    <Button size="sm" variant="secondary" className="flex-1" onClick={handleCancel} disabled={busy}>
-                      <XCircle className="w-3.5 h-3.5" /> Cancel
-                    </Button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             )}
 
@@ -253,11 +362,73 @@ export function AgentPanel() {
               </div>
             )}
 
-            {output && (
+            {output.length > 0 && (
               <div className="glass-panel p-3">
-                <pre className="text-[10px] font-mono text-slate-300 whitespace-pre-wrap max-h-64 overflow-y-auto">{output}</pre>
+                <div className="flex items-center gap-2 mb-2">
+                  <Terminal className="w-3.5 h-3.5 text-cyan-400/70" />
+                  <span className="text-[10px] tracking-[0.2em] text-slate-500 uppercase">Agent Terminal</span>
+                </div>
+                <pre className="text-[10px] font-mono text-slate-300 whitespace-pre-wrap max-h-64 overflow-y-auto">
+                  {output.join('\n')}
+                </pre>
               </div>
             )}
+
+            <div className="glass-panel p-3">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Settings className="w-3.5 h-3.5 text-cyan-400/70" />
+                  <span className="text-[10px] tracking-[0.2em] text-slate-500 uppercase">Agent Settings</span>
+                </div>
+                <Button size="sm" variant="ghost" onClick={() => setShowPermissions(!showPermissions)}>
+                  {showPermissions ? 'Hide' : 'Show'}
+                </Button>
+              </div>
+              {showPermissions && permissions && (
+                <div className="space-y-2 text-xs">
+                  <label className="flex items-center justify-between">
+                    <span className="text-slate-400">Auto Execute</span>
+                    <input
+                      type="checkbox"
+                      checked={permissions.auto_execute}
+                      onChange={(e) => handlePermissionChange('auto_execute', e.target.checked)}
+                    />
+                  </label>
+                  <label className="flex items-center justify-between">
+                    <span className="text-slate-400">Auto Fix</span>
+                    <input
+                      type="checkbox"
+                      checked={permissions.auto_fix}
+                      onChange={(e) => handlePermissionChange('auto_fix', e.target.checked)}
+                    />
+                  </label>
+                  <div>
+                    <span className="text-slate-400">Terminal:</span>
+                    <select
+                      value={permissions.terminal}
+                      onChange={(e) => handlePermissionChange('terminal', e.target.value)}
+                      className="ml-2 bg-slate-900/80 border border-cyan-500/20 rounded px-2 py-1 text-xs"
+                    >
+                      <option value="allow">Allow</option>
+                      <option value="ask">Ask</option>
+                      <option value="deny">Deny</option>
+                    </select>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Filesystem Delete:</span>
+                    <select
+                      value={permissions.filesystem_delete}
+                      onChange={(e) => handlePermissionChange('filesystem_delete', e.target.value)}
+                      className="ml-2 bg-slate-900/80 border border-cyan-500/20 rounded px-2 py-1 text-xs"
+                    >
+                      <option value="allow">Allow</option>
+                      <option value="ask">Ask</option>
+                      <option value="deny">Deny</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>

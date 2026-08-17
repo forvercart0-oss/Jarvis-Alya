@@ -134,3 +134,46 @@ async def delete_task(task_id: str):
 async def get_task_history(limit: int = 50):
     manager = _get_manager()
     return manager.get_task_history(limit=limit)
+
+
+@router.post("/tasks/advanced")
+async def create_task_advanced(request: dict):
+    manager = _get_manager()
+    description = request.get("description", "")
+    task_type = request.get("task_type", "general")
+    auto_execute = request.get("auto_execute", False)
+    context = request.get("context")
+    dry_run = request.get("dry_run", False)
+    if not description:
+        raise HTTPException(status_code=400, detail="description is required")
+    result = manager.create_task_with_routing(description, task_type=task_type, auto_execute=auto_execute, context=context, dry_run=dry_run)
+    return result
+
+
+@router.get("/tasks/queue")
+async def get_task_queue():
+    manager = _get_manager()
+    return {"queue": manager.get_queue()}
+
+
+@router.get("/tasks/processes")
+async def get_task_processes():
+    manager = _get_manager()
+    return {"processes": manager.get_processes()}
+
+
+@router.post("/tasks/autonomy")
+async def set_autonomy_level(request: dict):
+    manager = _get_manager()
+    level = request.get("level", "balanced")
+    try:
+        manager.set_autonomy_level(level)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"level": manager.get_autonomy_level()}
+
+
+@router.get("/tasks/project/{project}")
+async def get_tasks_by_project(project: str):
+    manager = _get_manager()
+    return manager.get_tasks_by_project(project)

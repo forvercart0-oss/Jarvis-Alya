@@ -75,6 +75,18 @@ class SystemPlatform(ABC):
         """Capture the screen to ``out_path``. Return status details."""
 
     @abstractmethod
+    async def list_windows(self) -> dict:
+        """List available windows."""
+
+    @abstractmethod
+    async def get_active_window(self) -> dict:
+        """Return active window info."""
+
+    @abstractmethod
+    async def get_screen_info(self) -> dict:
+        """Return screen dimensions."""
+
+    @abstractmethod
     async def set_brightness(self, level: int) -> dict:
         """Set screen brightness to ``level`` percent (0-100)."""
 

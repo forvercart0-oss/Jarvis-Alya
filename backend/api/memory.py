@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -57,9 +56,19 @@ async def get_memories(category: str | None = None, project: str | None = None, 
 
 
 @router.get("/memory/search")
-async def search_memories(query: str, category: str | None = None, project: str | None = None, profile: str | None = None, min_confidence: float = 0.0, limit: int = 20):
+async def search_memories(
+    query: str,
+    category: str | None = None,
+    project: str | None = None,
+    profile: str | None = None,
+    min_confidence: float = 0.0,
+    limit: int = 20,
+):
     from backend.main import memory_service
-    return memory_service.search(query, category=category, project=project, profile=profile, min_confidence=min_confidence, limit=limit)
+    return memory_service.search(
+        query, category=category, project=project, profile=profile,
+        min_confidence=min_confidence, limit=limit,
+    )
 
 
 @router.get("/memory/stats")
@@ -95,7 +104,9 @@ async def add_memory(request: MemoryRequest):
 @router.patch("/memory/{memory_id}")
 async def update_memory(memory_id: str, request: MemoryRequest):
     from backend.main import memory_service
-    memory = memory_service.memory.long_term.update(memory_id, request.content, confidence=request.confidence, source=request.source)
+    memory = memory_service.memory.long_term.update(
+        memory_id, request.content, confidence=request.confidence, source=request.source,
+    )
     if not memory:
         raise HTTPException(status_code=404, detail="Memory not found")
     return {"status": "updated"}
@@ -192,3 +203,158 @@ async def set_privacy(request: PrivacyRequest):
     from backend.main import memory_service
     memory_service.set_privacy_mode(request.mode)
     return {"status": "updated"}
+
+
+@router.get("/memory/health")
+async def memory_health():
+    from backend.main import memory_service
+    return memory_service.get_health()
+
+
+@router.get("/memory/ranked")
+async def search_memories_ranked(
+    query: str = "",
+    category: str | None = None,
+    project: str | None = None,
+    profile: str | None = None,
+    min_confidence: float = 0.0,
+    limit: int = 20,
+):
+    from backend.main import memory_service
+    return memory_service.search_with_ranking(
+        query=query, category=category, project=project, profile=profile,
+        min_confidence=min_confidence, limit=limit,
+    )
+
+
+@router.get("/memory/context")
+async def get_memory_context(
+    query: str,
+    project: str | None = None,
+    profile: str = "jarvis",
+    max_memories: int = 8,
+    max_tokens: int = 2000,
+):
+    from backend.main import memory_service
+    return memory_service.build_context(
+        query, project=project, profile=profile,
+        max_memories=max_memories, max_tokens=max_tokens,
+    )
+
+
+@router.get("/memory/duplicates")
+async def get_duplicates(threshold: float = 0.85):
+    from backend.main import memory_service
+    return {"duplicates": memory_service.detect_duplicates(threshold=threshold)}
+
+
+@router.get("/memory/contradictions")
+async def get_contradictions():
+    from backend.main import memory_service
+    return {"contradictions": memory_service.detect_contradictions()}
+
+
+@router.post("/memory/decay")
+async def apply_memory_decay(decay_rate: float = 0.01):
+    from backend.main import memory_service
+    updated = memory_service.apply_decay(decay_rate=decay_rate)
+    return {"updated": updated}
+
+
+@router.get("/memory/{memory_id}/related")
+async def get_related_memories(memory_id: str, limit: int = 10):
+    from backend.main import memory_service
+    return {"related": memory_service.get_related_memories(memory_id, limit=limit)}
+
+
+@router.post("/memory/export")
+async def export_memories(category: str | None = None, project: str | None = None, profile: str | None = None):
+    from backend.main import memory_service
+    return memory_service.export_memories(category=category, project=project, profile=profile)
+
+
+@router.post("/memory/import")
+async def import_memories(request: dict):
+    from backend.main import memory_service
+    mode = request.get("mode", "merge")
+    data = request.get("data", {})
+    return memory_service.import_memories(data, mode=mode)
+
+
+@router.patch("/memory/{memory_id}")
+async def update_memory_fields(memory_id: str, updates: dict):
+    from backend.main import memory_service
+    updated = memory_service.update_memory_fields(memory_id, updates)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Memory not found")
+    return updated
+
+
+@router.get("/memory/dashboard")
+async def get_memory_dashboard():
+    from backend.main import memory_service
+    return memory_service.get_memory_dashboard()
+
+
+@router.post("/memory/confirm")
+async def confirm_memory(request: dict):
+    from backend.main import memory_service
+    content = request.get("content", "")
+    category = request.get("category", "general")
+    importance = request.get("importance", "medium")
+    memory_type = request.get("memory_type")
+    if not content:
+        raise HTTPException(status_code=400, detail="content is required")
+    result = memory_service.remember_with_confirmation(
+        content, category=category, importance=importance, memory_type=memory_type,
+    )
+    return result
+
+
+@router.post("/memory/session")
+async def remember_session(request: dict):
+    from backend.main import memory_service
+    session_id = request.get("session_id", "")
+    content = request.get("content", "")
+    if not session_id or not content:
+        raise HTTPException(status_code=400, detail="session_id and content are required")
+    result = memory_service.remember_session(
+        session_id, content,
+        category=request.get("category", "general"),
+        memory_type=request.get("memory_type", "fact"),
+        importance=float(request.get("importance", 0.5)),
+        expires_at=request.get("expires_at"),
+    )
+    return result
+
+
+@router.get("/memory/session/{session_id}")
+async def get_session_memories(session_id: str, limit: int = 50):
+    from backend.main import memory_service
+    return {"memories": memory_service.get_session_memories(session_id, limit=limit)}
+
+
+@router.delete("/memory/session/{session_id}")
+async def clear_session_memories(session_id: str):
+    from backend.main import memory_service
+    count = memory_service.clear_session_memories(session_id)
+    return {"status": "cleared", "count": count}
+
+
+@router.get("/memory/audit")
+async def get_memory_audit(limit: int = 100):
+    from backend.main import memory_service
+    return {"audit": memory_service.audit.get_recent(limit=limit)}
+
+
+@router.post("/memory/conflicts/resolve")
+async def resolve_memory_conflict(request: dict):
+    from backend.main import memory_service
+    memory_id = request.get("memory_id", "")
+    keep = request.get("keep", True)
+    if not memory_id:
+        raise HTTPException(status_code=400, detail="memory_id is required")
+    result = memory_service.resolve_conflict(memory_id, keep=keep)
+    if not result:
+        raise HTTPException(status_code=404, detail="Memory not found")
+    return result

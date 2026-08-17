@@ -47,6 +47,14 @@ class VisionProvider(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    async def understand_ui(self, image_path: str) -> VisionResult:
+        """Understand the UI layout and elements."""
+
+    @abstractmethod
+    async def answer_visual_question(self, image_path: str, question: str) -> VisionResult:
+        """Answer a natural language question about the image."""
+
+    @abstractmethod
     async def health_check(self) -> dict[str, Any]:
         """Return provider health status."""
         raise NotImplementedError

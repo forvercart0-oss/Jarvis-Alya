@@ -1,6 +1,6 @@
 export type OrbState = 'idle' | 'listening' | 'thinking' | 'processing' | 'speaking' | 'error'
 
-export type TabId = 'home' | 'chat' | 'voice' | 'system' | 'tools' | 'coding' | 'memory' | 'automations' | 'tasks' | 'media' | 'settings' | 'diagnostics' | 'health' | 'about' | 'skills' | 'agent' | 'browser' | 'computer' | 'vision' | 'research'
+export type TabId = 'home' | 'chat' | 'voice' | 'system' | 'tools' | 'coding' | 'memory' | 'automations' | 'tasks' | 'workflows' | 'media' | 'settings' | 'diagnostics' | 'health' | 'about' | 'skills' | 'agent' | 'browser' | 'computer' | 'vision' | 'research'
 
 export type ConnectionState = 'connecting' | 'online' | 'offline'
 
@@ -104,6 +104,12 @@ export interface JarvisSettings {
   research_max_sources?: number
   research_depth?: string
   research_document_format?: string
+  workflow_max_concurrent?: number
+  workflow_default_timeout?: number
+  workflow_default_retries?: number
+  workflow_quiet_hours_start?: string
+  workflow_quiet_hours_end?: string
+  workflow_history_retention_days?: number
 }
 
 export interface PersonaInfo {
@@ -181,6 +187,10 @@ export interface PrivacySettings {
   cloud_sharing?: string
 }
 
+export type MemoryType = 'user_preference' | 'user_profile' | 'project' | 'project_preference' | 'workflow' | 'skill' | 'task' | 'conversation' | 'fact' | 'decision' | 'goal' | 'important_context' | 'session' | 'profile' | 'general'
+export type MemoryImportance = 'low' | 'medium' | 'high'
+export type MemoryStatus = 'active' | 'archived' | 'conflicted' | 'expired'
+
 export interface MemoryItem {
   id: string
   key: string
@@ -193,6 +203,48 @@ export interface MemoryItem {
   profile?: string
   expires_at?: string
   last_used_at?: string
+  importance?: number
+  access_count?: number
+  tags?: string[]
+  related_ids?: string[]
+  memory_type?: string
+  decay_factor?: number
+  status?: MemoryStatus
+  previous_value?: string
+  updated_at?: string
+}
+
+export interface MemoryDashboard {
+  total_memories: number
+  storage_bytes: number
+  by_category: Record<string, number>
+  by_type: Record<string, number>
+  by_importance: Record<string, number>
+  recent: Array<{
+    id: string
+    content: string
+    category: string
+    memory_type: string
+    importance: number
+    created_at: string
+  }>
+  health?: Record<string, any>
+}
+
+export interface SessionMemory extends MemoryItem {
+  session_id: string
+}
+
+export interface MemoryAuditEntry {
+  audit_id: string
+  event: string
+  memory_id?: string
+  category?: string
+  memory_type?: string
+  project?: string
+  profile?: string
+  detail: string
+  timestamp: string
 }
 
 export interface NotificationItem {
@@ -327,7 +379,7 @@ export interface SkillActivity {
   result: 'success' | 'error' | 'denied'
 }
 
-export type AgentState = 'idle' | 'planning' | 'waiting_approval' | 'executing' | 'waiting_confirmation' | 'testing' | 'completed' | 'failed' | 'cancelled'
+export type AgentState = 'idle' | 'planning' | 'waiting_for_permission' | 'waiting_for_user' | 'executing' | 'observing' | 'verifying' | 'recovering' | 'paused' | 'completed' | 'failed' | 'cancelled'
 
 export interface AgentTask {
   task_id: string
@@ -335,6 +387,7 @@ export interface AgentTask {
   type: string
   status: string
   risk: string
+  command_category?: string
   arguments: Record<string, any>
   result?: any
   error?: string
@@ -342,6 +395,16 @@ export interface AgentTask {
   finished_at?: string
   retries: number
   max_retries: number
+  output?: string
+  command?: string
+  files_changed?: string[]
+  checkpoint_id?: string
+  duration_ms?: number
+  confidence?: string
+  observation?: string
+  verification?: string
+  requires_approval?: boolean
+  dry_run?: boolean
 }
 
 export interface AgentPlan {
@@ -351,6 +414,8 @@ export interface AgentPlan {
   tasks: AgentTask[]
   approved: boolean
   project?: string
+  autonomy_level?: string
+  dry_run?: boolean
   created_at: string
 }
 
@@ -363,13 +428,52 @@ export interface AgentSession {
     project_root?: string
     language?: string
     persona?: string
+    autonomy_level?: string
   }
   plan?: AgentPlan
   current_task_index: number
   history: Array<Record<string, any>>
   created_at: string
   updated_at: string
+  background_tasks?: string[]
+  kill_switch?: boolean
 }
+
+export interface AgentDefinition {
+  agent_id: string
+  name: string
+  description: string
+  capabilities: string[]
+  tools: string[]
+  permissions: string[]
+  status: string
+  priority: string
+  version: string
+}
+
+export interface OrchestrationTask {
+  task_id: string
+  user_request: string
+  state: string
+  plan?: AgentPlan
+  results?: Record<string, any>
+  errors?: string[]
+  agent_assignments?: Record<string, string>
+  created_at: number
+  completed_at: number
+}
+
+export interface AgentMessage {
+  sender: string
+  receiver: string
+  task_id: string
+  type: string
+  content: any
+  metadata: Record<string, any>
+  timestamp: string
+}
+
+export type OrchestratorState = 'idle' | 'planning' | 'dispatching' | 'running' | 'waiting_permission' | 'verifying' | 'completed' | 'failed' | 'cancelled'
 
 export interface GitStatus {
   path: string
@@ -461,4 +565,211 @@ export interface ResearchSource {
   publisher: string
   publication_date: string
   source_type: string
+}
+
+export interface BrowserSession {
+  session_id: string
+  url: string
+  title: string
+  tabs: Array<{ title: string; url: string }>
+  active_tab_index: number
+  connected: boolean
+  error?: string
+}
+
+export interface BrowserSettings {
+  enabled: boolean
+  engine: string
+  mode: string
+  profile: string
+  download_dir: string
+  search_engine: string
+  permission: string
+  timeout: number
+  max_retries: number
+  trusted_domains: string[]
+  visual_fallback: boolean
+  ask_before_send: boolean
+  ask_before_post: boolean
+  ask_before_upload: boolean
+  ask_before_download: boolean
+  ask_before_purchase: boolean
+  auto_captcha_pause: boolean
+  max_actions: number
+  max_page_reloads: number
+  dom_first: boolean
+}
+
+export interface BrowserTask {
+  goal: string
+  state: string
+  steps: Array<{ action: string; result: any; count: number }>
+  current_step: number
+  error?: string
+}
+
+export interface BrowserElement {
+  type: string
+  role: string
+  text: string
+  label: string
+  selector: string
+  visible: boolean
+  enabled: boolean
+  confidence: number
+}
+
+export interface ComputerStatus {
+  platform: string
+  available: boolean
+  mode: string
+  active_window?: string
+  cursor?: { x: number; y: number }
+  monitors?: Array<{ id: string; width: number; height: number; scale: number }>
+  takeover?: boolean
+  task?: ComputerTask
+}
+
+export interface ComputerSettings {
+  enabled: boolean
+  mode: string
+  screen_access: string
+  mouse_control: string
+  keyboard_control: string
+  application_launch: string
+  window_control: string
+  screen_preview: string
+  mouse_failsafe: boolean
+  max_retries: number
+  file_automation: string
+  terminal_automation: string
+  process_control: string
+  trust_level: string
+  emergency_stop: string
+  automation_timeout: number
+  max_task_steps: number
+  visual_confidence: number
+  window_layouts: boolean
+  clipboard_access: string
+}
+
+export interface ComputerTask {
+  goal: string
+  state: string
+  steps: Array<{ action: string; result: any; count: number }>
+  current_step: number
+  error?: string
+}
+
+export interface WindowInfo {
+  window_id: string
+  title: string
+  application: string
+  process: string
+  x: number
+  y: number
+  width: number
+  height: number
+  state: string
+  monitor: number
+}
+
+export interface VisionStatus {
+  enabled: boolean
+  provider?: string | null
+  providers?: number
+  last_capture?: any
+  confidence_threshold?: number
+  camera_active?: boolean
+  screen_access?: boolean
+  continuous_vision?: boolean
+  visual_overlay?: boolean
+}
+
+export interface VisionSettings {
+  enabled: boolean
+  provider: string
+  confidence_threshold: number
+  local_model: string
+  cloud_model: string
+  max_retries: number
+  cache_ttl: number
+  capture_hotkey: string
+  max_image_size_mb: number
+  max_image_width: number
+  max_image_height: number
+  image_quality: number
+  ocr_enabled: boolean
+  camera_enabled: boolean
+  screen_analysis_enabled: boolean
+  remember_visual_context: boolean
+  external_provider_allowed: boolean
+  screen_access: boolean
+  continuous_vision: boolean
+  camera_access: boolean
+  visual_overlay: boolean
+  screen_history_minutes: number
+  max_visual_steps: number
+  ocr_preprocessing: boolean
+  offline_fallback: boolean
+  prompt_injection_protection: boolean
+}
+
+export type WorkflowStatus = 'draft' | 'active' | 'paused' | 'running' | 'waiting' | 'completed' | 'failed' | 'cancelled'
+export type WorkflowTriggerType = 'one_time' | 'scheduled' | 'recurring' | 'event_based' | 'manual' | 'conditional'
+
+export interface WorkflowStep {
+  step_id: string
+  type: string
+  name: string
+  description?: string
+  config?: Record<string, any>
+  next_step_id?: string | null
+  condition?: Record<string, any> | null
+  retry_policy?: Record<string, any> | null
+  timeout_seconds?: number
+  order: number
+}
+
+export interface Workflow {
+  workflow_id: string
+  name: string
+  description?: string
+  trigger?: Record<string, any>
+  steps?: WorkflowStep[]
+  variables?: Record<string, any>
+  permissions?: Record<string, any>
+  status: WorkflowStatus
+  enabled: boolean
+  created_at: string
+  updated_at: string
+  last_run?: string | null
+  next_run?: string | null
+  tags?: string[]
+  project?: string | null
+}
+
+export interface WorkflowRun {
+  run_id: string
+  workflow_id: string
+  status: WorkflowStatus
+  started_at: string
+  finished_at?: string | null
+  duration_seconds?: number
+  steps?: Array<Record<string, any>>
+  errors?: Array<Record<string, any>>
+  result?: Record<string, any> | null
+}
+
+export interface WorkflowApproval {
+  approval_id: string
+  workflow_id: string
+  run_id: string
+  step_id: string
+  action: string
+  arguments: Record<string, any>
+  risk_level: string
+  status: string
+  created_at: string
+  resolved_at?: string | null
 }

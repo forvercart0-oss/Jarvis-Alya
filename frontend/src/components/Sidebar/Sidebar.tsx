@@ -101,6 +101,7 @@ export function Sidebar({ activeTab, onTabChange, connection, persona, onSwitchP
       <SidebarItem id="browser" label="Browser" icon={<Globe className="w-5 h-5" />} active={activeTab === 'browser'} accent={accentColor} onClick={() => onTabChange('browser')} />
       <SidebarItem id="computer" label="Computer" icon={<Monitor className="w-5 h-5" />} active={activeTab === 'computer'} accent={accentColor} onClick={() => onTabChange('computer')} />
       <SidebarItem id="vision" label="Vision" icon={<Eye className="w-5 h-5" />} active={activeTab === 'vision'} accent={accentColor} onClick={() => onTabChange('vision')} />
+      <SidebarItem id="workflows" label="Workflows" icon={<Zap className="w-5 h-5" />} active={activeTab === 'workflows'} accent={accentColor} onClick={() => onTabChange('workflows')} />
       <SidebarItem id="research" label="Research" icon={<FlaskConical className="w-5 h-5" />} active={activeTab === 'research'} accent={accentColor} serious={seriousMode} onClick={() => onTabChange('research')} />
       <SidebarItem id="settings" label="Settings" icon={<Settings className="w-5 h-5" />} active={activeTab === 'settings'} accent={accentColor} onClick={() => onTabChange('settings')} />
 

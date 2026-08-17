@@ -58,6 +58,23 @@ PUBLIC_SETTING_KEYS = {
     "memory_retention_summaries_days",
     "proactive_mode",
     "proactive_min_interval_minutes",
+    "memory_ranking_enabled",
+    "memory_decay_enabled",
+    "memory_decay_rate",
+    "memory_duplicate_detection",
+    "memory_contradiction_detection",
+    "memory_auto_extraction",
+    "memory_temporary_chat",
+    "memory_max_context_memories",
+    "memory_max_context_tokens",
+    "memory_ask_before_remember",
+    "memory_session_memory_enabled",
+    "memory_private_mode",
+    "memory_audit_log_enabled",
+    "memory_prompt_injection_protection",
+    "memory_hybrid_search_enabled",
+    "memory_semantic_search_enabled",
+    "memory_keyword_fallback_enabled",
     "message_notifications_enabled",
     "browser_notifications_enabled",
     "voice_notifications_enabled",
@@ -82,9 +99,111 @@ PUBLIC_SETTING_KEYS = {
     "vision_max_retries",
     "vision_cache_ttl",
     "vision_capture_hotkey",
+    "vision_max_image_size_mb",
+    "vision_max_image_width",
+    "vision_max_image_height",
+    "vision_image_quality",
+    "vision_ocr_enabled",
+    "vision_camera_enabled",
+    "vision_screen_analysis_enabled",
+    "vision_remember_visual_context",
+    "vision_external_provider_allowed",
+    "vision_screen_access",
+    "vision_continuous_vision",
+    "vision_camera_access",
+    "vision_visual_overlay",
+    "vision_screen_history_minutes",
+    "vision_max_visual_steps",
+    "vision_ocr_preprocessing",
+    "vision_offline_fallback",
+    "vision_prompt_injection_protection",
     "research_max_sources",
     "research_depth",
     "research_document_format",
+    "agent_enabled",
+    "agent_auto_execute",
+    "agent_auto_fix",
+    "agent_max_retries",
+    "agent_confirmation_level",
+    "agent_terminal",
+    "agent_filesystem_delete",
+    "agent_network",
+    "agent_git",
+    "agent_autonomy_level",
+    "agent_dry_run",
+    "agent_background_tasks_enabled",
+    "agent_require_confirmation_communicate",
+    "agent_require_confirmation_delete",
+    "agent_require_confirmation_system",
+    "agent_require_confirmation_purchases",
+    "agent_require_confirmation_publishing",
+    "agent_kill_switch_enabled",
+    "agent_max_task_time",
+    "agent_max_steps",
+    "agent_max_parallel_tasks",
+    "agent_file_conflict_protection",
+    "agent_orchestration_enabled",
+    "agent_multi_agent_mode",
+    "agent_max_active_agents",
+    "agent_max_task_steps",
+    "agent_task_timeout",
+    "agent_agent_timeout",
+    "agent_cost_limit",
+    "agent_logging_enabled",
+    "agent_custom_agents_enabled",
+    "task_autonomy_level",
+    "task_dry_run",
+    "task_max_concurrent",
+    "task_default_timeout",
+    "task_default_retries",
+    "task_command_security",
+    "task_process_tracking",
+    "browser_enabled",
+    "browser_engine",
+    "browser_mode",
+    "browser_profile",
+    "browser_download_dir",
+    "browser_search_engine",
+    "browser_permission",
+    "browser_timeout",
+    "browser_max_retries",
+    "browser_trusted_domains",
+    "browser_visual_fallback",
+    "browser_ask_before_send",
+    "browser_ask_before_post",
+    "browser_ask_before_upload",
+    "browser_ask_before_download",
+    "browser_ask_before_purchase",
+    "browser_auto_captcha_pause",
+    "browser_max_actions",
+    "browser_max_page_reloads",
+    "browser_dom_first",
+    "computer_enabled",
+    "computer_mode",
+    "computer_screen_access",
+    "computer_mouse_control",
+    "computer_keyboard_control",
+    "computer_application_launch",
+    "computer_window_control",
+    "computer_screen_preview",
+    "computer_mouse_failsafe",
+    "computer_max_retries",
+    "computer_file_automation",
+    "computer_terminal_automation",
+    "computer_process_control",
+    "computer_trust_level",
+    "computer_emergency_stop",
+    "computer_automation_timeout",
+    "computer_max_task_steps",
+    "computer_visual_confidence",
+    "computer_window_layouts",
+    "computer_clipboard_access",
+    "workflow_max_concurrent",
+    "workflow_default_timeout",
+    "workflow_default_retries",
+    "workflow_quiet_hours_start",
+    "workflow_quiet_hours_end",
+    "workflow_history_retention_days",
 }
 
 # Secret keys stored in `.env` but never returned unmasked to the browser.
@@ -166,6 +285,23 @@ class Settings(BaseSettings):
     memory_retention_summaries_days: int = 30
     proactive_mode: bool = False
     proactive_min_interval_minutes: int = 10
+    memory_ranking_enabled: bool = True
+    memory_decay_enabled: bool = True
+    memory_decay_rate: float = 0.01
+    memory_duplicate_detection: bool = True
+    memory_contradiction_detection: bool = True
+    memory_auto_extraction: bool = False
+    memory_temporary_chat: bool = False
+    memory_max_context_memories: int = 8
+    memory_max_context_tokens: int = 2000
+    memory_ask_before_remember: bool = False
+    memory_session_memory_enabled: bool = True
+    memory_private_mode: bool = False
+    memory_audit_log_enabled: bool = True
+    memory_prompt_injection_protection: bool = True
+    memory_hybrid_search_enabled: bool = True
+    memory_semantic_search_enabled: bool = True
+    memory_keyword_fallback_enabled: bool = True
 
     # Notifications
     message_notifications_enabled: bool = True
@@ -212,11 +348,122 @@ class Settings(BaseSettings):
     vision_max_retries: int = 3
     vision_cache_ttl: float = 30.0
     vision_capture_hotkey: str = "ctrl+shift+j"
+    vision_max_image_size_mb: float = 20.0
+    vision_max_image_width: int = 1920
+    vision_max_image_height: int = 1080
+    vision_image_quality: int = 85
+    vision_ocr_enabled: bool = True
+    vision_camera_enabled: bool = False
+    vision_screen_analysis_enabled: bool = True
+    vision_remember_visual_context: bool = False
+    vision_external_provider_allowed: bool = True
+    vision_screen_access: bool = False
+    vision_continuous_vision: bool = False
+    vision_camera_access: bool = False
+    vision_visual_overlay: bool = False
+    vision_screen_history_minutes: int = 0
+    vision_max_visual_steps: int = 10
+    vision_ocr_preprocessing: bool = True
+    vision_offline_fallback: bool = True
+    vision_prompt_injection_protection: bool = True
 
     # Deep Research
     research_max_sources: int = 20
     research_depth: str = "deep"
     research_document_format: str = "markdown"
+
+    # Agent
+    agent_enabled: bool = True
+    agent_auto_execute: bool = False
+    agent_auto_fix: bool = True
+    agent_max_retries: int = 3
+    agent_confirmation_level: str = "risky_only"
+    agent_terminal: str = "ask"
+    agent_filesystem_delete: str = "ask"
+    agent_network: str = "ask"
+    agent_git: str = "ask"
+    agent_autonomy_level: str = "assisted"
+    agent_dry_run: bool = False
+    agent_background_tasks_enabled: bool = True
+    agent_require_confirmation_communicate: bool = True
+    agent_require_confirmation_delete: bool = True
+    agent_require_confirmation_system: bool = True
+    agent_require_confirmation_purchases: bool = True
+    agent_require_confirmation_publishing: bool = True
+    agent_kill_switch_enabled: bool = True
+    agent_max_task_time: int = 1800
+    agent_max_steps: int = 50
+    agent_max_parallel_tasks: int = 2
+    agent_file_conflict_protection: bool = True
+    agent_orchestration_enabled: bool = True
+    agent_multi_agent_mode: str = "auto"
+    agent_max_active_agents: int = 5
+    agent_max_parallel_tasks: int = 3
+    agent_max_task_steps: int = 20
+    agent_task_timeout: int = 600
+    agent_agent_timeout: int = 300
+    agent_cost_limit: str = "off"
+    agent_logging_enabled: bool = False
+    agent_custom_agents_enabled: bool = True
+
+    # Task Engine
+    task_autonomy_level: str = "balanced"
+    task_dry_run: bool = False
+    task_max_concurrent: int = 3
+    task_default_timeout: int = 600
+    task_default_retries: int = 3
+    task_command_security: bool = True
+    task_process_tracking: bool = True
+
+    # Browser
+    browser_enabled: bool = True
+    browser_engine: str = "chromium"
+    browser_mode: str = "visible"
+    browser_profile: str = "isolated"
+    browser_download_dir: str = "~/Downloads/JARVIS-Browser"
+    browser_search_engine: str = "https://www.google.com"
+    browser_permission: str = "ask"
+    browser_timeout: int = 30
+    browser_max_retries: int = 3
+    browser_trusted_domains: list[str] = ["github.com", "docs.python.org", "developer.mozilla.org"]
+    browser_visual_fallback: bool = True
+    browser_ask_before_send: bool = True
+    browser_ask_before_post: bool = True
+    browser_ask_before_upload: bool = True
+    browser_ask_before_download: bool = False
+    browser_ask_before_purchase: bool = True
+    browser_auto_captcha_pause: bool = True
+    browser_max_actions: int = 10
+    browser_max_page_reloads: int = 3
+    browser_dom_first: bool = True
+
+    # Computer
+    computer_enabled: bool = True
+    computer_mode: str = "off"
+    computer_screen_access: str = "ask"
+    computer_mouse_control: str = "ask"
+    computer_keyboard_control: str = "ask"
+    computer_application_launch: str = "ask"
+    computer_window_control: str = "ask"
+    computer_screen_preview: str = "off"
+    computer_mouse_failsafe: bool = True
+    computer_max_retries: int = 3
+    computer_file_automation: str = "ask"
+    computer_terminal_automation: str = "ask"
+    computer_process_control: str = "ask"
+    computer_trust_level: str = "ask_sensitive"
+    computer_emergency_stop: str = "ctrl+alt+shift+j"
+    computer_automation_timeout: int = 30
+    computer_max_task_steps: int = 20
+    computer_visual_confidence: float = 0.70
+    computer_window_layouts: bool = True
+    computer_clipboard_access: str = "ask"
+    workflow_max_concurrent: int = 3
+    workflow_default_timeout: int = 600
+    workflow_default_retries: int = 2
+    workflow_quiet_hours_start: str = "23:00"
+    workflow_quiet_hours_end: str = "08:00"
+    workflow_history_retention_days: int = 30
 
     # ---- persistence -------------------------------------------------
     def apply_db_overrides(self, overrides: dict[str, str]) -> None:

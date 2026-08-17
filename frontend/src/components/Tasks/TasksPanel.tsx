@@ -18,27 +18,31 @@ interface TasksPanelProps {
 const STATUS_COLORS: Record<string, string> = {
   pending: 'text-slate-400',
   planning: 'text-yellow-400',
-  waiting_permission: 'text-yellow-400',
+  ready: 'text-blue-400',
   running: 'text-cyan-400',
+  waiting: 'text-orange-400',
   paused: 'text-orange-400',
-  waiting_user: 'text-yellow-400',
   verifying: 'text-purple-400',
+  needs_approval: 'text-red-400',
   completed: 'text-green-400',
   failed: 'text-red-400',
   cancelled: 'text-slate-600',
+  blocked: 'text-red-400',
 }
 
 const STATUS_BG: Record<string, string> = {
   pending: 'bg-slate-500/10',
   planning: 'bg-yellow-500/10',
-  waiting_permission: 'bg-yellow-500/10',
+  ready: 'bg-blue-500/10',
   running: 'bg-cyan-500/10',
+  waiting: 'bg-orange-500/10',
   paused: 'bg-orange-500/10',
-  waiting_user: 'bg-yellow-500/10',
   verifying: 'bg-purple-500/10',
+  needs_approval: 'bg-red-500/10',
   completed: 'bg-green-500/10',
   failed: 'bg-red-500/10',
   cancelled: 'bg-slate-500/10',
+  blocked: 'bg-red-500/10',
 }
 
 const inputCls = 'w-full bg-slate-900/80 border border-cyan-500/20 rounded px-2 py-1.5 text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-400/60'
@@ -47,24 +51,27 @@ const labelCls = 'text-[10px] tracking-widest text-slate-500 uppercase'
 export function TasksPanel({ tasks, taskPlan, onCreate, onStart, onPause, onResume, onCancel, onApprove, onDeny, onClearPlan }: TasksPanelProps) {
   const [newTask, setNewTask] = useState('')
   const [autoExecute, setAutoExecute] = useState(false)
+  const [dryRun, setDryRun] = useState(false)
   const [expandedTask, setExpandedTask] = useState<string | null>(null)
   const [filter, setFilter] = useState<'all' | 'active' | 'completed' | 'failed'>('all')
+  const [view, setView] = useState<'tasks' | 'queue' | 'processes'>('tasks')
 
   const handleCreate = () => {
     if (!newTask.trim()) return
     onCreate(newTask.trim(), autoExecute)
     setNewTask('')
     setAutoExecute(false)
+    setDryRun(false)
   }
 
   const filteredTasks = tasks.filter((t) => {
-    if (filter === 'active') return ['pending', 'planning', 'waiting_permission', 'running', 'paused', 'waiting_user', 'verifying'].includes(t.status)
+    if (filter === 'active') return ['pending', 'planning', 'ready', 'running', 'waiting', 'paused', 'verifying', 'needs_approval', 'blocked'].includes(t.status)
     if (filter === 'completed') return t.status === 'completed'
     if (filter === 'failed') return ['failed', 'cancelled'].includes(t.status)
     return true
   })
 
-  const activeTasks = filteredTasks.filter((t) => ['pending', 'planning', 'waiting_permission', 'running', 'paused', 'waiting_user', 'verifying'].includes(t.status))
+  const activeTasks = filteredTasks.filter((t) => ['pending', 'planning', 'ready', 'running', 'waiting', 'paused', 'verifying', 'needs_approval', 'blocked'].includes(t.status))
   const completedTasks = filteredTasks.filter((t) => t.status === 'completed')
   const failedTasks = filteredTasks.filter((t) => ['failed', 'cancelled'].includes(t.status))
 
@@ -75,13 +82,23 @@ export function TasksPanel({ tasks, taskPlan, onCreate, onStart, onPause, onResu
           <Zap className="w-4 h-4" /> Tasks
         </h3>
         <div className="flex gap-1">
+          {(['tasks', 'queue', 'processes'] as const).map((v) => (
+            <button key={v} onClick={() => setView(v)} className={`px-2 py-1 text-[10px] rounded transition-colors ${view === v ? 'bg-cyan-500/20 text-cyan-300' : 'text-slate-500 hover:text-slate-300'}`}>
+              {v.charAt(0).toUpperCase() + v.slice(1)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {view === 'tasks' && (
+        <div className="flex gap-1">
           {(['all', 'active', 'completed', 'failed'] as const).map((f) => (
             <button key={f} onClick={() => setFilter(f)} className={`px-2 py-1 text-[10px] rounded transition-colors ${filter === f ? 'bg-cyan-500/20 text-cyan-300' : 'text-slate-500 hover:text-slate-300'}`}>
               {f.charAt(0).toUpperCase() + f.slice(1)}
             </button>
           ))}
         </div>
-      </div>
+      )}
 
       {/* Plan Preview */}
       {taskPlan && (
@@ -145,6 +162,10 @@ export function TasksPanel({ tasks, taskPlan, onCreate, onStart, onPause, onResu
             <input type="checkbox" checked={autoExecute} onChange={(e) => setAutoExecute(e.target.checked)} className="rounded border-slate-600" />
             Auto-execute
           </label>
+          <label className="flex items-center gap-2 text-[10px] text-slate-500">
+            <input type="checkbox" checked={dryRun} onChange={(e) => setDryRun(e.target.checked)} className="rounded border-slate-600" />
+            Dry run
+          </label>
           <button onClick={handleCreate} disabled={!newTask.trim()} className="px-3 py-1.5 bg-cyan-500/15 border border-cyan-400/40 rounded text-xs text-cyan-200 hover:bg-cyan-400/25 transition-all disabled:opacity-50">
             Create Task
           </button>
@@ -190,8 +211,22 @@ export function TasksPanel({ tasks, taskPlan, onCreate, onStart, onPause, onResu
         </div>
       )}
 
-      {filteredTasks.length === 0 && (
+      {filteredTasks.length === 0 && view === 'tasks' && (
         <div className="text-center text-slate-500 py-10 text-xs">No tasks found.</div>
+      )}
+
+      {view === 'queue' && (
+        <div className="space-y-2">
+          <h4 className="text-[10px] tracking-widest text-yellow-400 uppercase">Task Queue</h4>
+          <p className="text-[10px] text-slate-500">Queue view requires backend integration.</p>
+        </div>
+      )}
+
+      {view === 'processes' && (
+        <div className="space-y-2">
+          <h4 className="text-[10px] tracking-widest text-purple-400 uppercase">Managed Processes</h4>
+          <p className="text-[10px] text-slate-500">Process view requires backend integration.</p>
+        </div>
       )}
     </div>
   )
@@ -225,6 +260,8 @@ function TaskCard({ task, expanded, onToggleExpand, onStart, onPause, onResume, 
             </span>
             <span className="text-[10px] text-slate-500">{task.complexity}</span>
             <span className="text-[10px] text-slate-600">Step {task.current_step}/{task.total_steps}</span>
+            {(task as any).agent && <span className="text-[10px] text-blue-400">{(task as any).agent}</span>}
+            {(task as any).skill && <span className="text-[10px] text-purple-400">{(task as any).skill}</span>}
           </div>
           {(task as any).error && (
             <div className="flex items-center gap-1 mt-1 text-[10px] text-red-400">

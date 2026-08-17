@@ -1,13 +1,27 @@
-"""Memory service for JARVIS Phase 6."""
+"""Memory service for JARVIS Phase 12."""
 
 from __future__ import annotations
 
+import logging
+from typing import Any
+
 from memory.manager import MemoryManager
+
+logger = logging.getLogger("jarvis.services.memory")
 
 
 class MemoryService:
-    def __init__(self, memory: MemoryManager):
+    def __init__(self, memory: MemoryManager, ws_broadcast: Any | None = None):
         self.memory = memory
+        self._ws = ws_broadcast
+
+    def _broadcast(self, event: str, data: dict) -> None:
+        if self._ws:
+            try:
+                import asyncio
+                asyncio.get_event_loop().run_until_complete(self._ws(event, data))
+            except Exception:
+                pass
 
     def get_conversations(self, limit: int = 50):
         return self.memory.get_conversations(limit)
@@ -24,14 +38,19 @@ class MemoryService:
     def get_memory_by_id(self, memory_id: str):
         return self.memory.get_memory_by_id(memory_id)
 
-    def remember(self, content: str, category: str = "general"):
-        return self.memory.remember(content, category=category)
+    def remember(self, content: str, category: str = "general", **kwargs):
+        result = self.memory.remember(content, category=category, **kwargs)
+        self._broadcast("memory_created", result)
+        return result
 
     def forget(self, key: str):
         self.memory.forget(key)
 
     def delete_by_id(self, memory_id: str) -> bool:
-        return self.memory.delete_memory_by_id(memory_id)
+        result = self.memory.delete_memory_by_id(memory_id)
+        if result:
+            self._broadcast("memory_deleted", {"memory_id": memory_id})
+        return result
 
     def clear_all(self) -> int:
         return self.memory.clear_all_memories()

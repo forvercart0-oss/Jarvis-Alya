@@ -26,6 +26,8 @@ from backend.api.voice import router as voice_router
 from backend.api.agent import router as agent_router
 from backend.api.git import router as git_router
 from backend.api.research import router as research_router
+from backend.api.browser import router as browser_router
+from backend.api.computer import router as computer_router
 from backend.services.ai_service import AIService
 from backend.services.automation_service import AutomationService
 from backend.services.memory_service import MemoryService
@@ -86,7 +88,7 @@ ai_service = AIService(
     permission_manager=permission_manager,
 )
 voice_service = VoiceManager(memory_manager, ai_service)
-memory_service = MemoryService(memory_manager)
+memory_service = MemoryService(memory_manager, ws_broadcast=ws_manager.broadcast)
 tool_service = ToolService(tool_registry)
 system_service = SystemService()
 notification_service = NotificationService()
@@ -110,6 +112,7 @@ def get_research_manager_instance():
     return research_manager
 
 _agent_manager = None
+browser_manager = None
 
 
 def get_agent_manager_instance():
@@ -120,8 +123,17 @@ def get_agent_manager_instance():
             tool_execute=lambda name, confirmed=False, **kwargs: tool_registry.execute(name, confirmed=confirmed, **kwargs),
             memory=memory_manager,
             permission_manager=permission_manager,
+            ai_service=ai_service,
         )
     return _agent_manager
+
+
+def get_browser_manager_instance():
+    global browser_manager
+    if browser_manager is None:
+        from browser.manager import BrowserManager
+        browser_manager = BrowserManager()
+    return browser_manager
 
 
 async def _automation_command(cmd: str) -> dict:
@@ -229,6 +241,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from backend.api.workflows import router as workflows_router
+
+app.include_router(workflows_router, prefix="/api")
+
 app.include_router(chat_router, prefix="/api")
 app.include_router(voice_router, prefix="/api")
 app.include_router(system_router, prefix="/api")
@@ -246,6 +262,8 @@ app.include_router(agent_router, prefix="/api")
 app.include_router(git_router, prefix="/api")
 app.include_router(vision_router, prefix="/api")
 app.include_router(research_router, prefix="/api")
+app.include_router(browser_router, prefix="/api")
+app.include_router(computer_router, prefix="/api")
 
 
 # ---------------------------------------------------------------- health
@@ -495,6 +513,35 @@ async def websocket_endpoint(websocket: WebSocket):
                 mgr = get_research_manager_instance()
                 ok = await mgr.cancel_research(data.get("job_id", ""))
                 await ws_manager.send(websocket, "research_cancelled" if ok else "research_failed", {"job_id": data.get("job_id", "")})
+            elif event == "computer_action":
+                from computer.manager import computer_manager
+                action = data.get("action", "")
+                arguments = data.get("arguments", {})
+                result = await computer_manager.execute(action, arguments)
+                await ws_manager.send(websocket, "computer_result", {"action": action, "result": result})
+            elif event == "task_autonomy":
+                level = data.get("level", "balanced")
+                from automation.manager import TaskManager
+                task_mgr = get_task_manager_instance()
+                if isinstance(task_mgr, TaskManager):
+                    task_mgr.set_autonomy_level(level)
+                await ws_manager.send(websocket, "task_autonomy_updated", {"level": level})
+            elif event == "task_queue":
+                from automation.manager import TaskManager
+                task_mgr = get_task_manager_instance()
+                if isinstance(task_mgr, TaskManager):
+                    queue = task_mgr.get_queue()
+                    await ws_manager.send(websocket, "task_queue", {"queue": queue})
+            elif event == "memory_search":
+                query = data.get("query", "")
+                results = memory_manager.search_with_ranking(query=query, limit=10)
+                await ws_manager.send(websocket, "memory_search_completed", {"query": query, "results": results})
+            elif event == "memory_health":
+                health = memory_manager.get_health()
+                await ws_manager.send(websocket, "memory_health", health)
+            elif event == "memory_export":
+                export_data = memory_manager.export_memories()
+                await ws_manager.send(websocket, "memory_exported", export_data)
     except WebSocketDisconnect:
         await ws_manager.disconnect(websocket)
     except Exception as e:

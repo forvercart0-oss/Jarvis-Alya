@@ -14,6 +14,7 @@ import { MediaSettings } from './MediaSettings'
 import { GestureSettings } from './GestureSettings'
 import { CallSettings } from './CallSettings'
 import { VisionSettings } from './VisionSettings'
+import { WorkflowSettings } from './WorkflowSettings'
 
 interface SettingsPanelProps {
   settings: JarvisSettings | null
@@ -23,7 +24,7 @@ interface SettingsPanelProps {
   onClose: () => void
 }
 
-type SettingsTab = 'general' | 'persona' | 'ai' | 'local_ai' | 'voice' | 'memory' | 'appearance' | 'security' | 'advanced' | 'media' | 'gestures' | 'calls' | 'vision'
+type SettingsTab = 'general' | 'persona' | 'ai' | 'local_ai' | 'voice' | 'memory' | 'appearance' | 'security' | 'advanced' | 'media' | 'gestures' | 'calls' | 'vision' | 'workflows'
 
 export function SettingsPanel({ settings, persona, onSwitchPersona, onUpdate, onClose }: SettingsPanelProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>('general')
@@ -59,8 +60,9 @@ export function SettingsPanel({ settings, persona, onSwitchPersona, onUpdate, on
             { id: 'advanced', label: 'Advanced' },
             { id: 'media', label: 'Media' },
             { id: 'gestures', label: 'Gestures' },
-            { id: 'calls', label: 'Calls' },
-            { id: 'vision', label: 'Vision' },
+             { id: 'calls', label: 'Calls' },
+             { id: 'vision', label: 'Vision' },
+             { id: 'workflows', label: 'Workflows' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -92,6 +94,7 @@ export function SettingsPanel({ settings, persona, onSwitchPersona, onUpdate, on
           {activeTab === 'gestures' && <GestureSettings settings={settings} onUpdate={onUpdate} />}
           {activeTab === 'calls' && <CallSettings settings={settings} onUpdate={onUpdate} />}
           {activeTab === 'vision' && <VisionSettings settings={settings} onUpdate={onUpdate} />}
+          {activeTab === 'workflows' && <WorkflowSettings settings={settings} onUpdate={onUpdate} />}
         </div>
       </div>
     </div>

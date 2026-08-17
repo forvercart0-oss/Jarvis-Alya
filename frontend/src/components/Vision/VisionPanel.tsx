@@ -18,6 +18,9 @@ export function VisionPanel(_props: VisionPanelProps) {
   const [ocrText, setOcrText] = useState('')
   const [actionResult, setActionResult] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
+  const [imageA, setImageA] = useState('')
+  const [imageB, setImageB] = useState('')
+  const [compareResult, setCompareResult] = useState<any>(null)
 
   const refreshStatus = useCallback(async () => {
     try {
@@ -291,6 +294,55 @@ export function VisionPanel(_props: VisionPanelProps) {
           <div className="text-xs text-slate-300 whitespace-pre-wrap font-mono max-h-40 overflow-y-auto">{ocrText}</div>
         ) : (
           <div className="text-xs text-slate-600">No OCR result yet</div>
+        )}
+      </div>
+
+      <div className="glass-panel p-3 space-y-2">
+        <div className="text-[10px] tracking-[0.2em] text-slate-500 uppercase">Camera</div>
+        <div className="flex gap-2">
+          <button onClick={async () => { setLoading(true); try { await api.visionCameraStart() } finally { setLoading(false) } }} disabled={loading} className="px-3 py-1.5 text-[10px] bg-slate-800 border border-slate-600/30 rounded hover:bg-slate-700 transition-all disabled:opacity-50">
+            Start Camera
+          </button>
+          <button onClick={async () => { setLoading(true); try { await api.visionCameraStop() } finally { setLoading(false) } }} disabled={loading} className="px-3 py-1.5 text-[10px] bg-slate-800 border border-slate-600/30 rounded hover:bg-slate-700 transition-all disabled:opacity-50">
+            Stop Camera
+          </button>
+          <button onClick={async () => { setLoading(true); try { await api.visionCameraCapture() } finally { setLoading(false) } }} disabled={loading} className="px-3 py-1.5 text-[10px] bg-slate-800 border border-slate-600/30 rounded hover:bg-slate-700 transition-all disabled:opacity-50">
+            Capture
+          </button>
+        </div>
+      </div>
+
+      <div className="glass-panel p-3 space-y-2">
+        <div className="text-[10px] tracking-[0.2em] text-slate-500 uppercase">Image Compare</div>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={imageA}
+            onChange={(e) => setImageA(e.target.value)}
+            placeholder="Image A path"
+            className="flex-1 px-2 py-1 text-xs bg-slate-900 border border-slate-700 rounded text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500/50"
+          />
+          <input
+            type="text"
+            value={imageB}
+            onChange={(e) => setImageB(e.target.value)}
+            placeholder="Image B path"
+            className="flex-1 px-2 py-1 text-xs bg-slate-900 border border-slate-700 rounded text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500/50"
+          />
+          <button onClick={async () => { setLoading(true); setError(null); try { const res = await api.visionCompare(imageA, imageB); setCompareResult(res) } catch (err: any) { setError(err.message) } finally { setLoading(false) } }} disabled={loading || !imageA || !imageB} className="px-3 py-1.5 text-[10px] bg-slate-800 border border-slate-600/30 rounded hover:bg-slate-700 transition-all disabled:opacity-50">
+            Compare
+          </button>
+        </div>
+        {compareResult && (
+          <div className="text-xs space-y-1 mt-2">
+            <div className="flex justify-between">
+              <span className="text-slate-500">Identical</span>
+              <span className={compareResult.identical ? 'text-emerald-400' : 'text-yellow-400'}>{compareResult.identical ? 'Yes' : 'No'}</span>
+            </div>
+            {compareResult.difference && (
+              <div className="text-slate-400">{compareResult.difference}</div>
+            )}
+          </div>
         )}
       </div>
 

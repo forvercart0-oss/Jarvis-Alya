@@ -11,9 +11,13 @@ from automation.executor import TaskExecutor
 from automation.monitor import get_task_monitor
 from automation.planner import TaskPlanner
 from automation.policies import classify_task_complexity
+from automation.process_manager import ProcessManager
+from automation.router import AgentRouter, SkillRouter, ToolRouter
 from automation.scheduler import TaskScheduler
+from automation.task_queue import TaskQueue
 from automation.task_state import TaskState
 from automation.task_store import TaskStore
+from automation.audit import AuditLogger
 from backend.services.ws_manager import ws_manager
 
 logger = logging.getLogger("jarvis.automation.manager")
@@ -28,11 +32,13 @@ class TaskManager:
         tool_execute: Any,
         ai_service: Any | None = None,
         tts_callback: Any | None = None,
+        autonomy_level: str = "balanced",
     ):
         self._memory = memory_manager
         self._tool_execute = tool_execute
         self._ai_service = ai_service
         self._tts = tts_callback
+        self._autonomy_level = autonomy_level
         self._store = TaskStore(memory_manager)
         self._planner = TaskPlanner(
             ai_service=ai_service,
@@ -46,6 +52,12 @@ class TaskManager:
         self._scheduler = TaskScheduler(
             self._store, execute_callback=self._background_execute
         )
+        self._queue = TaskQueue()
+        self._agent_router = AgentRouter()
+        self._skill_router = SkillRouter(getattr(tool_execute, "registry", None))
+        self._tool_router = ToolRouter(getattr(tool_execute, "registry", None))
+        self._process_mgr = ProcessManager()
+        self._audit = AuditLogger(self._store)
         self._active_generators: dict[str, Any] = {}
         self._running = False
 
@@ -216,3 +228,55 @@ class TaskManager:
 
     def get_task_history(self, limit: int = 50) -> list[dict]:
         return self._store.get_tasks(limit=limit)
+
+    def get_tasks_by_project(self, project: str) -> list[dict]:
+        return self._store.get_tasks_by_project(project)
+
+    def set_autonomy_level(self, level: str) -> None:
+        allowed = {"manual", "low", "balanced", "high"}
+        if level not in allowed:
+            raise ValueError(f"Autonomy level must be one of {allowed}")
+        self._autonomy_level = level
+
+    def get_autonomy_level(self) -> str:
+        return self._autonomy_level
+
+    def create_task_with_routing(self, description: str, task_type: str = "general", auto_execute: bool = False, context: dict | None = None, dry_run: bool = False) -> dict:
+        agent = self._agent_router.route(description)
+        skills = self._skill_router.route(description)
+        priority = "normal"
+        if any(k in description.lower() for k in ["urgent", "critical", "now"]):
+            priority = "urgent"
+        elif any(k in description.lower() for k in ["important", "high"]):
+            priority = "high"
+        elif any(k in description.lower() for k in ["low", "later", "whenever"]):
+            priority = "low"
+
+        task = self._store.create_task(
+            description,
+            task_type=task_type,
+            metadata={
+                **(context or {}),
+                "agent": agent,
+                "skills": skills,
+                "priority": priority,
+                "dry_run": dry_run,
+            },
+        )
+        self._store.update_task(
+            task["id"],
+            agent=agent,
+            skill=",".join(skills),
+            priority=priority,
+            status=TaskState.PLANNING.value,
+        )
+        plan = self._planner.create_plan(task["id"], description, context)
+        self._queue.enqueue(task, priority=priority)
+        return {"task": task, "plan": plan.to_dict(), "agent": agent, "skills": skills}
+
+    def get_queue(self) -> list[dict]:
+        return [item["task"] for item in self._queue._queue]
+
+    def get_processes(self) -> list[dict]:
+        return [p.to_dict() for p in self._process_mgr._processes.values()]
+

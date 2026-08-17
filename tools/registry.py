@@ -142,6 +142,9 @@ def build_registry(db_path=None) -> ToolRegistry:
         BrowserNavigateTool, BrowserBackTool, BrowserForwardTool,
         BrowserReloadTool, BrowserClickTool, BrowserTypeTool,
         BrowserReadTool, BrowserScreenshotTool, BrowserStatusTool,
+        BrowserPressTool, BrowserScrollTool, BrowserWaitTool,
+        BrowserExtractLinksTool, BrowserOpenTabTool, BrowserCloseTabTool,
+        BrowserSwitchTabTool, BrowserDownloadTool,
     )
     from tools.memory_tools import RememberTool, ForgetTool, RecallMemoriesTool
     from tools.projects import (
@@ -202,6 +205,14 @@ def build_registry(db_path=None) -> ToolRegistry:
     registry.register(BrowserReadTool())
     registry.register(BrowserScreenshotTool())
     registry.register(BrowserStatusTool())
+    registry.register(BrowserPressTool())
+    registry.register(BrowserScrollTool())
+    registry.register(BrowserWaitTool())
+    registry.register(BrowserExtractLinksTool())
+    registry.register(BrowserOpenTabTool())
+    registry.register(BrowserCloseTabTool())
+    registry.register(BrowserSwitchTabTool())
+    registry.register(BrowserDownloadTool())
     registry.register(RememberTool(memory))
     registry.register(ForgetTool(memory))
     registry.register(RecallMemoriesTool(memory))

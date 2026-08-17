@@ -5,14 +5,25 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from memory.audit import MemoryAuditLog
+from memory.backup import MemoryBackup
+from memory.context_builder import ContextBuilder
+from memory.contradictions import ContradictionDetector
+from memory.decay import MemoryDecay
+from memory.duplicates import DuplicateDetector
+from memory.extractor import MemoryExtractor
+from memory.health import MemoryHealth
+from memory.knowledge_graph import KnowledgeGraph
 from memory.long_term import LongTermMemory
 from memory.preferences import PreferencesMemory
-from memory.projects import ProjectMemory
 from memory.privacy import PrivacyController
+from memory.projects import ProjectMemory
+from memory.ranker import MemoryRanker
 from memory.reminders import ReminderManager
 from memory.short_term import ShortTermMemory
 from memory.summaries import ConversationSummaries
 from memory.tasks import TaskMemory
+from memory.types import MemoryImportance, MemorySource, normalize_memory_type
 
 logger = logging.getLogger("jarvis.memory.manager")
 
@@ -33,6 +44,14 @@ MEMORY_CATEGORIES: tuple[str, ...] = (
     "task",
     "device",
     "non_sensitive_context",
+    "profile",
+    "decision",
+    "fact",
+    "context",
+    "research",
+    "document",
+    "episodic",
+    "procedural",
 )
 
 
@@ -66,6 +85,16 @@ class MemoryManager:
         self.privacy = PrivacyController(self)
         self.reminders = ReminderManager(self)
         self.semantic = __import__("memory.semantic", fromlist=["SemanticMemory"]).SemanticMemory(self, self._vector)
+        self.ranker = MemoryRanker(self.store)
+        self.decay = MemoryDecay(self.store)
+        self.duplicates = DuplicateDetector(self.store)
+        self.contradictions = ContradictionDetector(self.store)
+        self.context_builder = ContextBuilder(self)
+        self.knowledge_graph = KnowledgeGraph(self.store)
+        self.extractor = MemoryExtractor(self, None)
+        self.health = MemoryHealth(self.store)
+        self.backup = MemoryBackup(self.store)
+        self.audit = MemoryAuditLog(self.store.db_path)
 
     @property
     def vector_enabled(self) -> bool:
@@ -147,7 +176,7 @@ class MemoryManager:
         self._current_conv = None
         return self.ensure_conversation(None)
 
-    def remember(self, key: str, value: str = "", category: str | None = None, confidence: float = 1.0, source: str = "explicit_user", project: str = "", profile: str = "jarvis", expires_at: str | None = None) -> dict:
+    def remember(self, key: str, value: str = "", category: str | None = None, confidence: float = 1.0, source: str = "explicit_user", project: str = "", profile: str = "jarvis", expires_at: str | None = None, importance: float = 0.5, tags: list[str] | None = None, memory_type: str = "fact", related_ids: list[str] | None = None, key_override: str = "") -> dict:
         from memory.secret_filter import contains_secret
         content = value if value else key
         if contains_secret(key) or contains_secret(content):
@@ -155,12 +184,16 @@ class MemoryManager:
         mem = self.store.remember(
             content,
             category=normalize_category(category),
-            key_override=key if value else "",
+            key_override=key_override if key_override else (key if value else ""),
             confidence=confidence,
             source=source,
             project=project,
             profile=profile,
             expires_at=expires_at,
+            importance=importance,
+            tags=tags,
+            memory_type=memory_type,
+            related_ids=related_ids,
         )
         if self._vector is not None:
             self._vector.add(mem["id"], mem["value"], {"key": mem["key"], "category": mem["category"]})
@@ -222,3 +255,117 @@ class MemoryManager:
         if not query:
             return []
         return self.recall(query)[:limit]
+
+    def get_memories_for_context(self, query: str, project: str | None = None, profile: str = "jarvis", limit: int = 8) -> list[dict]:
+        return self.store.get_memories_for_context(query, project=project, profile=profile, limit=limit)
+
+    def search_with_ranking(self, query: str = "", category: str | None = None, project: str | None = None, profile: str | None = None, min_confidence: float = 0.0, limit: int = 50) -> list[dict]:
+        return self.store.search_with_ranking(query=query, category=category, project=project, profile=profile, min_confidence=min_confidence, limit=limit)
+
+    def increment_access(self, memory_id: str) -> None:
+        self.store.increment_access(memory_id)
+
+    def update_memory_fields(self, memory_id: str, updates: dict) -> dict | None:
+        return self.store.update_memory_fields(memory_id, updates)
+
+    def detect_duplicates(self, threshold: float = 0.85) -> list[dict]:
+        return self.store.detect_duplicates(threshold=threshold)
+
+    def merge_duplicates(self, primary_id: str, secondary_id: str) -> dict | None:
+        return self.store.duplicates.merge(primary_id, secondary_id)
+
+    def detect_contradictions(self) -> list[dict]:
+        return self.store.detect_contradictions()
+
+    def apply_decay(self, decay_rate: float = 0.01) -> int:
+        return self.store.apply_decay(decay_rate=decay_rate)
+
+    def get_health(self) -> dict:
+        return self.health.check()
+
+    def export_memories(self, category: str | None = None, project: str | None = None, profile: str | None = None) -> dict:
+        return self.backup.export(category=category, project=project, profile=profile)
+
+    def import_memories(self, data: dict, mode: str = "merge") -> dict:
+        return self.backup.import_(data, mode=mode)
+
+    def get_related_memories(self, memory_id: str, limit: int = 10) -> list[dict]:
+        return self.store.get_related_memories(memory_id, limit=limit)
+
+    def build_context(self, user_message: str, project: str | None = None, profile: str = "jarvis", max_memories: int = 8, max_tokens: int = 2000, task_type: str | None = None) -> dict:
+        return self.context_builder.build(user_message, project=project, profile=profile, max_memories=max_memories, max_tokens=max_tokens, task_type=task_type)
+
+    def remember_with_confirmation(self, content: str, category: str | None = None, importance: str = MemoryImportance.MEDIUM.value, memory_type: str | None = None, **kwargs) -> dict:
+        normalized_type = normalize_memory_type(memory_type or category)
+        return self.remember(
+            content,
+            category=normalized_type,
+            memory_type=normalized_type,
+            importance=self._importance_to_float(importance),
+            source=kwargs.get("source", MemorySource.EXPLICIT_USER.value),
+            project=kwargs.get("project", ""),
+            profile=kwargs.get("profile", "jarvis"),
+            expires_at=kwargs.get("expires_at"),
+            tags=kwargs.get("tags"),
+            related_ids=kwargs.get("related_ids"),
+        )
+
+    def remember_session(self, session_id: str, content: str, category: str = "general", memory_type: str = "fact", importance: float = 0.5, expires_at: str | None = None) -> dict:
+        return self.store.remember_session(session_id, content, category=category, memory_type=memory_type, importance=importance, expires_at=expires_at)
+
+    def get_session_memories(self, session_id: str, limit: int = 50) -> list[dict]:
+        return self.store.get_session_memories(session_id, limit=limit)
+
+    def clear_session_memories(self, session_id: str) -> int:
+        return self.store.clear_session_memories(session_id)
+
+    def get_memory_dashboard(self) -> dict:
+        stats = self.get_memory_stats()
+        rows = self.store.recall(limit=500)
+        by_category: dict[str, int] = {}
+        by_type: dict[str, int] = {}
+        by_importance: dict[str, int] = {}
+        recent = []
+        for row in rows:
+            cat = row.get("category") or "general"
+            mem_type = row.get("memory_type") or "fact"
+            imp = row.get("importance") or 0.5
+            by_category[cat] = by_category.get(cat, 0) + 1
+            by_type[mem_type] = by_type.get(mem_type, 0) + 1
+            if imp >= 0.8:
+                by_importance["high"] = by_importance.get("high", 0) + 1
+            elif imp >= 0.4:
+                by_importance["medium"] = by_importance.get("medium", 0) + 1
+            else:
+                by_importance["low"] = by_importance.get("low", 0) + 1
+            if len(recent) < 10:
+                recent.append({
+                    "id": row.get("id"),
+                    "content": (row.get("value") or row.get("key") or "")[:80],
+                    "category": cat,
+                    "memory_type": mem_type,
+                    "importance": imp,
+                    "created_at": row.get("created_at"),
+                })
+        health = self.health.check() if hasattr(self, "health") else {}
+        return {
+            "total_memories": stats.get("count", 0),
+            "storage_bytes": stats.get("size_bytes", 0),
+            "by_category": by_category,
+            "by_type": by_type,
+            "by_importance": by_importance,
+            "recent": recent,
+            "health": health,
+        }
+
+    def resolve_conflict(self, memory_id: str, keep: bool = True) -> dict | None:
+        memory = self.get_memory_by_id(memory_id)
+        if not memory:
+            return None
+        if keep:
+            self.update_memory_fields(memory_id, {"importance": max(float(memory.get("importance") or 0.5), 0.8)})
+        return self.get_memory_by_id(memory_id)
+
+    def _importance_to_float(self, importance: str) -> float:
+        mapping = {MemoryImportance.LOW.value: 0.2, MemoryImportance.MEDIUM.value: 0.5, MemoryImportance.HIGH.value: 0.9}
+        return mapping.get(importance, 0.5)
