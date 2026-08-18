@@ -107,6 +107,10 @@ fi
 
 # ---------------------------------------------------------------- Python venv
 info "Setting up Python environment..."
+
+# Redirect pip cache to /home to avoid quota issues on root partition
+export PIP_CACHE_DIR="${HOME}/.cache/pip-home"
+
 if [[ ! -d ".venv" ]]; then
   python3 -m venv .venv
   ok "Virtual environment created"
@@ -119,9 +123,23 @@ if [[ "${JARVIS_PIP_MIRROR:-}" != "" ]]; then
   PIP_OPTS="$PIP_OPTS -i ${JARVIS_PIP_MIRROR}"
 fi
 
-if ! pip install $PIP_OPTS -r requirements.txt; then
-  fail "pip install failed. See troubleshooting in README."
-  exit 1
+# Detect GPU: install CPU-only PyTorch if no working NVIDIA driver
+if nvidia-smi &>/dev/null; then
+  info "NVIDIA GPU detected — installing full CUDA PyTorch"
+  if ! pip install $PIP_OPTS -r requirements.txt; then
+    fail "pip install failed. See troubleshooting in README."
+    exit 1
+  fi
+else
+  warn "No working NVIDIA GPU — installing CPU-only PyTorch"
+  if ! pip install $PIP_OPTS torch --index-url https://download.pytorch.org/whl/cpu; then
+    fail "pip install (CPU torch) failed."
+    exit 1
+  fi
+  if ! pip install $PIP_OPTS -r requirements.txt; then
+    fail "pip install failed. See troubleshooting in README."
+    exit 1
+  fi
 fi
 ok "Python dependencies installed"
 
