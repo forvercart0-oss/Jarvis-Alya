@@ -446,6 +446,73 @@ See [updater/](updater/) for the updater service implementation.
 
 ---
 
+## Troubleshooting
+
+### `pip install` fails with "Failed to resolve pypi.org" / "Temporary failure in name resolution"
+
+Your system can't reach PyPI due to a DNS resolution failure. Fixes:
+
+1. **Fix DNS**:
+   ```bash
+   ping pypi.org          # confirm it's unreachable
+   sudo resolvectl flush-caches
+   # Or edit /etc/resolv.conf and add a working nameserver (e.g. 1.1.1.1, 8.8.8.8)
+   ```
+
+2. **Use a pip mirror** (the installer supports this natively):
+   ```bash
+   JARVIS_PIP_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple ./install.sh
+   ```
+   Common mirrors:
+   - **Tsinghua**: `https://pypi.tuna.tsinghua.edu.cn/simple`
+   - **Alibaba**: `https://mirrors.aliyun.com/pypi/simple`
+   - **USTC**: `https://pypi.mirrors.ustc.edu.cn/simple`
+
+3. **Proxy** — if behind a corporate proxy:
+   ```bash
+   export http_proxy=http://proxy:port
+   export https_proxy=http://proxy:port
+   ./install.sh
+   ```
+
+### `python3-venv` not found on Debian/Ubuntu
+
+```bash
+sudo apt install python3-venv
+```
+
+### Tauri build fails on Linux
+
+Ensure all Tauri dependencies are installed. On Arch:
+```bash
+sudo pacman -S --needed webkit2gtk-4.1 libappindicator-gtk3 librsvg xdotool \
+  openssl base-devel cmake patchelf pkg-config appmenu-gtk-module
+```
+On Debian/Ubuntu:
+```bash
+sudo apt install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev \
+  libxdo-dev libssl-dev pkg-config build-essential
+```
+
+### Frontend `npm install` fails
+
+```bash
+rm -rf frontend/node_modules package-lock.json
+cd frontend && npm install
+```
+
+### JARVIS won't start / "No module named" errors
+
+Recreate the virtual environment:
+```bash
+rm -rf .venv
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+---
+
 ## Contributing
 
 Contributions are welcome! Please read [SECURITY.md](SECURITY.md) first.
