@@ -384,6 +384,17 @@ export default function App() {
     }
   }, [persona?.accent_color, settings?.accent_color])
 
+  // Apply accent color as CSS variable for dynamic theming
+  useEffect(() => {
+    const root = document.documentElement
+    root.style.setProperty('--accent', accentColor)
+    const hex = accentColor.replace('#', '')
+    const r = parseInt(hex.substring(0, 2), 16)
+    const g = parseInt(hex.substring(2, 4), 16)
+    const b = parseInt(hex.substring(4, 6), 16)
+    root.style.setProperty('--accent-rgb', `${r}, ${g}, ${b}`)
+  }, [accentColor])
+
   useEffect(() => {
     if (settings && !settings.groq_api_key && !settings.local_llm_enabled) {
       setShowFirstRun(true)
@@ -536,7 +547,11 @@ export default function App() {
         onComplete={() => {
           setLoading(false)
           setBooted(true)
-          api.speak('Welcome back, Sir.').catch(() => {})
+          const personaId = settings?.persona || persona?.id || 'jarvis'
+          const greeting = personaId === 'alya'
+            ? 'Assalamualaikum. Main ALYA hoon. Bataiye kya kaam karna hai?'
+            : 'Assalamualaikum. Main JARVIS hoon. Bataiye kya kaam karna hai?'
+          api.speak(greeting).catch(() => {})
         }}
       />
     )

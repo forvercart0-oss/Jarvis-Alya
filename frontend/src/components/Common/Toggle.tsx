@@ -18,13 +18,15 @@ export function Toggle({ checked, onChange, label, description, disabled = false
         aria-checked={checked}
         onClick={() => !disabled && onChange(!checked)}
         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-          checked ? 'bg-cyan-500/30' : 'bg-slate-700'
+          checked ? 'bg-[var(--accent)]/30' : 'bg-slate-700'
         }`}
+        style={checked ? { backgroundColor: 'color-mix(in srgb, var(--accent) 30%, transparent)' } : undefined}
       >
         <span
           className={`inline-block h-4 w-4 rounded-full transition-transform ${
-            checked ? 'translate-x-6 bg-cyan-400' : 'translate-x-1 bg-slate-500'
+            checked ? 'translate-x-6' : 'translate-x-1 bg-slate-500'
           }`}
+          style={checked ? { backgroundColor: 'var(--accent)' } : undefined}
         />
       </button>
     </div>

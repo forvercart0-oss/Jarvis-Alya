@@ -196,7 +196,15 @@ export function TasksPanel({ tasks, taskPlan, onCreate, onStart, onPause, onResu
         <div className="space-y-2">
           <h4 className="text-[10px] tracking-widest text-green-400 uppercase">Completed Tasks</h4>
           {completedTasks.map((task) => (
-            <TaskCard key={task.id} task={task} onToggleExpand={() => {}} onStart={() => {}} onPause={() => {}} onResume={() => {}} onCancel={() => {}} />
+            <TaskCard
+              key={task.id}
+              task={task}
+              onToggleExpand={() => setExpandedTask(expandedTask === task.id ? null : task.id)}
+              onStart={() => {}}
+              onPause={() => {}}
+              onResume={() => {}}
+              onCancel={() => {}}
+            />
           ))}
         </div>
       )}
@@ -206,7 +214,15 @@ export function TasksPanel({ tasks, taskPlan, onCreate, onStart, onPause, onResu
         <div className="space-y-2">
           <h4 className="text-[10px] tracking-widest text-red-400 uppercase">Failed / Cancelled Tasks</h4>
           {failedTasks.map((task) => (
-            <TaskCard key={task.id} task={task} onToggleExpand={() => {}} onStart={() => {}} onPause={() => {}} onResume={() => {}} onCancel={() => {}} />
+            <TaskCard
+              key={task.id}
+              task={task}
+              onToggleExpand={() => setExpandedTask(expandedTask === task.id ? null : task.id)}
+              onStart={() => {}}
+              onPause={() => {}}
+              onResume={() => {}}
+              onCancel={() => {}}
+            />
           ))}
         </div>
       )}

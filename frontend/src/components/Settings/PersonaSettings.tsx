@@ -4,7 +4,6 @@ interface PersonaSettingsProps {
   settings: JarvisSettings | null
   persona: PersonaInfo | null
   onSwitch: (personaId: string) => Promise<unknown>
-  onUpdate: (patch: Partial<JarvisSettings>) => void
 }
 
 const PERSONA_CARDS = [
@@ -24,7 +23,7 @@ const PERSONA_CARDS = [
   },
 ]
 
-export function PersonaSettings({ settings, persona, onSwitch, onUpdate }: PersonaSettingsProps) {
+export function PersonaSettings({ settings, persona, onSwitch }: PersonaSettingsProps) {
   const active = persona?.id || settings?.persona || 'jarvis'
 
   return (
@@ -101,16 +100,11 @@ export function PersonaSettings({ settings, persona, onSwitch, onUpdate }: Perso
               <div className="text-slate-300 font-mono">{persona.accent_color}</div>
             </div>
           </div>
-          {onUpdate && (
-            <div className="pt-1">
-              <button
-                onClick={() => onUpdate({})}
-                className="text-[10px] tracking-wider uppercase text-slate-500 hover:text-slate-300"
-              >
-                Customize voice / theme in Appearance below
-              </button>
-            </div>
-          )}
+          <div className="pt-1">
+            <span className="text-[10px] tracking-wider uppercase text-slate-500">
+              Customize voice / theme in Appearance below
+            </span>
+          </div>
         </div>
       )}
     </div>

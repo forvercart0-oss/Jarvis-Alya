@@ -87,7 +87,7 @@ export function SettingsPanel({ settings, persona, onSwitchPersona, onUpdate, on
         <div className="flex-1 overflow-y-auto p-4 settings-scroll">
           {activeTab === 'general' && <GeneralSettings settings={settings} onUpdate={onUpdate} />}
           {activeTab === 'persona' && (
-            <PersonaSettings settings={settings} persona={persona} onSwitch={onSwitchPersona} onUpdate={onUpdate} />
+            <PersonaSettings settings={settings} persona={persona} onSwitch={onSwitchPersona} />
           )}
           {activeTab === 'ai' && <AISettings settings={settings} onUpdate={onUpdate} />}
           {activeTab === 'local_ai' && <LocalAISettings settings={settings} onUpdate={onUpdate} />}
@@ -95,7 +95,7 @@ export function SettingsPanel({ settings, persona, onSwitchPersona, onUpdate, on
           {activeTab === 'memory' && <MemorySettings settings={settings} onUpdate={onUpdate} />}
           {activeTab === 'appearance' && <AppearanceSettings settings={settings} onUpdate={onUpdate} />}
           {activeTab === 'security' && <SecuritySettings settings={settings} onUpdate={onUpdate} />}
-          {activeTab === 'advanced' && <AdvancedSettings settings={settings} onUpdate={onUpdate} />}
+          {activeTab === 'advanced' && <AdvancedSettings settings={settings} />}
           {activeTab === 'media' && <MediaSettings settings={settings} onUpdate={onUpdate} />}
           {activeTab === 'gestures' && <GestureSettings settings={settings} onUpdate={onUpdate} />}
           {activeTab === 'calls' && <CallSettings settings={settings} onUpdate={onUpdate} />}

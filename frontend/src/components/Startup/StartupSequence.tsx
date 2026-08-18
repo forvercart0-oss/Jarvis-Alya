@@ -22,6 +22,7 @@ const DIAGNOSTIC_LINES = [
   'CALIBRATING ARC REACTOR...',
   'ESTABLISHING SECURE CHANNEL...',
   'VOICE SYSTEM ONLINE...',
+  'MEMORY SYSTEM ONLINE...',
   'VISION SYSTEM ONLINE...',
   'ALL SYSTEMS ONLINE',
 ]
@@ -273,7 +274,7 @@ export function StartupSequence({ onComplete, accentColor = '#00f0ff', assistant
               <span>ALL SYSTEMS ONLINE</span>
             </div>
             <div className="text-[10px] mt-1 opacity-50">
-              Welcome back, Sir.
+              Assalamualaikum. {displayName} ready hai.
             </div>
           </motion.div>
         )}

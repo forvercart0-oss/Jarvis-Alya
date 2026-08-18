@@ -2,7 +2,6 @@ import type { JarvisSettings } from '../../types'
 
 interface AdvancedSettingsProps {
   settings: JarvisSettings
-  onUpdate: (patch: Partial<JarvisSettings>) => void
 }
 
 export function AdvancedSettings({ settings }: AdvancedSettingsProps) {

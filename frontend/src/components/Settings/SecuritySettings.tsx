@@ -11,6 +11,7 @@ interface PermissionItem {
   description: string
   enabled: boolean
   level: 'allowed' | 'confirmation' | 'disabled'
+  toggleable?: boolean
 }
 
 export function SecuritySettings({ settings, onUpdate }: SecuritySettingsProps) {
@@ -21,6 +22,7 @@ export function SecuritySettings({ settings, onUpdate }: SecuritySettingsProps) 
       description: 'Allow JARVIS to access your microphone for voice input.',
       enabled: settings.voice_enabled,
       level: settings.voice_enabled ? 'allowed' : 'disabled',
+      toggleable: true,
     },
     {
       id: 'camera',
@@ -28,13 +30,15 @@ export function SecuritySettings({ settings, onUpdate }: SecuritySettingsProps) 
       description: 'Allow JARVIS to access your camera for gesture control.',
       enabled: settings.gesture_control_enabled ?? false,
       level: (settings.gesture_control_enabled ?? false) ? 'allowed' : 'disabled',
+      toggleable: true,
     },
     {
       id: 'notifications',
       label: 'Notifications',
       description: 'Show desktop notifications for messages and system events.',
-      enabled: true,
-      level: 'allowed',
+      enabled: settings.desktop_notifications_enabled ?? true,
+      level: (settings.desktop_notifications_enabled ?? true) ? 'allowed' : 'disabled',
+      toggleable: false,
     },
     {
       id: 'computer_control',
@@ -42,6 +46,7 @@ export function SecuritySettings({ settings, onUpdate }: SecuritySettingsProps) 
       description: 'Allow JARVIS to control keyboard, mouse, and applications.',
       enabled: true,
       level: 'allowed',
+      toggleable: false,
     },
     {
       id: 'browser_control',
@@ -49,13 +54,15 @@ export function SecuritySettings({ settings, onUpdate }: SecuritySettingsProps) 
       description: 'Allow JARVIS to interact with web browsers.',
       enabled: true,
       level: 'allowed',
+      toggleable: false,
     },
     {
       id: 'messages',
       label: 'Messages',
       description: 'Allow JARVIS to read and draft messages. Requires confirmation for sending.',
-      enabled: false,
-      level: 'confirmation',
+      enabled: settings.message_notifications_enabled ?? false,
+      level: (settings.message_notifications_enabled ?? false) ? 'confirmation' : 'disabled',
+      toggleable: false,
     },
     {
       id: 'calls',
@@ -63,6 +70,7 @@ export function SecuritySettings({ settings, onUpdate }: SecuritySettingsProps) 
       description: 'Allow JARVIS to manage calls. Requires confirmation for outgoing calls.',
       enabled: settings.call_control_enabled ?? false,
       level: (settings.call_control_enabled ?? false) ? 'confirmation' : 'disabled',
+      toggleable: true,
     },
   ]
 
@@ -109,16 +117,18 @@ export function SecuritySettings({ settings, onUpdate }: SecuritySettingsProps) 
                 <span className={`text-[10px] tracking-wider uppercase ${getLevelColor(perm.level)}`}>
                   {getLevelLabel(perm.level)}
                 </span>
-                <button
-                  onClick={() => togglePermission(perm.id)}
-                  className={`w-10 h-5 rounded-full transition-all relative ${
-                    perm.enabled ? 'bg-cyan-500/40' : 'bg-slate-700'
-                  }`}
-                >
-                  <div className={`absolute top-1 w-3 h-3 rounded-full bg-cyan-400 transition-all ${
-                    perm.enabled ? 'left-6' : 'left-1'
-                  }`} />
-                </button>
+                {perm.toggleable && (
+                  <button
+                    onClick={() => togglePermission(perm.id)}
+                    className={`w-10 h-5 rounded-full transition-all relative ${
+                      perm.enabled ? 'bg-cyan-500/40' : 'bg-slate-700'
+                    }`}
+                  >
+                    <div className={`absolute top-1 w-3 h-3 rounded-full bg-cyan-400 transition-all ${
+                      perm.enabled ? 'left-6' : 'left-1'
+                    }`} />
+                  </button>
+                )}
               </div>
             </div>
           </div>

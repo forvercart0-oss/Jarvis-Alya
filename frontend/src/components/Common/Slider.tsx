@@ -24,7 +24,8 @@ export function Slider({ label, value, min = 0, max = 100, step = 1, onChange, d
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full h-1.5 rounded-full appearance-none bg-slate-700 accent-cyan-400 cursor-pointer"
+        className="w-full h-1.5 rounded-full appearance-none bg-slate-700 cursor-pointer"
+        style={{ accentColor: 'var(--accent)' }}
       />
     </div>
   )
