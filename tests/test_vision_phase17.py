@@ -7,12 +7,12 @@ import tempfile
 
 import pytest
 
-from vision.screen import ScreenCaptureProvider, SystemScreenCaptureProvider, WindowInfo, ScreenInfo
-from vision.ocr_preprocessor import OCRPreprocessor, ocr_preprocessor
+from vision.screen import SystemScreenCaptureProvider, WindowInfo, ScreenInfo
+from vision.ocr_preprocessor import ocr_preprocessor
 from vision.visual_context import VisualContext
 from vision.ui_detector import detect_ui_elements, classify_command
 from vision.grounding import VisualGrounding, GroundedElement
-from vision.question_answering import visual_qa, VisualQA
+from vision.question_answering import VisualQA
 from vision.sensitive import sensitive_detector
 
 

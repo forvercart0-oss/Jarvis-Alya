@@ -4,8 +4,6 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
-from memory.audit import MemoryAuditLog
-from memory.types import MemoryImportance, MemorySource, MemoryStatus, MemoryType, normalize_memory_type
 
 
 class SQLiteMemory:
@@ -1167,7 +1165,7 @@ class SQLiteMemory:
                 values.append(value)
         values.append(workflow_id)
         with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.execute(f"UPDATE workflows SET {set_clause} WHERE workflow_id = ?", values)
+            conn.execute(f"UPDATE workflows SET {set_clause} WHERE workflow_id = ?", values)
             conn.commit()
         return self.get_workflow(workflow_id)
 

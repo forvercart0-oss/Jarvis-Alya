@@ -13,7 +13,6 @@ from memory.context_builder import ContextBuilder
 from memory.contradictions import ContradictionDetector
 from memory.decay import MemoryDecay
 from memory.duplicates import DuplicateDetector
-from memory.environment import EnvironmentProfiler, environment_profiler
 from memory.errors import ErrorMemory
 from memory.extractor import MemoryExtractor
 from memory.health import MemoryHealth
@@ -28,8 +27,8 @@ from memory.reminders import ReminderManager
 from memory.short_term import ShortTermMemory
 from memory.summaries import ConversationSummaries
 from memory.tasks import TaskMemory
-from memory.types import ErrorCategory, IdeaStatus, MemoryImportance, MemorySource, PrivacyLevel, TrustLevel, normalize_memory_type
-from memory.workflows import WorkflowDetector, SuggestionEngine, workflow_detector, suggestion_engine
+from memory.types import MemoryImportance, MemorySource, normalize_memory_type
+from memory.workflows import suggestion_engine
 
 logger = logging.getLogger("jarvis.memory.manager")
 

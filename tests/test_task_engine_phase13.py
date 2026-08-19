@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-import pytest
 
 from automation.task_state import TaskState, TaskPriority
-from automation.router import AgentRouter, SkillRouter, ToolRouter
+from automation.router import AgentRouter, ToolRouter
 from automation.command_executor import CommandExecutor, CommandResult
 from automation.process_manager import ProcessManager
 from automation.task_queue import TaskQueue

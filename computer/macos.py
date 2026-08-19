@@ -50,7 +50,7 @@ def mouse_move(x: int, y: int) -> dict[str, Any]:
 
 
 def mouse_click(x: int, y: int, button: int = 1) -> dict[str, Any]:
-    btn = "left" if button == 1 else "right" if button == 3 else "middle"
+    _btn = "left" if button == 1 else "right" if button == 3 else "middle"
     return run_command(["osascript", "-e", f"tell application \"System Events\" to click at {{{x}, {y}}}"])
 
 

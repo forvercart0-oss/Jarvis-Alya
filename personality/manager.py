@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 from config.personas import get_persona, persona_payload, PERSONAS
-from language.detector import detect_language, language_name
+from language.detector import detect_language
 
 logger = logging.getLogger("jarvis.personality")
 

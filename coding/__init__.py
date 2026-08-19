@@ -36,6 +36,7 @@ __all__ = [
     "CodingAgent",
     "CodingGitManager",
     "CodingModelRouter",
+    "CodingTask",
     "CodingTaskPlanner",
     "CommandRunner",
     "DatabaseAgent",

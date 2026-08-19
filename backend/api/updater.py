@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from backend.services.ws_manager import ws_manager
-from updater.models import UpdaterConfig, UpdateInfo, UpdateProgress, UpdateState
+from updater.models import UpdateState
 
 logger = logging.getLogger("jarvis.api.updater")
 

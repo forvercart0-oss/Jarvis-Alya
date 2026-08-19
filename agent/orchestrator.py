@@ -10,11 +10,9 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
 
-from agent.models import AgentContext, AgentPlan, AgentState, AgentTask, AutonomyLevel, TaskStatus
-from agent.registry import agent_registry
+from agent.models import AgentContext, AgentPlan, AgentTask, AutonomyLevel
 from agent.context_manager import agent_context_manager
 from agent.result_aggregator import result_aggregator
-from agent.message import AgentMessage
 from backend.services.ws_manager import ws_manager
 
 logger = logging.getLogger("jarvis.agent.orchestrator")

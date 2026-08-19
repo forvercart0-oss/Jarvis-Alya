@@ -5,7 +5,6 @@ from __future__ import annotations
 import httpx
 import logging
 import os
-from typing import Any, Optional
 
 from generation.video.provider import VideoGenerationProvider
 from config.settings import get_settings

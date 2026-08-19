@@ -69,6 +69,7 @@ __all__ = [
     "MemoryStore",
     "MemoryType",
     "PreferencesMemory",
+    "PreferenceSource",
     "PrivacyController",
     "PrivacyLevel",
     "ProjectMemory",

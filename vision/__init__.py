@@ -12,10 +12,9 @@ from vision.image_utils import cleanup_temp_image, image_hash, preprocess_image,
 from vision.manager import VisionManager
 from vision.analyzer import analyze_image, describe_screen
 from vision.detector import detect_elements, find_target
-from vision.ocr import ocr_image, ocr_region
+from vision.ocr import ocr_image, ocr_region, crop_region
 from vision.ocr_preprocessor import ocr_preprocessor
 from vision.regions import select_region, parse_region
-from vision.ocr import ocr_image, ocr_region, crop_region
 from vision.actions import (
     mouse_move, mouse_click, mouse_double_click, mouse_right_click,
     mouse_drag, mouse_scroll, keyboard_type, keyboard_hotkey, keyboard_press,

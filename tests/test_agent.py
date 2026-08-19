@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 import asyncio
-import json
 
 import pytest
 
-from agent.classifier import CommandClassifier, CommandCategory, command_classifier
-from agent.loop import AgentLoop
+from agent.classifier import CommandCategory, command_classifier
 from agent.manager import get_agent_manager
 from agent.models import (
     AgentArtifacts,
@@ -82,7 +80,6 @@ def test_validate_plan_rejects_non_list_tasks():
 
 
 def test_state_manager_create_and_get():
-    import asyncio
     from agent.context import AgentContextBuilder
     builder = AgentContextBuilder()
     ctx = builder.build("test request", persona="jarvis")
@@ -97,7 +94,6 @@ def test_state_manager_create_and_get():
 
 
 def test_state_manager_cancel():
-    import asyncio
     from agent.context import AgentContextBuilder
     builder = AgentContextBuilder()
     ctx = builder.build("test request", persona="jarvis")
@@ -193,7 +189,6 @@ class TestAgentStateMachine:
         assert AgentState.CANCELLED.value == "cancelled"
 
     def test_state_manager_pause_resume(self):
-        import asyncio
         from agent.context import AgentContextBuilder
         builder = AgentContextBuilder()
         ctx = builder.build("test", persona="jarvis")
@@ -211,7 +206,6 @@ class TestAgentStateMachine:
         asyncio.run(go())
 
     def test_state_manager_kill_switch(self):
-        import asyncio
         from agent.context import AgentContextBuilder
         builder = AgentContextBuilder()
         ctx = builder.build("test", persona="jarvis")
@@ -302,10 +296,9 @@ class TestAgentModels:
 
 class TestAgentManager:
     def test_manager_pause_resume_kill(self):
-        import asyncio
         async def go():
             manager = get_agent_manager(tool_execute=None)
-            ctx = AgentContext(user_request="do something")
+            _ctx = AgentContext(user_request="do something")
             events = []
             async for ev in manager.start_agent("do something", autonomy_level="assisted"):
                 events.append(ev)

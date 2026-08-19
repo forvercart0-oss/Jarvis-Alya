@@ -4,9 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from memory.manager import MemoryManager
 from memory.types import ErrorCategory, IdeaStatus, PrivacyLevel, TrustLevel
-from memory.secret_filter import contains_secret
 
 
 def test_new_memory_types_exist():

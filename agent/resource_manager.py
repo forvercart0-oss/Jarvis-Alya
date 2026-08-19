@@ -10,7 +10,6 @@ import logging
 import os
 import time
 from dataclasses import dataclass
-from typing import Any
 
 try:
     import psutil

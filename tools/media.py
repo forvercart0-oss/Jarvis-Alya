@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import os
-import uuid
-from typing import Any, Optional
 
 from tools.registry import ToolResult
 from generation.image.manager import ImageGenerationManager

@@ -10,7 +10,7 @@ import asyncio
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Callable, Optional
+from typing import Optional
 
 logger = logging.getLogger("jarvis.safety.confirmation")
 

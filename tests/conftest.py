@@ -1,4 +1,3 @@
-import os
 import pytest
 from memory.manager import MemoryManager
 

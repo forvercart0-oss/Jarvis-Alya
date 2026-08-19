@@ -1,6 +1,6 @@
 import httpx
 import json
-from typing import Any, AsyncGenerator, Optional
+from typing import AsyncGenerator
 from brain.provider import AIProvider, ProviderResponse
 from config.settings import get_settings
 

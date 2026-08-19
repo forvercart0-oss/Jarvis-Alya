@@ -2,17 +2,15 @@
 
 from __future__ import annotations
 
-import pytest
 
-from vision.screen_understanding import ScreenUnderstanding, ScreenUnderstandingEngine
-from vision.action_planner import VisualActionPlanner, ActionPlan, PlannedAction
-from vision.screen_query import ScreenQueryEngine
-from vision.screen_diff import ScreenDiffEngine, ScreenDiff
+from vision.screen_understanding import ScreenUnderstanding
+from vision.action_planner import VisualActionPlanner
+from vision.screen_diff import ScreenDiffEngine
 from vision.wait_for_element import WaitForElement, SmartWait
 from vision.accessibility import AccessibilityElement, get_adapter
 from vision.action_verification import ActionVerifier
 from vision.action_log import ActionLogger, ActionLogEntry
-from vision.screen_intelligence import ScreenIntelligenceOrchestrator, ScreenIntelligenceMode
+from vision.screen_intelligence import ScreenIntelligenceMode
 from vision.ocr_providers import OCRResult, OCRTextRegion, TesseractOCRProvider
 
 

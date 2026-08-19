@@ -1,5 +1,4 @@
 import datetime
-from typing import Optional
 from tools.registry import ToolResult
 
 

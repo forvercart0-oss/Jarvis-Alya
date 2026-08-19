@@ -5,10 +5,11 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from datetime import datetime
 from typing import Any, AsyncGenerator
 
 from workflows.conditions import ConditionEvaluator
-from workflows.models import Approval, Workflow, WorkflowRun, WorkflowStep
+from workflows.models import Workflow, WorkflowRun, WorkflowStep, WorkflowStatus
 from workflows.variables import VariableResolver
 
 logger = logging.getLogger("jarvis.workflows.engine")
@@ -201,7 +202,6 @@ class WorkflowEngine:
         if not topic:
             return {"success": False, "error": "No topic provided"}
         try:
-            from research.manager import ResearchManager
             from backend.main import get_research_manager_instance
             mgr = get_research_manager_instance()
             job = await mgr.start_research(topic)

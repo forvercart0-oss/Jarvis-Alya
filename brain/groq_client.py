@@ -38,7 +38,7 @@ class GroqClient:
             raise GroqClientError("Groq client is not configured.")
         try:
             response = self._client.chat.completions.create(
-                model=(self.settings.groq_model if self.settings else "llama-3.3-70b-versatile"),
+                model=self.settings.groq_model,
                 messages=messages,
             )
             if asyncio.iscoroutine(response):
@@ -52,7 +52,7 @@ class GroqClient:
             raise GroqClientError("Groq client is not configured.")
         try:
             stream = self._client.chat.completions.create(
-                model=(self.settings.groq_model if self.settings else "llama-3.3-70b-versatile"),
+                model=self.settings.groq_model,
                 messages=messages,
                 stream=True,
             )

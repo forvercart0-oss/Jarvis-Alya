@@ -13,8 +13,8 @@ from vision.camera import CameraManager
 from vision.capture import capture_screen, get_active_window, get_screen_info, list_monitors
 from vision.comparison import compare_images
 from vision.detector import detect_elements, find_target
-from vision.image_utils import validate_image, preprocess_image, cleanup_temp_image
-from vision.ocr import ocr_image, ocr_region
+from vision.image_utils import validate_image
+from vision.ocr import ocr_image
 from vision.regions import parse_region
 
 logger = logging.getLogger("jarvis.vision.manager")

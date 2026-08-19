@@ -55,7 +55,7 @@ async def mouse_drag(x1: int, y1: int, x2: int, y2: int) -> dict[str, Any]:
     if not await _ensure_permission("computer.mouse"):
         return {"success": False, "error": "Permission denied: computer.mouse"}
     from computer.controller import computer_controller
-    r1 = await computer_controller.click_at(x1, y1, 1)
+    await computer_controller.click_at(x1, y1, 1)
     await asyncio.sleep(0.05)
     result = await _run_platform_command("mouse_drag", x1, y1, x2, y2)
     if result.get("ok"):
@@ -68,7 +68,6 @@ async def mouse_scroll(x: int, y: int, direction: str = "down", amount: int = 3)
         return {"success": False, "error": "Permission denied: computer.mouse"}
     system = platform.system().lower()
     if system == "linux":
-        cmd = ["xdotool", "mousemove", str(x), str(y)]
         scroll = "4" if direction == "down" else "5"
         result = await _run_platform_command("mouse_scroll", x, y, scroll * str(amount))
         if result.get("ok"):

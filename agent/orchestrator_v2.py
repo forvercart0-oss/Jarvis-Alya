@@ -12,15 +12,12 @@ import logging
 import time
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
 from enum import StrEnum
 from typing import Any
 
-from agent.artifact_manager import artifact_manager
 from agent.checkpoint_manager import checkpoint_manager
-from agent.goal_engine import Goal, GoalEngine, GoalStatus, get_goal_engine
+from agent.goal_engine import Goal, GoalEngine, GoalStatus, GoalTask, get_goal_engine
 from agent.recovery_engine import recovery_engine
-from agent.registry_v2 import agent_registry_v2
 from agent.resource_manager import resource_manager
 from agent.task_graph import GraphNode, TaskGraph
 from agent.verification_engine_v2 import verification_engine_v2

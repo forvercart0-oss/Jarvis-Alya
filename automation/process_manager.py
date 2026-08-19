@@ -6,7 +6,6 @@ import logging
 import os
 import signal
 import time
-from typing import Any
 
 logger = logging.getLogger("jarvis.automation.processes")
 

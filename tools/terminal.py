@@ -1,5 +1,4 @@
 import subprocess
-from typing import Optional
 from tools.registry import ToolResult
 
 

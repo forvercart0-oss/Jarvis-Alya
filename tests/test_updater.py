@@ -19,13 +19,12 @@ Covers:
 
 from __future__ import annotations
 
-import asyncio
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from updater.models import UpdaterConfig, UpdateInfo, UpdateProgress, UpdateState
+from updater.models import UpdateInfo, UpdateProgress, UpdateState
 from updater.github import GitHubClient
 from updater.downloader import UpdateDownloader
 from updater.verifier import UpdateVerifier

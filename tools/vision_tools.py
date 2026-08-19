@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from tools.registry import ToolResult
 from vision.manager import vision_manager

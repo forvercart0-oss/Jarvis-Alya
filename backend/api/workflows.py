@@ -125,7 +125,18 @@ async def run_workflow(workflow_id: str):
     workflow = Workflow.from_dict(result)
     run_id = str(__import__("uuid").uuid4())[:8]
     store.update_workflow(workflow_id, {"status": "running"})
+    import asyncio
+    asyncio.create_task(_run_workflow_background(engine, workflow, workflow_id, run_id, store))
     return {"status": "started", "workflow_id": workflow_id, "run_id": run_id}
+
+
+async def _run_workflow_background(engine, workflow, workflow_id, run_id, store):
+    try:
+        async for _event in engine.execute(workflow):
+            pass
+        store.update_workflow(workflow_id, {"status": "completed", "last_run": __import__("datetime").datetime.utcnow().isoformat()})
+    except Exception:
+        store.update_workflow(workflow_id, {"status": "failed", "last_run": __import__("datetime").datetime.utcnow().isoformat()})
 
 
 @router.post("/workflows/{workflow_id}/pause")

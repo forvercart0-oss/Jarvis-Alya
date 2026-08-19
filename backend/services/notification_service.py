@@ -1,7 +1,7 @@
 import logging
 from collections import deque
 from datetime import datetime
-from typing import Any, Optional
+from typing import Optional
 
 from backend.services.ws_manager import ws_manager
 

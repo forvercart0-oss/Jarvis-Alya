@@ -5,10 +5,10 @@ from __future__ import annotations
 import pytest
 
 from vision.application_understanding import ApplicationUnderstanding, application_understanding
-from vision.dialog_detection import DialogDetector, DialogDetectionResult, dialog_detector
-from vision.workflow_recorder import WorkflowRecorder, RecordedWorkflow, RecordedStep, workflow_recorder
-from vision.workflow_replay import WorkflowReplayer, workflow_replayer
-from vision.visual_skills import VisualSkillManager, VisualSkill, visual_skill_manager
+from vision.dialog_detection import DialogDetector, DialogDetectionResult
+from vision.workflow_recorder import WorkflowRecorder, RecordedWorkflow, RecordedStep
+from vision.workflow_replay import WorkflowReplayer
+from vision.visual_skills import VisualSkillManager, VisualSkill
 from vision.gesture import GestureController, GestureDetector, get_gesture, GESTURES
 
 

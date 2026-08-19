@@ -271,7 +271,7 @@ class Settings(BaseSettings):
 
     # Groq
     groq_api_key: str = ""
-    groq_model: str = "llama-3.3-70b-versatile"
+    groq_model: str = ""
     groq_temperature: float = 0.7
     groq_max_tokens: int = 1024
     groq_streaming: bool = True
@@ -657,11 +657,11 @@ class Settings(BaseSettings):
                 continue
             value = getattr(self, key)
             if isinstance(value, bool):
-                out[key] = "true" if value else "false"
+                out[key.upper()] = "true" if value else "false"
             elif isinstance(value, (int, float)):
-                out[key] = str(value)
+                out[key.upper()] = str(value)
             else:
-                out[key] = str(value)
+                out[key.upper()] = str(value)
         return out
 
     def persist(self) -> None:
@@ -671,7 +671,7 @@ class Settings(BaseSettings):
             for line in ENV_FILE.read_text().splitlines():
                 if "=" in line and not line.strip().startswith("#"):
                     key, _, value = line.partition("=")
-                    existing[key.strip()] = value.strip()
+                    existing[key.strip().upper()] = value.strip()
         for key, value in self.to_env().items():
             existing[key] = value
         lines = [f"{key}={value}" for key, value in sorted(existing.items())]

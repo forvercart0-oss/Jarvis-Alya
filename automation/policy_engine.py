@@ -12,11 +12,11 @@ DOCUMENTS, NETWORK, COMMUNICATION, VISION, AUTOMATION
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
-from safety.policy import PolicyAction, RiskLevel, get_policy_engine
+from safety.policy import PolicyAction, get_policy_engine
 
 logger = logging.getLogger("jarvis.automation.policy")
 

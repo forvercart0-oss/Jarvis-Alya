@@ -1,4 +1,3 @@
-from typing import Any
 from tools.registry import Tool, ToolResult
 from memory.manager import MemoryManager
 

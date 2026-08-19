@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import pytest
 
 from browser.page_context import PageContext, PageElement, page_context_extractor
 from browser.element import semantic_match, find_best_element
-from browser.planner import BrowserActionPlanner, BrowserTask, BrowserTaskState, browser_planner
-from browser.permissions import BrowserPermissionManager, browser_permission_manager
-from browser.takeover import BrowserTakeover, browser_takeover
+from browser.planner import BrowserTaskState, browser_planner
+from browser.permissions import browser_permission_manager
+from browser.takeover import browser_takeover
 from browser.safety import BrowserSafety
 
 

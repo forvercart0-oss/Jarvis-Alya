@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import platform
-import sys
 from typing import Literal
 
 Platform = Literal["linux", "windows", "macos", "unknown"]

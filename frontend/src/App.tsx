@@ -319,12 +319,13 @@ export default function App() {
     async (patch: Partial<import('./types').JarvisSettings>) => {
       try {
         await api.updateSettings(patch)
+        fetchData()
         if (patch.accent_color) setAccentColor(patch.accent_color)
       } catch {
         // ignore
       }
     },
-    []
+    [fetchData]
   )
 
   const handleRetry = useCallback(() => {
@@ -525,7 +526,7 @@ export default function App() {
           state={orbState}
           assistantName={settings?.assistant_name || 'JARVIS'}
           accentColor={seriousMode ? '#ff1a1a' : accentColor}
-          size={88}
+          size={settings?.orb_size || 64}
           onClick={handleOrbClick}
         />
         <div className="mt-4 text-[10px] tracking-[0.3em] uppercase flex items-center gap-2" style={{ color: seriousMode ? '#ff1a1a' : undefined }}>

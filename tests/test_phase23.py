@@ -2,21 +2,20 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 
 import pytest
 
 from agent.goal_engine import GoalEngine, get_goal_engine
 from agent.task_graph import TaskGraph, GraphNode
-from agent.registry_v2 import AgentRegistryV2, agent_registry_v2
-from agent.orchestrator_v2 import AutonomousOrchestrator, get_autonomous_orchestrator, OrchestratorStateV2
-from agent.recovery_engine import RecoveryEngine, recovery_engine, ErrorClass
-from agent.verification_engine_v2 import VerificationEngine, verification_engine_v2
-from agent.artifact_manager import ArtifactManager, artifact_manager
-from agent.checkpoint_manager import CheckpointManager, checkpoint_manager
+from agent.registry_v2 import agent_registry_v2
+from agent.orchestrator_v2 import get_autonomous_orchestrator
+from agent.recovery_engine import RecoveryEngine, ErrorClass
+from agent.verification_engine_v2 import VerificationEngine
+from agent.artifact_manager import ArtifactManager
+from agent.checkpoint_manager import CheckpointManager
 from agent.resource_manager import ResourceManager
-from agent.working_memory import WorkingMemory, working_memory
+from agent.working_memory import WorkingMemory
 
 logger = logging.getLogger("jarvis.test.phase23")
 

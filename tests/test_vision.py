@@ -13,7 +13,6 @@ from vision.providers.base import VisionProvider, VisionResult
 from vision.manager import VisionManager, vision_audit
 from vision.image_utils import (
     validate_image,
-    preprocess_image,
     image_hash,
     detect_secrets_in_text,
     ImageValidationError,

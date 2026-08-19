@@ -3,10 +3,23 @@
 from __future__ import annotations
 
 import base64
+import os
 import platform
 from pathlib import Path
 
 from system.base import SystemPlatform, run, which
+
+
+def _has_cmd(cmd: str) -> bool:
+    return any(
+        os.path.isfile(os.path.join(p, cmd))
+        for p in os.environ.get("PATH", "").split(os.pathsep)
+        if p
+    )
+
+
+def _detect_wayland() -> bool:
+    return os.environ.get("XDG_SESSION_TYPE", "").lower() == "wayland"
 
 
 class LinuxPlatform(SystemPlatform):

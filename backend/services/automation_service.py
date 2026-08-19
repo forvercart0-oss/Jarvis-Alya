@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from datetime import datetime, time as dtime
-from typing import Any, Optional
+from typing import Optional
 
 from memory.manager import MemoryManager
 from backend.services.ws_manager import ws_manager

@@ -1,6 +1,4 @@
 import re
-from brain.groq_client import GroqClient
-from brain.offline import offline_reply
 
 
 class Route:

@@ -151,7 +151,7 @@ def test_model_router():
 def test_file_editor_diff():
     import tempfile
     with tempfile.TemporaryDirectory() as tmpdir:
-        editor = FileEditor(__import__("pathlib").Path(tmpdir))
+        _editor = FileEditor(__import__("pathlib").Path(tmpdir))
         fd = FileDiff(path="test.py", change_type="modified", old_content="a=1", new_content="a=2")
         assert fd.change_type == "modified"
 

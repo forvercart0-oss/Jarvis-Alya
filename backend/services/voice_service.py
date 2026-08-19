@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from typing import Callable, Optional
 
 from voice import VoiceService
 from voice.tts_manager import TTSManager

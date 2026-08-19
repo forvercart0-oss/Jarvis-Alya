@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from language.detector import detect_language, normalize_language
+from language.detector import detect_language
 
 
 def response_style_for(text: str, persona_gender: str = "male") -> str:

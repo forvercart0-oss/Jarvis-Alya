@@ -2,8 +2,6 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 
-from backend.services.ai_service import AIService
-from backend.services.memory_service import MemoryService
 from generation.image.manager import ImageGenerationManager
 from generation.video.manager import VideoGenerationManager
 

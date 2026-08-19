@@ -4,15 +4,13 @@ from __future__ import annotations
 
 import pytest
 
-from agent.registry import AgentDefinition, AgentRegistry, agent_registry
-from agent.context_manager import AgentContextManager, agent_context_manager
-from agent.result_aggregator import ResultAggregator, result_aggregator
+from agent.registry import AgentDefinition, agent_registry
+from agent.context_manager import agent_context_manager
+from agent.result_aggregator import result_aggregator
 from agent.message import AgentMessage
-from agent.orchestrator import AgentOrchestrator, OrchestratorState, OrchestrationTask
+from agent.orchestrator import OrchestratorState, OrchestrationTask
 from agent.specialized import (
-    ResearchAgent, CodingAgent, BrowserAgent, ComputerAgent,
-    VisionAgent, FileAgent, TerminalAgent, SystemAgent,
-    CommunicationAgent, MemoryAgent, DocumentAgent, PlanningAgent, VerificationAgent,
+    ResearchAgent, CommunicationAgent, VerificationAgent,
 )
 
 

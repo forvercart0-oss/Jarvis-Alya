@@ -96,8 +96,3 @@ class WorkflowScheduler:
         self._active_workflows.pop(workflow.workflow_id, None)
         final_status = "active" if event.get("data", {}).get("status") != "failed" else "failed"
         self._store.update_workflow(workflow.workflow_id, {"status": final_status, "last_run": datetime.utcnow().isoformat()})
-
-
-def suppress(exc_type):
-    import contextlib
-    return contextlib.suppress(exc_type)

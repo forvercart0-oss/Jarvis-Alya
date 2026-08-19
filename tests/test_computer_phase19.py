@@ -2,18 +2,17 @@
 
 from __future__ import annotations
 
-import asyncio
 import pytest
 
-from computer.window_manager import WindowManager, window_manager
-from computer.app_manager import ApplicationManager, app_manager
-from computer.file_manager import FileManager, file_manager
-from computer.terminal import TerminalProvider, terminal_provider
-from computer.processes import ProcessManager, process_manager
-from computer.clipboard import ClipboardProvider, clipboard_provider
-from computer.task_planner import ComputerTaskPlanner, ComputerTask, ComputerTaskState, computer_planner
-from computer.takeover import ComputerTakeover, computer_takeover
-from computer.trust import ComputerPermissionManager, TrustLevel, computer_permission_manager
+from computer.window_manager import WindowManager
+from computer.app_manager import ApplicationManager
+from computer.file_manager import file_manager
+from computer.terminal import terminal_provider
+from computer.processes import ProcessManager
+from computer.clipboard import ClipboardProvider
+from computer.task_planner import ComputerTask, ComputerTaskState, computer_planner
+from computer.takeover import computer_takeover
+from computer.trust import ComputerPermissionManager, TrustLevel
 from computer.safety import ComputerSafety
 
 

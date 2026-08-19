@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, AsyncGenerator, Optional
+from typing import AsyncGenerator
 
 
 class AIProvider(ABC):

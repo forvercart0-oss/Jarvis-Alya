@@ -24,8 +24,8 @@ from automation.policy_engine import (
     ExecutionMode,
     get_automation_policy_engine,
 )
-from automation.policies import classify_task_complexity, get_policy_for_complexity
-from automation.task_state import TaskComplexity, TaskState
+from automation.policies import classify_task_complexity
+from automation.task_state import TaskComplexity
 
 logger = logging.getLogger("jarvis.automation.execution")
 
@@ -202,7 +202,6 @@ class AutonomousExecutionEngine:
 
     async def _fast_path(self, command: str, context: ExecutionContext) -> AsyncGenerator[ExecutionResult, None]:
         """Direct tool execution for simple, pre-authorized commands."""
-        start = time.time()
         self._broadcast("execution_fast_path", {"task_id": context.task_id, "command": command})
 
         route = await self._route_command(command)
@@ -223,7 +222,6 @@ class AutonomousExecutionEngine:
 
     async def _complex_path(self, command: str, context: ExecutionContext) -> AsyncGenerator[ExecutionResult, None]:
         """Multi-step orchestrated execution for complex commands."""
-        start = time.time()
         self._broadcast("execution_complex_path", {"task_id": context.task_id, "command": command})
 
         if self._ai_service:

@@ -1,5 +1,5 @@
 import asyncio
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict
 
 
 class ToolResult:
@@ -164,7 +164,6 @@ def build_registry(db_path=None) -> ToolRegistry:
         ComputerMouseDragTool, ComputerMouseScrollTool, ComputerKeyboardTypeTool,
         ComputerKeyboardHotkeyTool, ComputerKeyboardPressTool,
     )
-    from computer.controller import computer_controller
     from memory.manager import MemoryManager
 
     if hasattr(db_path, "store"):

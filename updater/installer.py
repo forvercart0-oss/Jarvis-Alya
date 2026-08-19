@@ -3,15 +3,12 @@
 from __future__ import annotations
 
 import logging
-import os
 import platform
 import shutil
 import subprocess
-import sys
 from pathlib import Path
-from typing import Any
 
-from updater.models import UpdateInfo, UpdateProgress
+from updater.models import UpdateProgress, UpdateState
 
 logger = logging.getLogger("jarvis.updater.installer")
 

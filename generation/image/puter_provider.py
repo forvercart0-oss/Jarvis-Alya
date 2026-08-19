@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import httpx
 import logging
-from typing import Any, Optional
 
 from generation.image.provider import ImageGenerationProvider
 from config.settings import get_settings

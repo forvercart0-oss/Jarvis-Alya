@@ -1,11 +1,9 @@
 import asyncio
 import platform
-import shutil
 import socket
 import subprocess
 import time
 from collections import deque
-from typing import Optional
 
 import psutil
 

@@ -7,7 +7,6 @@ Never uploads camera frames to third-party servers unless explicitly configured.
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 logger = logging.getLogger("jarvis.gesture")
 

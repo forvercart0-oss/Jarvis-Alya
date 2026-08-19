@@ -3,7 +3,6 @@ import logging
 import re
 from typing import Awaitable, Callable, Optional
 
-from backend.services.ws_manager import ws_manager
 from voice.tts import TTS as EspeakTTS
 from voice.kokoro_tts import KokoroTTS
 from config.settings import get_settings

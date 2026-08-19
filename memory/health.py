@@ -16,7 +16,6 @@ class MemoryHealth:
         return self._store.get_health()
 
     def summary(self) -> dict:
-        stats = self._store.get_memory_stats()
         health = self.check()
         return {
             "total_memories": health.get("total_memories", 0),

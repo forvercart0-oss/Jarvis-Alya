@@ -1,15 +1,9 @@
-import asyncio
 import logging
 import sys
 from pathlib import Path
 
 from config.settings import get_settings
 from backend.main import app
-from backend.services.ai_service import AIService
-from backend.services.voice_service import VoiceManager
-from memory.manager import MemoryManager
-from tools.registry import ToolRegistry
-from voice.tts import TTS
 
 import uvicorn
 

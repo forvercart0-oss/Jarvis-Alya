@@ -81,7 +81,7 @@ export function HomePanel({ settings, health, voiceInfo, diagnostics, stats, pro
 
         {/* Orb + quick actions */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="glass-panel p-6 flex flex-col items-center">
-          <Orb state={orbState} assistantName={settings?.assistant_name || 'JARVIS'} accentColor={accentColor} size={96} />
+          <Orb state={orbState} assistantName={settings?.assistant_name || 'JARVIS'} accentColor={accentColor} size={settings?.orb_size || 64} />
           <p className="text-[10px] tracking-[0.4em] text-slate-500 uppercase mt-4 mb-3">Quick Actions</p>
           <div className="flex flex-wrap justify-center gap-2 w-full">
             <QuickActions onAction={onAction} />

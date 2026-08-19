@@ -2,16 +2,13 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
-import os
 import tempfile
 from pathlib import Path
-from typing import Any
 
 import httpx
 
-from updater.models import UpdateInfo, UpdateProgress, UpdateState
+from updater.models import UpdateProgress, UpdateState
 
 logger = logging.getLogger("jarvis.updater.downloader")
 

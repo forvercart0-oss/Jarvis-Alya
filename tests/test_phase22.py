@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 
 import pytest
 
-from automation.execution_engine import AutonomousExecutionEngine, ExecutionContext, ExecutionMode, ExecutionPath
+from automation.execution_engine import AutonomousExecutionEngine, ExecutionContext, ExecutionPath
 from automation.policy_engine import AutomationPolicyEngine, ExecutionMode as PolicyExecutionMode
 
 logger = logging.getLogger("jarvis.test.phase22")
@@ -131,7 +130,7 @@ async def test_execution_engine_smart_retry(execution_engine):
 
 @pytest.mark.asyncio
 async def test_execution_engine_verification(execution_engine):
-    ctx = ExecutionContext(task_id="t4", user_request="test")
+    _ctx = ExecutionContext(task_id="t4", user_request="test")
     verified = await execution_engine.verify_result(type("Step", (), {"verify": None, "arguments": {}})(), {"success": True})
     assert verified is True
 
@@ -166,6 +165,7 @@ def test_automation_policy_engine_global():
 
 def test_execution_engine_global():
     from automation.execution_engine import get_execution_engine
+    from automation.policy_engine import reset_automation_policy_engine
     import automation.execution_engine as ee_module
     ee_module._execution_engine = None
     engine1 = get_execution_engine(tool_execute=lambda name, confirmed=False, **kwargs: {"success": True})
@@ -175,9 +175,11 @@ def test_execution_engine_global():
     reset_automation_policy_engine()
 
 
-def test_execution_engine_global():
-    from automation.execution_engine import get_execution_engine, _execution_engine
-    _execution_engine = None
+def test_execution_engine_global_singleton():
+    import automation.execution_engine as ee_module
+    from automation.execution_engine import get_execution_engine
+    ee_module._execution_engine = None
     engine1 = get_execution_engine(tool_execute=lambda name, confirmed=False, **kwargs: {"success": True})
     engine2 = get_execution_engine(tool_execute=lambda name, confirmed=False, **kwargs: {"success": True})
     assert engine1 is engine2
+    ee_module._execution_engine = None

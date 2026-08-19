@@ -81,39 +81,26 @@ Path(settings.db_path).parent.mkdir(parents=True, exist_ok=True)
 Path(settings.data_dir).mkdir(parents=True, exist_ok=True)
 Path(settings.logs_dir).mkdir(parents=True, exist_ok=True)
 
-vector_dir = Path(settings.data_dir) / "vector_store" if settings.vector_memory_enabled else None
-memory_manager = MemoryManager(settings.db_path, vector_dir=vector_dir)
-settings.apply_db_overrides(memory_manager.store.get_all_settings())
-tool_registry = build_registry(settings.db_path)
-tts_manager = TTSManager(settings)
-skill_registry = SkillRegistry()
-skill_registry.load()
-skill_manager = SkillManager(skill_registry)
-permission_manager = PermissionManager(Path(settings.data_dir) / "permissions.json")
-activity_logger = get_activity_logger(Path(settings.logs_dir) / "activity.jsonl")
-skill_executor = SkillExecutor(skill_registry, permission_manager)
-ai_service = AIService(
-    memory_manager,
-    tts_manager,
-    tool_registry,
-    skill_registry=skill_registry,
-    permission_manager=permission_manager,
-)
-voice_service = VoiceManager(memory_manager, ai_service)
-memory_service = MemoryService(memory_manager, ws_broadcast=ws_manager.broadcast)
-workflow_detector.set_broadcast(ws_manager.broadcast)
-tool_service = ToolService(tool_registry)
+memory_manager = None  # type: ignore
+tool_registry = None  # type: ignore
+tts_manager = None  # type: ignore
+skill_registry = None  # type: ignore
+skill_manager = None  # type: ignore
+permission_manager = None  # type: ignore
+activity_logger = None  # type: ignore
+skill_executor = None  # type: ignore
+ai_service = None  # type: ignore
+voice_service = None  # type: ignore
+memory_service = None  # type: ignore
+tool_service = None  # type: ignore
 system_service = SystemService()
 notification_service = NotificationService()
-image_mgr = ImageGenerationManager(settings)
-video_mgr = VideoGenerationManager(settings)
-call_mgr = CallManager(settings)
-gesture_detector = GestureDetector(settings)
-from automation.policy_engine import get_automation_policy_engine
-automation_policy_engine = get_automation_policy_engine(
-    execution_mode=settings.execution_mode,
-    profile=settings.automation_profile,
-)
+image_mgr = None  # type: ignore
+video_mgr = None  # type: ignore
+call_mgr = None  # type: ignore
+gesture_detector = None  # type: ignore
+automation_policy_engine = None  # type: ignore
+automation_service = None  # type: ignore
 
 research_manager = None
 
@@ -164,12 +151,6 @@ async def _automation_command(cmd: str) -> dict:
         return {"success": False, "error": str(exc)}
 
 
-automation_service = AutomationService(
-    memory_manager,
-    speak_callback=lambda text: voice_service.speak(text) if voice_service._started else voice_service.test_voice(text),
-    command_callback=_automation_command,
-)
-
 task_manager = None
 
 
@@ -194,18 +175,6 @@ async def _execute_automation_handler(automation_id: str):
     return {"success": False, "error": "Automation not found."}
 
 
-tool_registry.register_handler(
-    "execute_automation",
-    "Manually trigger an automation by its ID.",
-    {
-        "type": "object",
-        "properties": {"automation_id": {"type": "string"}},
-        "required": ["automation_id"],
-    },
-    _execute_automation_handler,
-)
-
-
 async def _tts_broadcast(event: str, text: str):
     await ws_manager.broadcast(event, {"text": text})
 
@@ -214,13 +183,83 @@ async def _tts_first_audio():
     await ws_manager.broadcast("tts_first_audio", {})
 
 
-tts_manager.on_event(_tts_broadcast)
-tts_manager.on_first_audio(_tts_first_audio)
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global memory_manager, tool_registry, tts_manager, skill_registry, skill_manager
+    global permission_manager, activity_logger, skill_executor, ai_service
+    global voice_service, memory_service, tool_service, image_mgr, video_mgr
+    global call_mgr, gesture_detector, automation_policy_engine, automation_service
+
     logger.info("JARVIS 2.0 starting up...")
+
+    # Initialize all heavy services here instead of at module import time
+    vector_dir = Path(settings.data_dir) / "vector_store" if settings.vector_memory_enabled else None
+    memory_manager = MemoryManager(settings.db_path, vector_dir=vector_dir)
+    settings.apply_db_overrides(memory_manager.store.get_all_settings())
+    tool_registry = build_registry(settings.db_path)
+    tts_manager = TTSManager(settings)
+    skill_registry = SkillRegistry()
+    skill_registry.load()
+    skill_manager = SkillManager(skill_registry)
+    permission_manager = PermissionManager(Path(settings.data_dir) / "permissions.json")
+    activity_logger = get_activity_logger(Path(settings.logs_dir) / "activity.jsonl")
+    skill_executor = SkillExecutor(skill_registry, permission_manager)
+    ai_service = AIService(
+        memory_manager,
+        tts_manager,
+        tool_registry,
+        skill_registry=skill_registry,
+        permission_manager=permission_manager,
+    )
+    voice_service = VoiceManager(memory_manager, ai_service)
+    memory_service = MemoryService(memory_manager, ws_broadcast=ws_manager.broadcast)
+    workflow_detector.set_broadcast(ws_manager.broadcast)
+    tool_service = ToolService(tool_registry)
+    image_mgr = ImageGenerationManager(settings)
+    video_mgr = VideoGenerationManager(settings)
+    call_mgr = CallManager(settings)
+    gesture_detector = GestureDetector(settings)
+    from automation.policy_engine import get_automation_policy_engine as _get_ape
+    automation_policy_engine = _get_ape(
+        execution_mode=settings.execution_mode,
+        profile=settings.automation_profile,
+    )
+
+    def _speak_cb(text):
+        if voice_service._started:
+            voice_service.speak(text)
+        else:
+            voice_service.test_voice(text)
+
+    async def _auto_cmd(cmd: str) -> dict:
+        try:
+            result = await tool_registry.execute("terminal", arguments={"command": cmd})
+            if hasattr(result, "_data"):
+                return result._data
+            return {"success": True, "result": str(result)}
+        except Exception as exc:
+            return {"success": False, "error": str(exc)}
+
+    automation_service = AutomationService(
+        memory_manager,
+        speak_callback=_speak_cb,
+        command_callback=_auto_cmd,
+    )
+
+    tts_manager.on_event(_tts_broadcast)
+    tts_manager.on_first_audio(_tts_first_audio)
+
+    tool_registry.register_handler(
+        "execute_automation",
+        "Manually trigger an automation by its ID.",
+        {
+            "type": "object",
+            "properties": {"automation_id": {"type": "string"}},
+            "required": ["automation_id"],
+        },
+        _execute_automation_handler,
+    )
+
     await persona_service.apply_persona_on_startup()
     await tts_manager.start()
     await voice_service.start()
@@ -232,7 +271,6 @@ async def lifespan(app: FastAPI):
     vision_manager.set_broadcast(ws_manager.broadcast)
     if settings.vision_provider:
         try:
-            from vision.providers.base import VisionProvider
             provider_mod = __import__(f"vision.providers.{settings.vision_provider}", fromlist=["VisionProvider"])
             provider = getattr(provider_mod, "VisionProvider", None)
             if provider:
@@ -296,6 +334,8 @@ app.include_router(updater_router, prefix="/api")
 # ---------------------------------------------------------------- health
 @app.get("/api/health")
 async def health():
+    if not ai_service:
+        return {"status": "starting", "assistant": settings.assistant_name, "providers": {}}
     return {
         "status": "ok",
         "assistant": settings.assistant_name,
@@ -307,18 +347,20 @@ async def health():
         },
         "database": {"status": "online"},
         "websocket": {"status": "online", "connections": ws_manager.count},
-        "tts": {"status": "available" if tts_manager.is_available() else "unavailable", "backend": tts_manager.backend, "engine": tts_manager.engine},
-        "voice": {"status": "available" if voice_service.is_available() else "unavailable", "mic": voice_service.mic_available},
-        "image": await image_mgr.health(),
-        "video": await video_mgr.health(),
-        "gestures": {"status": "active" if gesture_detector.active else "inactive"},
-        "calls": {"status": "available" if call_mgr.is_available() else "unavailable"},
+        "tts": {"status": "available" if tts_manager and tts_manager.is_available() else "unavailable", "backend": tts_manager.backend if tts_manager else None, "engine": tts_manager.engine if tts_manager else None},
+        "voice": {"status": "available" if voice_service and voice_service.is_available() else "unavailable", "mic": voice_service.mic_available if voice_service else False},
+        "image": await image_mgr.health() if image_mgr else {"status": "offline"},
+        "video": await video_mgr.health() if video_mgr else {"status": "offline"},
+        "gestures": {"status": "active" if gesture_detector and gesture_detector.active else "inactive"},
+        "calls": {"status": "available" if call_mgr and call_mgr.is_available() else "unavailable"},
         "vision": vision_manager.status(),
     }
 
 
 @app.get("/api/health/detailed")
 async def health_detailed():
+    if not ai_service:
+        return {"status": "starting", "assistant": settings.assistant_name, "version": app.version}
     provider_status = await ai_service.health()
     active = ai_service._select_provider()
     db_status = "online"
@@ -452,8 +494,8 @@ async def safety_pending():
 @app.get("/api/system/diagnostics")
 async def system_diagnostics():
 
-    provider_status = await ai_service.health()
-    active = ai_service._select_provider()
+    provider_status = await ai_service.health() if ai_service else {}
+    active = ai_service._select_provider() if ai_service else None
     return {
         "version": app.version,
         "assistant": settings.assistant_name,
@@ -467,28 +509,28 @@ async def system_diagnostics():
         "providers": provider_status,
         "active_provider": active.name if active else None,
         "provider_count": len(provider_status),
-        "tools": len(tool_registry.names()),
+        "tools": len(tool_registry.names()) if tool_registry else 0,
         "database": await system_service.check_database(settings.db_path),
         "websocket_clients": ws_manager.count,
         "websocket": system_service.check_websocket(ws_manager),
         "tts": {
-            "available": tts_manager.is_available(),
-            "backend": tts_manager.backend,
-            "engine": tts_manager.engine,
+            "available": tts_manager.is_available() if tts_manager else False,
+            "backend": tts_manager.backend if tts_manager else None,
+            "engine": tts_manager.engine if tts_manager else None,
             "voice": settings.tts_voice,
-            "voices": len(tts_manager.voice_catalog()),
+            "voices": len(tts_manager.voice_catalog()) if tts_manager else 0,
         },
         "pipewire": await system_service.check_pipewire(),
         "voice": {
-            "initialized": voice_service.initialized,
-            "mic_available": voice_service.mic_available,
-            "tts_available": voice_service.tts_available,
+            "initialized": voice_service.initialized if voice_service else False,
+            "mic_available": voice_service.mic_available if voice_service else False,
+            "tts_available": voice_service.tts_available if voice_service else False,
         },
-        "memory": {"conversations": len(memory_manager.get_conversations(limit=1000))},
-        "image": await image_mgr.health(),
-        "video": await video_mgr.health(),
-        "gestures": {"active": gesture_detector.active, "available": gesture_detector.is_available()},
-        "calls": {"available": call_mgr.is_available()},
+        "memory": {"conversations": len(memory_manager.get_conversations(limit=1000)) if memory_manager else 0},
+        "image": await image_mgr.health() if image_mgr else {"status": "offline"},
+        "video": await video_mgr.health() if video_mgr else {"status": "offline"},
+        "gestures": {"active": gesture_detector.active if gesture_detector else False, "available": gesture_detector.is_available() if gesture_detector else False},
+        "calls": {"available": call_mgr.is_available() if call_mgr else False},
         "vision": vision_manager.status(),
         "python": __import__("sys").version.split()[0],
     }

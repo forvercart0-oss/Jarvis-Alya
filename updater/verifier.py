@@ -5,9 +5,7 @@ from __future__ import annotations
 import logging
 import zipfile
 from pathlib import Path
-from typing import Any
 
-from updater.models import UpdateInfo, UpdateProgress
 
 logger = logging.getLogger("jarvis.updater.verifier")
 

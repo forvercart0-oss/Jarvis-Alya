@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 from updater.installer import UpdateInstaller
-from updater.models import UpdateProgress, UpdateState
+from updater.models import UpdateProgress
 from updater.downloader import UpdateDownloader
 from updater.verifier import UpdateVerifier
 from updater.github import GitHubClient

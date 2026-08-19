@@ -1,6 +1,5 @@
 import asyncio
 from collections import deque
-from typing import Optional
 from tools.registry import ToolRegistry
 
 

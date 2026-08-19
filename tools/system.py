@@ -1,4 +1,3 @@
-import platform
 from tools.registry import ToolResult
 import psutil
 

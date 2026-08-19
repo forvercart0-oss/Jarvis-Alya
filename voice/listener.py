@@ -1,4 +1,3 @@
-import asyncio
 import subprocess
 import sys
 import speech_recognition as sr

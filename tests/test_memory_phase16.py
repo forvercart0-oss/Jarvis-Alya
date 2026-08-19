@@ -2,15 +2,11 @@
 
 from __future__ import annotations
 
-import json
-import pytest
 
 from memory.audit import MemoryAuditLog
 from memory.extractor import MemoryExtractor
-from memory.manager import MemoryManager
 from memory.types import MemoryImportance, MemorySource, MemoryStatus, MemoryType, normalize_memory_type
 from memory.context_builder import ContextBuilder
-from memory.types import MemoryStatus
 
 
 def test_memory_type_normalization():
